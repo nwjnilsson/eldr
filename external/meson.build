@@ -1,2 +1,2 @@
-cxxopts_inc = include_directories('cxxopts/include')
-imgui_inc = include_directories('imgui')
+cxxopts = include_directories('cxxopts/include')
+imgui = include_directories('imgui')

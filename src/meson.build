@@ -1,1 +1,2 @@
+subdir('libgui')
 subdir('eldr')
