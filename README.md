@@ -8,7 +8,11 @@ I will try to keep cross platform compatibility in mind while developing Eldr, b
 The following software is available on Windows as well, so it should be possible to build there as well. Note that MSVC 2013 is not compatible with [cxxopts](https://github.com/jarro2783/cxxopts#requirements).
 ```
 $ sudo apt-get install build-essential ninja-build meson python3 python3-pip \
-    python3-setuptools python3-wheel libspdlog-dev
+    python3-setuptools python3-wheel libspdlog-dev libglfw3-dev libglm-dev libvulkan-dev
+```
+For debugging:
+```
+sudo apt install vulkan-validationlayers-dev spirv-tools
 ```
 
 ## Build
