@@ -1,7 +1,8 @@
 ---
 Language:        Cpp
-AccessModifierOffset: -4
+AccessModifierOffset: -2
 AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
 AlignEscapedNewlinesLeft: false
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -21,7 +22,6 @@ ContinuationIndentWidth: 2
 Cpp11BracedListStyle: false
 DerivePointerBinding: false
 ExperimentalAutoDetectBinPacking: false
-IndentAccessModifiers: true
 IndentCaseLabels: true
 IndentFunctionDeclarationAfterType: false
 IndentWidth:     2
