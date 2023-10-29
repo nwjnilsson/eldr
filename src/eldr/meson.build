@@ -1,6 +1,6 @@
-libglfw = dependency('glfw3')
+src = ['main.cpp', 'eldr-app.cpp']
 executable('eldr',
-  'eldr.cpp',
-  include_directories : [inc, cxxopts],
-  dependencies : [libglfw],
+  sources : src,
+  include_directories : [include, inc_cxxopts, inc_imgui],
+  dependencies : [libglfw, libvulkan],
   link_with : eldr_gui)
