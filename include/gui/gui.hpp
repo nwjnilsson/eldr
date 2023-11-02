@@ -1,11 +1,6 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
 #include <gui/vulkan-backend.hpp>
-#include <imgui.h>
-#include <memory>
-#include <string.h>
-#include <vector>
 
 namespace eldr {
 
@@ -25,7 +20,7 @@ private:
   const int   height_;
   std::string window_name_;
 
-  VulkanData vulkan_data_;
+  vk_wrapper::VkWrapper vk_wrapper_;
 
   GLFWwindow* window_;
 };
