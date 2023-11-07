@@ -201,7 +201,66 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
   return indices;
 }
 
-void VkWrapper::selectPhysicalDevice()
+SwapChainSupportDetails swapChainSupportDetails(VkPhysicalDevice device,
+                                                VkSurfaceKHR     surface)
+{
+  SwapChainSupportDetails details;
+  // Query for supported formats
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
+                                            &details.capabilities);
+  uint32_t format_count;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr);
+
+  if (format_count != 0) {
+    details.formats.resize(format_count);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count,
+                                         details.formats.data());
+  }
+
+  // Query for present modes
+  uint32_t present_mode_count;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+                                            &present_mode_count, nullptr);
+
+  if (present_mode_count != 0) {
+    details.present_modes.resize(present_mode_count);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+      device, surface, &present_mode_count, details.present_modes.data());
+  }
+
+  return details;
+}
+
+bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
+                      std::vector<const char*> device_extensions)
+{
+  // Enumerate physical device extension
+  uint32_t                           props_count;
+  std::vector<VkExtensionProperties> properties;
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &props_count, nullptr);
+  properties.resize(props_count);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &props_count,
+                                       properties.data());
+
+  // Check extensions
+  std::set<std::string> required_extensions(device_extensions.begin(),
+                                            device_extensions.end());
+  for (const auto& extension : properties) {
+    required_extensions.erase(extension.extensionName);
+  }
+  // Queue families
+  QueueFamilyIndices indices = findQueueFamilies(device, surface);
+  // Swap chain
+  SwapChainSupportDetails swap_chain_support =
+    swapChainSupportDetails(device, surface);
+
+  return required_extensions.empty() && indices.isComplete() &&
+         !swap_chain_support.formats.empty() &&
+         !swap_chain_support.present_modes.empty();
+}
+
+void VkWrapper::selectPhysicalDevice(
+  std::vector<const char*>& device_extensions)
 {
   uint32_t gpu_count;
   VkResult err = vkEnumeratePhysicalDevices(instance_, &gpu_count, nullptr);
@@ -226,7 +285,8 @@ void VkWrapper::selectPhysicalDevice()
   for (VkPhysicalDevice& device : gpus) {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(device, &props);
-    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+        isDeviceSuitable(device, surface_, device_extensions)) {
       physical_device_ = device;
       return;
     }
@@ -238,36 +298,15 @@ void VkWrapper::selectPhysicalDevice()
 void VkWrapper::createLogicalDevice()
 {
 
-  // Required extensions
   std::vector<const char*> device_extensions;
-  device_extensions.push_back("VK_KHR_swapchain");
-
+  device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 #ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
   device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
 
-  // Enumerate physical device extension
-  uint32_t                           props_count;
-  std::vector<VkExtensionProperties> properties;
-  vkEnumerateDeviceExtensionProperties(physical_device_, nullptr, &props_count,
-                                       nullptr);
-  properties.resize(props_count);
-  vkEnumerateDeviceExtensionProperties(physical_device_, nullptr, &props_count,
-                                       properties.data());
-
-  // Check that extensions are available
-  std::set<std::string> required_extensions(device_extensions.begin(),
-                                            device_extensions.end());
-  for (const auto& extension : properties) {
-    required_extensions.erase(extension.extensionName);
-  }
-  if (!required_extensions.empty())
-    throwVkErr("Some required extensions are missing");
+  selectPhysicalDevice(device_extensions);
 
   QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
-  if (!indices.isComplete())
-    throwVkErr("The necessary queue families could not be found");
-
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::set<uint32_t> unique_queue_families = { indices.graphics_family.value(),
                                                indices.present_family.value() };
@@ -318,24 +357,20 @@ void VkWrapper::createCommandPool()
 
 void VkWrapper::init(VkWrapperInitInfo& init_info)
 {
-  createInstance(init_info.extensions);
+  createInstance(init_info.instance_extensions);
   setupDebugMessenger();
-  // createSurface();
-  selectPhysicalDevice();
-  createLogicalDevice();
+  createSurface(init_info.window);
+  createLogicalDevice(); // Also selects physical device
   ////createSwapChain();
   ////createImageViews();
   ////createRenderPass();
   ////createGraphicsPipeline();
   ////createFramebuffers();
   createCommandPool();
-
-  setupVulkanWindow(init_info.window, init_info.width, init_info.height);
 }
 
-void VkWrapper::setupVulkanWindow(GLFWwindow* window, int width, int height)
+void VkWrapper::createSurface(GLFWwindow* window)
 {
-
   // Create surface
   if (glfwCreateWindowSurface(instance_, window, nullptr, &surface_) !=
       VK_SUCCESS)
@@ -346,6 +381,7 @@ void VkWrapper::destroy()
 {
 
   // TODO: destroy everything
+  // surface, devices, queues?
   vkDestroyDescriptorPool(device_, descriptor_pool_, allocator_);
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(

@@ -12,23 +12,6 @@
 
 namespace eldr {
 
-EldrGUI::EldrGUI(int width, int height, std::string name)
-  : width_{ width }, height_{ height }, window_name_{ name }
-{
-  //vulkan_data_.g_allocator          = nullptr;
-  //vulkan_data_.g_instance           = VK_NULL_HANDLE;
-  //vulkan_data_.g_physical_device    = VK_NULL_HANDLE;
-  //vulkan_data_.g_device             = VK_NULL_HANDLE;
-  //vulkan_data_.g_queue_family       = (uint32_t) -1;
-  //vulkan_data_.g_queue              = VK_NULL_HANDLE;
-  //vulkan_data_.g_debug_messenger    = VK_NULL_HANDLE;
-  //vulkan_data_.g_pipeline_cache     = VK_NULL_HANDLE;
-  //vulkan_data_.g_descriptor_pool    = VK_NULL_HANDLE;
-  //vulkan_data_.g_min_image_count    = 2;
-  //vulkan_data_.g_swap_chain_rebuild = false;
-
-  init();
-}
 
 EldrGUI::~EldrGUI()
 {
@@ -77,7 +60,7 @@ void EldrGUI::init()
     .window = window_,
     .width = width_,
     .height = height_,
-    .extensions = extensions
+    .instance_extensions = extensions
   };
   vk_wrapper_.init(info);
 }

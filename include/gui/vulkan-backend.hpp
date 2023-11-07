@@ -21,7 +21,13 @@ struct VkWrapperInitInfo {
   GLFWwindow*               window;
   int                       width;
   int                       height;
-  std::vector<const char*>& extensions;
+  std::vector<const char*>& instance_extensions;
+};
+
+struct SwapChainSupportDetails {
+  VkSurfaceCapabilitiesKHR        capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR>   present_modes;
 };
 
 struct QueueFamilyIndices {
@@ -57,10 +63,30 @@ class VkWrapper {
 public:
   VkWrapper()
   {
-
-    // TODO Implement
-    // Some variables will be VK_NULL_HANDLE while indices will need to be
-    // initialized to -1
+    allocator_            = nullptr;
+    instance_             = VK_NULL_HANDLE;
+    physical_device_      = VK_NULL_HANDLE;
+    device_               = VK_NULL_HANDLE;
+    present_queue_        = VK_NULL_HANDLE;
+    graphics_queue_       = VK_NULL_HANDLE;
+    debug_messenger_      = VK_NULL_HANDLE;
+    pipeline_cache_       = VK_NULL_HANDLE;
+    descriptor_pool_      = VK_NULL_HANDLE;
+    width_                = 0;
+    height_               = 0;
+    swapchain_            = VK_NULL_HANDLE;
+    surface_              = VK_NULL_HANDLE;
+    render_pass_          = VK_NULL_HANDLE;
+    useDynamic_rendering_ = false;
+    clear_enable_         = false;
+    pipeline_             = VK_NULL_HANDLE;
+    frames_               = nullptr;
+    frame_semaphores_     = nullptr;
+    min_image_count_      = 2;
+    swap_chain_rebuild_   = false;
+    // surface_format_       = VK_NULL_HANDLE;
+    // present_mode_         = VK_NULL_HANDLE;
+    // clear_value_          = VK_NULL_HANDLE;
   }
 
   void init(VkWrapperInitInfo&);
@@ -107,12 +133,13 @@ private:
 
   // FUNCTIONS
   // Device
+  SwapChainSupportDetails swapChainSupportDetails();
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   void setupDebugMessenger();
 #endif
   void createInstance(std::vector<const char*>& instance_extensions);
-  void createSurface();
-  void selectPhysicalDevice();
+  void createSurface(GLFWwindow* window);
+  void selectPhysicalDevice(std::vector<const char*>& device_extensions);
   void createLogicalDevice();
   // void createSwapChain();
   // void createImageViews();
@@ -120,9 +147,6 @@ private:
   // void createGraphicsPipeline();
   // void createFramebuffers();
   void createCommandPool();
-
-  // Window
-  void setupVulkanWindow(GLFWwindow*, int w, int h);
 };
 
 void checkVkResult(VkResult);
