@@ -18,7 +18,6 @@ EldrGUI::~EldrGUI()
 
   // Destroy Vulkan objects
   vk_wrapper_.destroy();
-
   glfwDestroyWindow(window_);
   glfwTerminate();
 }

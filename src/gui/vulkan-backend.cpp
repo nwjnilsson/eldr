@@ -1,5 +1,6 @@
 #include <core/util.hpp>
 #include <gui/vulkan-backend.hpp>
+#include <limits>
 #include <set>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
@@ -297,7 +298,6 @@ void VkWrapper::selectPhysicalDevice(
 
 void VkWrapper::createLogicalDevice()
 {
-
   std::vector<const char*> device_extensions;
   device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 #ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
@@ -339,6 +339,139 @@ void VkWrapper::createLogicalDevice()
                    &graphics_queue_);
 }
 
+VkSurfaceFormatKHR selectSwapSurfaceFormat(
+  const std::vector<VkSurfaceFormatKHR>& available_formats)
+{
+  for (const auto& a_format : available_formats) {
+    if (a_format.format == VK_FORMAT_B8G8R8_SRGB &&
+        a_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      return a_format;
+    }
+  }
+  return available_formats[0];
+}
+
+VkPresentModeKHR selectSwapPresentMode(
+  const std::vector<VkPresentModeKHR>& available_present_modes)
+{
+  for (const auto& a_present_mode : available_present_modes) {
+    if (a_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+      // prefer this if it exists (triple buffering)
+      return VK_PRESENT_MODE_MAILBOX_KHR;
+    }
+  }
+  return VK_PRESENT_MODE_FIFO_KHR; // guaranteed to exist (vertical sync)
+}
+
+VkExtent2D selectSwapExtent(GLFWwindow*                     window,
+                            const VkSurfaceCapabilitiesKHR& capabilities)
+{
+  // Match the resolution of the current window, unless the value is the max
+  // of uint32_t
+  if (capabilities.currentExtent.width !=
+      std::numeric_limits<uint32_t>::max()) {
+    return capabilities.currentExtent;
+  }
+  else {
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    VkExtent2D extent = { static_cast<uint32_t>(width),
+                          static_cast<uint32_t>(height) };
+    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width,
+                              capabilities.maxImageExtent.width);
+    extent.height =
+      std::clamp(extent.height, capabilities.minImageExtent.height,
+                 capabilities.maxImageExtent.height);
+    return extent;
+  }
+}
+
+void VkWrapper::createSwapChain(GLFWwindow* window)
+{
+  SwapChainSupportDetails swap_chain_support =
+    swapChainSupportDetails(physical_device_, surface_);
+  surface_format_   = selectSwapSurfaceFormat(swap_chain_support.formats);
+  present_mode_     = selectSwapPresentMode(swap_chain_support.present_modes);
+  VkExtent2D extent = selectSwapExtent(window, swap_chain_support.capabilities);
+
+  // TODO: keep this image count?
+  min_image_count_ = swap_chain_support.capabilities.minImageCount + 1;
+  // If there is an upper limit, make sure we don't exceed it
+  if (swap_chain_support.capabilities.maxImageCount > 0) {
+    min_image_count_ =
+      std::min(min_image_count_, swap_chain_support.capabilities.maxImageCount);
+  }
+  VkSwapchainCreateInfoKHR swap_ci{};
+  swap_ci.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  swap_ci.surface          = surface_;
+  swap_ci.minImageCount    = min_image_count_;
+  swap_ci.imageFormat      = surface_format_.format;
+  swap_ci.imageColorSpace  = surface_format_.colorSpace;
+  swap_ci.imageExtent      = extent;
+  swap_ci.imageArrayLayers = 1;
+  swap_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  swap_ci.preTransform     = swap_chain_support.capabilities.currentTransform;
+  swap_ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  swap_ci.presentMode      = present_mode_;
+  swap_ci.clipped      = VK_TRUE; // don't care about color of obscured pixels
+  swap_ci.oldSwapchain = VK_NULL_HANDLE;
+
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
+  uint32_t           queueFamilyIndices[] = { indices.graphics_family.value(),
+                                              indices.present_family.value() };
+
+  if (indices.graphics_family != indices.present_family) {
+    swap_ci.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+    swap_ci.queueFamilyIndexCount = 2;
+    swap_ci.pQueueFamilyIndices   = queueFamilyIndices;
+  }
+  else {
+    swap_ci.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+    swap_ci.queueFamilyIndexCount = 0;       // Optional
+    swap_ci.pQueueFamilyIndices   = nullptr; // Optional
+  }
+
+  if (vkCreateSwapchainKHR(device_, &swap_ci, allocator_, &swapchain_) !=
+      VK_SUCCESS) {
+    throwVkErr("Failed to create swapchain");
+  }
+  vkGetSwapchainImagesKHR(device_, swapchain_, &image_count_, nullptr);
+  swapchain_images_.resize(image_count_);
+  vkGetSwapchainImagesKHR(device_, swapchain_, &image_count_,
+                          swapchain_images_.data());
+  swapchain_extent_       = extent;
+  swapchain_image_format_ = surface_format_.format;
+}
+
+void VkWrapper::createImageViews()
+{
+  swapchain_image_views_.resize(swapchain_images_.size());
+  for (size_t i = 0; i < swapchain_images_.size(); i++) {
+    VkImageViewCreateInfo image_view_ci{};
+    image_view_ci.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_ci.image    = swapchain_images_[i];
+    image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_ci.format   = swapchain_image_format_;
+    // Standard color properties
+    image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    image_view_ci.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_ci.subresourceRange.baseMipLevel   = 0;
+    image_view_ci.subresourceRange.levelCount     = 1;
+    image_view_ci.subresourceRange.baseArrayLayer = 0;
+    image_view_ci.subresourceRange.layerCount     = 1;
+
+    if (vkCreateImageView(device_, &image_view_ci, allocator_,
+                          &swapchain_image_views_[i]) != VK_SUCCESS) {
+      throwVkErr("Failed to create image view!");
+    }
+  }
+}
+
 void VkWrapper::createCommandPool()
 {
   VkDescriptorPoolSize pool_sizes[] = {
@@ -361,8 +494,8 @@ void VkWrapper::init(VkWrapperInitInfo& init_info)
   setupDebugMessenger();
   createSurface(init_info.window);
   createLogicalDevice(); // Also selects physical device
-  ////createSwapChain();
-  ////createImageViews();
+  createSwapChain(init_info.window);
+  createImageViews();
   ////createRenderPass();
   ////createGraphicsPipeline();
   ////createFramebuffers();
@@ -372,7 +505,7 @@ void VkWrapper::init(VkWrapperInitInfo& init_info)
 void VkWrapper::createSurface(GLFWwindow* window)
 {
   // Create surface
-  if (glfwCreateWindowSurface(instance_, window, nullptr, &surface_) !=
+  if (glfwCreateWindowSurface(instance_, window, allocator_, &surface_) !=
       VK_SUCCESS)
     throwVkErr("Failed to create window surface!");
 }
@@ -381,8 +514,20 @@ void VkWrapper::destroy()
 {
 
   // TODO: destroy everything
-  // surface, devices, queues?
+  // vkDestroyCommandPool(device_, command_pool_, const VkAllocationCallbacks
+  // *pAllocator) vkDestroyFramebuffer(VkDevice device, VkFramebuffer
+  // framebuffer, const VkAllocationCallbacks *pAllocator)
+  // pipeline
+  // renderpass
+
+  // image views
+  for (auto& image_view : swapchain_image_views_)
+    vkDestroyImageView(device_, image_view, allocator_);
+
+  vkDestroySwapchainKHR(device_, swapchain_, allocator_);
   vkDestroyDescriptorPool(device_, descriptor_pool_, allocator_);
+  vkDestroySurfaceKHR(instance_, surface_, allocator_);
+  vkDestroyDevice(device_, allocator_);
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
     instance_, "vkDestroyDebugUtilsMessengerEXT");
@@ -392,5 +537,6 @@ void VkWrapper::destroy()
   // Instance should be destroyed last
   vkDestroyInstance(instance_, allocator_);
 }
+
 } // Namespace vk_wrapper
 } // Namespace eldr

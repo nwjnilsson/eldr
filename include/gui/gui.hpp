@@ -24,6 +24,8 @@ private:
 
   vk_wrapper::VkWrapper vk_wrapper_;
 
+  // TODO: decide whether this pointer should live here or in vulkan_backend.hpp
+  // If it lives in the wrapper, initializing is slightly simpler
   GLFWwindow* window_;
 };
 } // namespace eldr

@@ -44,14 +44,12 @@ public:
   Frame() { memset((void*) this, VK_NULL_HANDLE, sizeof(*this)); }
 
 private:
-  // FRAME RELATED
   VkCommandPool   command_pool_;
   VkCommandBuffer command_buffer_;
   VkFence         fence_;
   VkImage         backbuffer_;
   VkImageView     backbuffer_view_;
-
-  VkFramebuffer framebuffer_;
+  VkFramebuffer   framebuffer_;
 };
 
 struct VulkanFrameSemaphores {
@@ -105,16 +103,20 @@ private:
   VkDescriptorPool         descriptor_pool_;
 
   // WINDOW RELATED
-  int                width_;
-  int                height_;
-  VkSwapchainKHR     swapchain_;
-  VkSurfaceKHR       surface_;
-  VkSurfaceFormatKHR surface_format_;
-  VkPresentModeKHR   present_mode_;
-  VkRenderPass       render_pass_;
-  bool               useDynamic_rendering_;
-  bool               clear_enable_;
-  VkClearValue       clear_value_;
+  int                      width_;  //!
+  int                      height_; //!
+  VkSwapchainKHR           swapchain_;
+  std::vector<VkImage>     swapchain_images_;
+  std::vector<VkImageView> swapchain_image_views_;
+  VkFormat                 swapchain_image_format_;
+  VkExtent2D               swapchain_extent_;
+  VkSurfaceKHR             surface_;
+  VkSurfaceFormatKHR       surface_format_;
+  VkPresentModeKHR         present_mode_; //!
+  VkRenderPass             render_pass_;
+  bool                     useDynamic_rendering_;
+  bool                     clear_enable_;
+  VkClearValue             clear_value_;
   // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
   uint32_t frame_index_;
   // Number of simultaneous in-flight frames (returned by
@@ -128,12 +130,10 @@ private:
   VkPipeline             pipeline_;
   Frame*                 frames_;
   VulkanFrameSemaphores* frame_semaphores_;
-  int                    min_image_count_;
-  bool                   swap_chain_rebuild_;
+  uint32_t               min_image_count_;
+  bool                   swapchain_rebuild_;
 
   // FUNCTIONS
-  // Device
-  SwapChainSupportDetails swapChainSupportDetails();
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   void setupDebugMessenger();
 #endif
@@ -141,14 +141,15 @@ private:
   void createSurface(GLFWwindow* window);
   void selectPhysicalDevice(std::vector<const char*>& device_extensions);
   void createLogicalDevice();
-  // void createSwapChain();
-  // void createImageViews();
+  void createSwapChain(GLFWwindow* window);
+  void createImageViews();
   // void createRenderPass();
   // void createGraphicsPipeline();
   // void createFramebuffers();
   void createCommandPool();
 };
-
+// TODO: ?
 void checkVkResult(VkResult);
+
 } // Namespace vk_wrapper
 } // Namespace eldr
