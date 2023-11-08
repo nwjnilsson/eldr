@@ -81,7 +81,7 @@ public:
     frames_               = nullptr;
     frame_semaphores_     = nullptr;
     min_image_count_      = 2;
-    swap_chain_rebuild_   = false;
+    swapchain_rebuild_   = false;
     // surface_format_       = VK_NULL_HANDLE;
     // present_mode_         = VK_NULL_HANDLE;
     // clear_value_          = VK_NULL_HANDLE;

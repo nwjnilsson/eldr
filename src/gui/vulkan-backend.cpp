@@ -252,12 +252,12 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
   // Queue families
   QueueFamilyIndices indices = findQueueFamilies(device, surface);
   // Swap chain
-  SwapChainSupportDetails swap_chain_support =
+  SwapChainSupportDetails swapchain_support =
     swapChainSupportDetails(device, surface);
 
   return required_extensions.empty() && indices.isComplete() &&
-         !swap_chain_support.formats.empty() &&
-         !swap_chain_support.present_modes.empty();
+         !swapchain_support.formats.empty() &&
+         !swapchain_support.present_modes.empty();
 }
 
 void VkWrapper::selectPhysicalDevice(
@@ -389,18 +389,18 @@ VkExtent2D selectSwapExtent(GLFWwindow*                     window,
 
 void VkWrapper::createSwapChain(GLFWwindow* window)
 {
-  SwapChainSupportDetails swap_chain_support =
+  SwapChainSupportDetails swapchain_support =
     swapChainSupportDetails(physical_device_, surface_);
-  surface_format_   = selectSwapSurfaceFormat(swap_chain_support.formats);
-  present_mode_     = selectSwapPresentMode(swap_chain_support.present_modes);
-  VkExtent2D extent = selectSwapExtent(window, swap_chain_support.capabilities);
+  surface_format_   = selectSwapSurfaceFormat(swapchain_support.formats);
+  present_mode_     = selectSwapPresentMode(swapchain_support.present_modes);
+  VkExtent2D extent = selectSwapExtent(window, swapchain_support.capabilities);
 
   // TODO: keep this image count?
-  min_image_count_ = swap_chain_support.capabilities.minImageCount + 1;
+  min_image_count_ = swapchain_support.capabilities.minImageCount + 1;
   // If there is an upper limit, make sure we don't exceed it
-  if (swap_chain_support.capabilities.maxImageCount > 0) {
+  if (swapchain_support.capabilities.maxImageCount > 0) {
     min_image_count_ =
-      std::min(min_image_count_, swap_chain_support.capabilities.maxImageCount);
+      std::min(min_image_count_, swapchain_support.capabilities.maxImageCount);
   }
   VkSwapchainCreateInfoKHR swap_ci{};
   swap_ci.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -411,7 +411,7 @@ void VkWrapper::createSwapChain(GLFWwindow* window)
   swap_ci.imageExtent      = extent;
   swap_ci.imageArrayLayers = 1;
   swap_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  swap_ci.preTransform     = swap_chain_support.capabilities.currentTransform;
+  swap_ci.preTransform     = swapchain_support.capabilities.currentTransform;
   swap_ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   swap_ci.presentMode      = present_mode_;
   swap_ci.clipped      = VK_TRUE; // don't care about color of obscured pixels
