@@ -9,7 +9,7 @@
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include <imgui.h> // ImVector
+#include <cstring> // TODO: remove if not using memset
 #include <optional>
 #include <string>
 #include <vector>
@@ -75,13 +75,13 @@ public:
     swapchain_            = VK_NULL_HANDLE;
     surface_              = VK_NULL_HANDLE;
     render_pass_          = VK_NULL_HANDLE;
-    useDynamic_rendering_ = false;
-    clear_enable_         = false;
-    pipeline_             = VK_NULL_HANDLE;
+    //useDynamic_rendering_ = false;
+    //clear_enable_         = false;
+    graphics_pipeline_             = VK_NULL_HANDLE;
     frames_               = nullptr;
     frame_semaphores_     = nullptr;
     min_image_count_      = 2;
-    swapchain_rebuild_   = false;
+    swapchain_rebuild_    = false;
     // surface_format_       = VK_NULL_HANDLE;
     // present_mode_         = VK_NULL_HANDLE;
     // clear_value_          = VK_NULL_HANDLE;
@@ -113,25 +113,19 @@ private:
   VkSurfaceKHR             surface_;
   VkSurfaceFormatKHR       surface_format_;
   VkPresentModeKHR         present_mode_; //!
+  //bool                     useDynamic_rendering_;
+  //bool                     clear_enable_;
+  //VkClearValue             clear_value_;
+  //uint32_t                 frame_index_;
+  uint32_t                 image_count_;
+  //uint32_t                 semaphore_index_;
+  VkPipeline               graphics_pipeline_;
   VkRenderPass             render_pass_;
-  bool                     useDynamic_rendering_;
-  bool                     clear_enable_;
-  VkClearValue             clear_value_;
-  // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
-  uint32_t frame_index_;
-  // Number of simultaneous in-flight frames (returned by
-  // vkGetSwapchainImagesKHR, usually derived from min_image_count)
-  uint32_t image_count_;
-  // Current set of swapchain wait semaphores we're using (needs to be
-  // distinct from per frame data)
-  uint32_t semaphore_index_;
-  // The window pipeline may uses a different VkRenderPass than the one passed
-  // in ImGui_ImplVulkan_InitInfo
-  VkPipeline             pipeline_;
-  Frame*                 frames_;
-  VulkanFrameSemaphores* frame_semaphores_;
-  uint32_t               min_image_count_;
-  bool                   swapchain_rebuild_;
+  VkPipelineLayout         pipeline_layout_;
+  Frame*                   frames_;
+  VulkanFrameSemaphores*   frame_semaphores_;
+  uint32_t                 min_image_count_;
+  bool                     swapchain_rebuild_;
 
   // FUNCTIONS
 #ifdef ELDR_VULKAN_DEBUG_REPORT
@@ -143,8 +137,9 @@ private:
   void createLogicalDevice();
   void createSwapChain(GLFWwindow* window);
   void createImageViews();
+  void createRenderPass();
+  void createGraphicsPipeline();
   // void createRenderPass();
-  // void createGraphicsPipeline();
   // void createFramebuffers();
   void createCommandPool();
 };

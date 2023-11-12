@@ -1,5 +1,9 @@
 #include <core/util.hpp>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <gui/vulkan-backend.hpp>
+#include <iostream>
 #include <limits>
 #include <set>
 #include <spdlog/spdlog.h>
@@ -25,6 +29,34 @@ void checkVkResult(VkResult result)
   spdlog::error("[VULKAN] Error: VkResult = %d", result);
   if (result < 0)
     throwVkErr("Fatal error!");
+}
+
+// TODO: Maybe this should not be placed here
+static std::vector<char> loadShader(const std::string& type)
+{
+  const char* env_p = std::getenv("ELDR_DIR");
+  if (env_p == nullptr) {
+    throw std::runtime_error("Environment not set up correctly");
+  }
+
+  std::string filename{};
+  if (type == "vertex")
+    filename = std::string(env_p) + "/resources/vert.spv";
+  else if (type == "fragment")
+    filename = std::string(env_p) + "/resources/frag.spv";
+
+  std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("[UTIL]: Failed to open file!");
+  }
+
+  size_t            file_size = (size_t) file.tellg();
+  std::vector<char> buffer(file_size);
+  file.seekg(0);
+  file.read(buffer.data(), file_size);
+  file.close();
+  return buffer;
 }
 
 bool isAvailableVkExtension(const std::vector<VkExtensionProperties>& props,
@@ -279,10 +311,10 @@ void VkWrapper::selectPhysicalDevice(
   // It is possible to add additional criteria for what is to be considered
   // a suitable GPU. The Vulkan programming tutorial suggests implementing a
   // scoring system where each usable property of a device would add to its
-  // overall score, and when the properties of all devices have been evaluated,
-  // the highest scoring device is considered the most suitable one.
-  // For now I don't really think it matters. Just use a discrete GPU if it's
-  // available.
+  // overall score, and when the properties of all devices have been
+  // evaluated, the highest scoring device is considered the most suitable
+  // one. For now I don't really think it matters. Just use a discrete GPU if
+  // it's available.
   for (VkPhysicalDevice& device : gpus) {
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(device, &props);
@@ -472,21 +504,237 @@ void VkWrapper::createImageViews()
   }
 }
 
-void VkWrapper::createCommandPool()
+void VkWrapper::createRenderPass()
 {
-  VkDescriptorPoolSize pool_sizes[] = {
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-  };
-  VkDescriptorPoolCreateInfo pool_info = {};
-  pool_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  pool_info.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-  pool_info.maxSets       = 1;
-  pool_info.poolSizeCount = (uint32_t) IM_ARRAYSIZE(pool_sizes);
-  pool_info.pPoolSizes    = pool_sizes;
-  VkResult err =
-    vkCreateDescriptorPool(device_, &pool_info, allocator_, &descriptor_pool_);
-  checkVkResult(err);
+  VkAttachmentDescription color_attachment{};
+  color_attachment.format         = swapchain_image_format_;
+  color_attachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color_attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  VkAttachmentReference color_attachment_ref{};
+  color_attachment_ref.attachment = 0;
+  color_attachment_ref.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass{};
+  subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments    = &color_attachment_ref;
+
+  VkRenderPassCreateInfo render_pass_ci{};
+  render_pass_ci.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  render_pass_ci.attachmentCount = 1;
+  render_pass_ci.pAttachments    = &color_attachment;
+  render_pass_ci.subpassCount    = 1;
+  render_pass_ci.pSubpasses      = &subpass;
+
+  if (vkCreateRenderPass(device_, &render_pass_ci, allocator_, &render_pass_) !=
+      VK_SUCCESS) {
+    throwVkErr("Failed to create render pass!");
+  }
 }
+
+VkShaderModule createShaderModule(VkDevice&                device,
+                                  VkAllocationCallbacks*   allocator,
+                                  const std::vector<char>& bytecode)
+{
+  VkShaderModuleCreateInfo shader_ci{};
+  shader_ci.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  shader_ci.codeSize = bytecode.size();
+  shader_ci.pCode    = reinterpret_cast<const uint32_t*>(bytecode.data());
+
+  VkShaderModule shader_module;
+  if (vkCreateShaderModule(device, &shader_ci, allocator, &shader_module) !=
+      VK_SUCCESS) {
+    throwVkErr("Failed to create shader module!");
+  }
+  return shader_module;
+}
+
+void VkWrapper::createGraphicsPipeline()
+{
+  std::vector<char> vert_shader = loadShader("vertex");
+  std::vector<char> frag_shader = loadShader("fragment");
+  spdlog::info("Vertex shader size = {}", vert_shader.size());
+  spdlog::info("Fragment shader size = {}", frag_shader.size());
+
+  VkShaderModule vert_shader_module =
+    createShaderModule(device_, allocator_, vert_shader);
+  VkShaderModule frag_shader_module =
+    createShaderModule(device_, allocator_, frag_shader);
+
+  VkPipelineShaderStageCreateInfo vert_shader_stage_ci{};
+  vert_shader_stage_ci.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vert_shader_stage_ci.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+  vert_shader_stage_ci.module = vert_shader_module;
+  vert_shader_stage_ci.pName  = "main";
+  // The variable below is useful for constants in the shader. Can be more
+  // efficient than configuring constants at render time.
+  vert_shader_stage_ci.pSpecializationInfo = nullptr;
+
+  VkPipelineShaderStageCreateInfo frag_shader_stage_ci{};
+  frag_shader_stage_ci.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  frag_shader_stage_ci.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+  frag_shader_stage_ci.module = frag_shader_module;
+  frag_shader_stage_ci.pName  = "main";
+  // The variable below is useful for constants in the shader. Can be more
+  // efficient than configuring constants at render time.
+  frag_shader_stage_ci.pSpecializationInfo = nullptr;
+
+  VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_ci,
+                                                      frag_shader_stage_ci };
+
+  VkPipelineVertexInputStateCreateInfo vertex_input_info{};
+  vertex_input_info.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input_info.vertexBindingDescriptionCount   = 0;
+  vertex_input_info.pVertexBindingDescriptions      = nullptr; // Optional
+  vertex_input_info.vertexAttributeDescriptionCount = 0;
+  vertex_input_info.pVertexAttributeDescriptions    = nullptr; // Optional
+
+  VkPipelineInputAssemblyStateCreateInfo input_assembly{};
+  input_assembly.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  // TODO: Use different topology?
+  input_assembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  input_assembly.primitiveRestartEnable = VK_FALSE;
+
+  VkViewport viewport{};
+  viewport.x        = 0.0f;
+  viewport.y        = 0.0f;
+  viewport.width    = (float) swapchain_extent_.width;
+  viewport.height   = (float) swapchain_extent_.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+
+  VkRect2D scissor{};
+  scissor.offset = { 0, 0 };
+  scissor.extent = swapchain_extent_;
+
+  std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR };
+
+  VkPipelineDynamicStateCreateInfo dynamic_state{};
+  dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamic_state.dynamicStateCount =
+    static_cast<uint32_t>(dynamic_states.size());
+  dynamic_state.pDynamicStates = dynamic_states.data();
+
+  VkPipelineViewportStateCreateInfo viewport_state{};
+  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state.viewportCount = 1;
+  viewport_state.pViewports = &viewport;
+  viewport_state.scissorCount  = 1;
+  viewport_state.pScissors = &scissor;
+
+  VkPipelineRasterizationStateCreateInfo rasterizer{};
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.depthClampEnable        = VK_FALSE;
+  rasterizer.rasterizerDiscardEnable = VK_FALSE;
+  rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
+  rasterizer.lineWidth               = 1.0f;
+  rasterizer.cullMode                = VK_CULL_MODE_BACK_BIT;
+  rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer.depthBiasEnable         = VK_FALSE;
+
+  VkPipelineMultisampleStateCreateInfo multisampling{};
+  multisampling.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisampling.sampleShadingEnable   = VK_FALSE;
+  multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+  multisampling.minSampleShading      = 1.0f;     // Optional
+  multisampling.pSampleMask           = nullptr;  // Optional
+  multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+  multisampling.alphaToOneEnable      = VK_FALSE; // Optional
+
+  // TODO: may want to change
+  VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+  colorBlendAttachment.colorWriteMask =
+    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+    VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  colorBlendAttachment.blendEnable         = VK_TRUE;
+  colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  colorBlendAttachment.dstColorBlendFactor =
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+  colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+  colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+  colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+
+  // TODO: specify
+  VkPipelineColorBlendStateCreateInfo color_blending{};
+  color_blending.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blending.logicOpEnable     = VK_FALSE;
+  color_blending.logicOp           = VK_LOGIC_OP_COPY; // Optional
+  color_blending.attachmentCount   = 1;
+  color_blending.pAttachments      = &colorBlendAttachment;
+  color_blending.blendConstants[0] = 0.0f; // Optional
+  color_blending.blendConstants[1] = 0.0f; // Optional
+  color_blending.blendConstants[2] = 0.0f; // Optional
+  color_blending.blendConstants[3] = 0.0f; // Optional
+
+  VkPipelineLayoutCreateInfo pipeline_layout_ci{};
+  pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipeline_layout_ci.setLayoutCount         = 0;       // Optional
+  pipeline_layout_ci.pSetLayouts            = nullptr; // Optional
+  pipeline_layout_ci.pushConstantRangeCount = 0;       // Optional
+  pipeline_layout_ci.pPushConstantRanges    = nullptr; // Optional
+
+  if (vkCreatePipelineLayout(device_, &pipeline_layout_ci, nullptr,
+                             &pipeline_layout_) != VK_SUCCESS) {
+    throwVkErr("Failed to create pipeline layout");
+  }
+
+  VkGraphicsPipelineCreateInfo pipeline_ci{};
+  pipeline_ci.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  pipeline_ci.stageCount = 2;
+  pipeline_ci.pStages    = shader_stages;
+  pipeline_ci.pVertexInputState   = &vertex_input_info;
+  pipeline_ci.pInputAssemblyState = &input_assembly;
+  pipeline_ci.pViewportState      = &viewport_state;
+  pipeline_ci.pRasterizationState = &rasterizer;
+  pipeline_ci.pMultisampleState   = &multisampling;
+  pipeline_ci.pDepthStencilState  = nullptr;
+  pipeline_ci.pColorBlendState    = &color_blending;
+  pipeline_ci.pDynamicState       = &dynamic_state;
+  pipeline_ci.layout              = pipeline_layout_;
+  pipeline_ci.renderPass          = render_pass_;
+  pipeline_ci.subpass             = 0;
+  pipeline_ci.basePipelineHandle  = VK_NULL_HANDLE; // Optional
+  pipeline_ci.basePipelineIndex   = -1;             // Optional
+
+  if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pipeline_ci,
+                                nullptr, &graphics_pipeline_) != VK_SUCCESS) {
+    throwVkErr("Failed to create graphics pipeline!");
+  }
+
+  vkDestroyShaderModule(device_, vert_shader_module, allocator_);
+  vkDestroyShaderModule(device_, frag_shader_module, allocator_);
+}
+
+// void VkWrapper::createCommandPool()
+//{
+//   VkDescriptorPoolSize pool_sizes[] = {
+//     { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+//   };
+//   VkDescriptorPoolCreateInfo pool_info = {};
+//   pool_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+//   pool_info.flags         =
+//   VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; pool_info.maxSets = 1;
+//   pool_info.poolSizeCount = (uint32_t) IM_ARRAYSIZE(pool_sizes);
+//   pool_info.pPoolSizes    = pool_sizes;
+//   VkResult err =
+//     vkCreateDescriptorPool(device_, &pool_info, allocator_,
+//     &descriptor_pool_);
+//   checkVkResult(err);
+// }
 
 void VkWrapper::init(VkWrapperInitInfo& init_info)
 {
@@ -496,10 +744,11 @@ void VkWrapper::init(VkWrapperInitInfo& init_info)
   createLogicalDevice(); // Also selects physical device
   createSwapChain(init_info.window);
   createImageViews();
+  createRenderPass();
+  createGraphicsPipeline();
   ////createRenderPass();
-  ////createGraphicsPipeline();
   ////createFramebuffers();
-  createCommandPool();
+  // createCommandPool();
 }
 
 void VkWrapper::createSurface(GLFWwindow* window)
@@ -518,7 +767,9 @@ void VkWrapper::destroy()
   // *pAllocator) vkDestroyFramebuffer(VkDevice device, VkFramebuffer
   // framebuffer, const VkAllocationCallbacks *pAllocator)
   // pipeline
-  // renderpass
+  vkDestroyPipeline(device_, graphics_pipeline_, allocator_);
+  vkDestroyPipelineLayout(device_, pipeline_layout_, allocator_);
+  vkDestroyRenderPass(device_, render_pass_, allocator_);
 
   // image views
   for (auto& image_view : swapchain_image_views_)
