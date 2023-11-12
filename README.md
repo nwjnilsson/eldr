@@ -16,11 +16,14 @@ sudo apt install vulkan-validationlayers-dev spirv-tools
 ```
 
 ## Build
+### App
 ```
-$ meson setup build
+$ CXX=clang++ meson setup build
 ```
 and
 ```
 $ cd build
 $ ninja -j [N]
 ```
+### Shaders
+I have been using [glslc](https://github.com/google/shaderc) to compile some basic shaders. Eldr will look for the compiled shaders `vert.spv` and `frag.spv` in `resources`. `compileShaders.sh` will compile the `src/shaders/shader.(vert|frag)` and put the corresponding `.spv` files in `resources`.
