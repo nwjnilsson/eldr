@@ -8,23 +8,18 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 
 
-EldrGUI::~EldrGUI()
-{
-
-  // Destroy Vulkan objects
-  vk_wrapper_.destroy();
-  glfwDestroyWindow(window_);
-  glfwTerminate();
-}
-
 static void glfwErrorCallback(int error, const char* description)
 {
   fprintf(stderr, "GLFW Error %d: %s", error, description);
+}
+
+void EldrGUI::display()
+{
+  vk_wrapper_.drawFrame();
 }
 
 void EldrGUI::init()
@@ -52,16 +47,21 @@ void EldrGUI::init()
     glfwGetRequiredInstanceExtensions(&extensions_count);
   for (size_t i = 0; i < extensions_count; i++)
     extensions.push_back(glfw_extensions[i]);
-  
 
   // Initialize Vulkan
-  vk_wrapper::VkWrapperInitInfo info = {
-    .window = window_,
-    .width = width_,
-    .height = height_,
-    .instance_extensions = extensions
-  };
+  vk_wrapper::VkWrapperInitInfo info = { .window              = window_,
+                                         .width               = width_,
+                                         .height              = height_,
+                                         .instance_extensions = extensions };
   vk_wrapper_.init(info);
+}
+
+void EldrGUI::terminate()
+{
+  // Destroy Vulkan objects
+  vk_wrapper_.destroy();
+  glfwDestroyWindow(window_);
+  glfwTerminate();
 }
 
 } // Namespace eldr

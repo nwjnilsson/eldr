@@ -15,7 +15,9 @@ public:
   // EldrGUI &operator=(const EldrGUI &) = delete;
 
   inline bool shouldClose() { return glfwWindowShouldClose(window_); }
+  void        display();
   void        init();
+  void        terminate();
 
 private:
   const int   width_;

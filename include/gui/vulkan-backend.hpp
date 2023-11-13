@@ -39,55 +39,39 @@ struct QueueFamilyIndices {
   }
 };
 
-class Frame {
-public:
-  Frame() { memset((void*) this, VK_NULL_HANDLE, sizeof(*this)); }
-
-private:
-  VkCommandPool   command_pool_;
-  VkCommandBuffer command_buffer_;
-  VkFence         fence_;
-  VkImage         backbuffer_;
-  VkImageView     backbuffer_view_;
-  VkFramebuffer   framebuffer_;
-};
-
-struct VulkanFrameSemaphores {
-  VkSemaphore image_acquired_semaphore;
-  VkSemaphore render_complete_semaphore;
-};
 
 class VkWrapper {
 public:
   VkWrapper()
   {
-    allocator_            = nullptr;
-    instance_             = VK_NULL_HANDLE;
-    physical_device_      = VK_NULL_HANDLE;
-    device_               = VK_NULL_HANDLE;
-    present_queue_        = VK_NULL_HANDLE;
-    graphics_queue_       = VK_NULL_HANDLE;
-    debug_messenger_      = VK_NULL_HANDLE;
-    pipeline_cache_       = VK_NULL_HANDLE;
-    descriptor_pool_      = VK_NULL_HANDLE;
-    width_                = 0;
-    height_               = 0;
-    swapchain_            = VK_NULL_HANDLE;
-    surface_              = VK_NULL_HANDLE;
-    render_pass_          = VK_NULL_HANDLE;
-    //useDynamic_rendering_ = false;
-    //clear_enable_         = false;
-    graphics_pipeline_             = VK_NULL_HANDLE;
-    frames_               = nullptr;
-    frame_semaphores_     = nullptr;
-    min_image_count_      = 2;
-    swapchain_rebuild_    = false;
+    allocator_       = nullptr;
+    instance_        = VK_NULL_HANDLE;
+    physical_device_ = VK_NULL_HANDLE;
+    device_          = VK_NULL_HANDLE;
+    present_queue_   = VK_NULL_HANDLE;
+    graphics_queue_  = VK_NULL_HANDLE;
+    debug_messenger_ = VK_NULL_HANDLE;
+    pipeline_cache_  = VK_NULL_HANDLE;
+    descriptor_pool_ = VK_NULL_HANDLE;
+    width_           = 0;
+    height_          = 0;
+    swapchain_       = VK_NULL_HANDLE;
+    surface_         = VK_NULL_HANDLE;
+    render_pass_     = VK_NULL_HANDLE;
+    // useDynamic_rendering_ = false;
+    // clear_enable_         = false;
+    graphics_pipeline_ = VK_NULL_HANDLE;
+    // frames_            = nullptr;
+    // frame_semaphores_  = nullptr;
+    min_image_count_   = 2;
+    swapchain_rebuild_ = false;
     // surface_format_       = VK_NULL_HANDLE;
     // present_mode_         = VK_NULL_HANDLE;
     // clear_value_          = VK_NULL_HANDLE;
   }
 
   void init(VkWrapperInitInfo&);
+  void drawFrame();
   void destroy();
 
 private:
@@ -113,35 +97,48 @@ private:
   VkSurfaceKHR             surface_;
   VkSurfaceFormatKHR       surface_format_;
   VkPresentModeKHR         present_mode_; //!
-  //bool                     useDynamic_rendering_;
-  //bool                     clear_enable_;
-  //VkClearValue             clear_value_;
-  //uint32_t                 frame_index_;
-  uint32_t                 image_count_;
-  //uint32_t                 semaphore_index_;
-  VkPipeline               graphics_pipeline_;
-  VkRenderPass             render_pass_;
-  VkPipelineLayout         pipeline_layout_;
-  Frame*                   frames_;
-  VulkanFrameSemaphores*   frame_semaphores_;
-  uint32_t                 min_image_count_;
-  bool                     swapchain_rebuild_;
+  // bool                     useDynamic_rendering_;
+  // bool                     clear_enable_;
+  // VkClearValue             clear_value_;
+  // uint32_t                 frame_index_;
+  uint32_t image_count_;
+  // uint32_t                 semaphore_index_;
+  VkSemaphore                image_available_sem_;
+  VkSemaphore                render_finished_sem_;
+  VkFence                    in_flight_fence_;
+  VkPipeline                 graphics_pipeline_;
+  VkRenderPass               render_pass_;
+  VkPipelineLayout           pipeline_layout_;
+  std::vector<VkFramebuffer> swapchain_framebuffers_;
+  VkCommandPool              command_pool_;
+  VkCommandBuffer            command_buffer_;
+  // Frame*                     frames_;
+  // VulkanFrameSemaphores*     frame_semaphores_;
+  uint32_t min_image_count_;
+  bool     swapchain_rebuild_;
 
   // FUNCTIONS
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   void setupDebugMessenger();
 #endif
+  // Creation
   void createInstance(std::vector<const char*>& instance_extensions);
   void createSurface(GLFWwindow* window);
-  void selectPhysicalDevice(std::vector<const char*>& device_extensions);
   void createLogicalDevice();
   void createSwapChain(GLFWwindow* window);
   void createImageViews();
   void createRenderPass();
   void createGraphicsPipeline();
-  // void createRenderPass();
-  // void createFramebuffers();
+  void createFramebuffers();
   void createCommandPool();
+  void createCommandBuffer();
+  void createSyncObjects();
+
+  // Util
+  void selectPhysicalDevice(std::vector<const char*>& device_extensions);
+
+  // Other
+  void recordCommandBuffer(uint32_t im_index);
 };
 // TODO: ?
 void checkVkResult(VkResult);
