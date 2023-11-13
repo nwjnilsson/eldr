@@ -806,7 +806,9 @@ void VkWrapper::createSyncObjects()
 void VkWrapper::init(VkWrapperInitInfo& init_info)
 {
   createInstance(init_info.instance_extensions);
+#ifdef ELDR_VULKAN_DEBUG_REPORT
   setupDebugMessenger();
+#endif
   createSurface(init_info.window);
   createLogicalDevice(); // Also selects physical device
   createSwapChain(init_info.window);

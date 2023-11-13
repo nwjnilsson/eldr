@@ -9,7 +9,7 @@ public:
   EldrGUI(int width, int height, std::string name)
     : width_{ width }, height_{ height }, window_name_{ name } {};
 
-  ~EldrGUI();
+  //~EldrGUI();
 
   // EldrGUI(const EldrGUI &)            = delete;
   // EldrGUI &operator=(const EldrGUI &) = delete;

@@ -4,7 +4,8 @@ project('eldr', 'cpp',
   default_options : [
     'cpp_std=c++17',      # TODO: bump to 20 once I have a more recent Meson
     'buildtype=debug',
-    'warning_level=2'     # -Wall -Wextra
+    'warning_level=2',    # -Wall -Wextra
+    'b_ndebug=if-release'
     ]
   )
 
