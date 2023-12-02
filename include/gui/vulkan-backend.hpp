@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+const uint8_t MAX_FRAMES_IN_FLIGHT = 2;
+
 namespace eldr {
 namespace vk_wrapper {
 
@@ -38,7 +40,6 @@ struct QueueFamilyIndices {
     return graphics_family.has_value() && present_family.has_value();
   }
 };
-
 
 class VkWrapper {
 public:
@@ -68,6 +69,7 @@ public:
     // surface_format_       = VK_NULL_HANDLE;
     // present_mode_         = VK_NULL_HANDLE;
     // clear_value_          = VK_NULL_HANDLE;
+    current_frame_ = 0;
   }
 
   void init(VkWrapperInitInfo&);
@@ -103,15 +105,16 @@ private:
   // uint32_t                 frame_index_;
   uint32_t image_count_;
   // uint32_t                 semaphore_index_;
-  VkSemaphore                image_available_sem_;
-  VkSemaphore                render_finished_sem_;
-  VkFence                    in_flight_fence_;
-  VkPipeline                 graphics_pipeline_;
-  VkRenderPass               render_pass_;
-  VkPipelineLayout           pipeline_layout_;
-  std::vector<VkFramebuffer> swapchain_framebuffers_;
-  VkCommandPool              command_pool_;
-  VkCommandBuffer            command_buffer_;
+  std::vector<VkSemaphore>     image_available_sem_;
+  std::vector<VkSemaphore>     render_finished_sem_;
+  std::vector<VkFence>         in_flight_fences_;
+  uint32_t                     current_frame_;
+  VkPipeline                   graphics_pipeline_;
+  VkRenderPass                 render_pass_;
+  VkPipelineLayout             pipeline_layout_;
+  std::vector<VkFramebuffer>   swapchain_framebuffers_;
+  VkCommandPool                command_pool_;
+  std::vector<VkCommandBuffer> command_buffers_;
   // Frame*                     frames_;
   // VulkanFrameSemaphores*     frame_semaphores_;
   uint32_t min_image_count_;
@@ -131,7 +134,7 @@ private:
   void createGraphicsPipeline();
   void createFramebuffers();
   void createCommandPool();
-  void createCommandBuffer();
+  void createCommandBuffers();
   void createSyncObjects();
 
   // Util
