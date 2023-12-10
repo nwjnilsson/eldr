@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GLFW/glfw3.h>
 #include <gui/vulkan-backend.hpp>
 
 namespace eldr {
@@ -14,10 +15,12 @@ public:
   // EldrGUI(const EldrGUI &)            = delete;
   // EldrGUI &operator=(const EldrGUI &) = delete;
 
+  void display();
+  void init();
+  void terminate();
+
   inline bool shouldClose() { return glfwWindowShouldClose(window_); }
-  void        display();
-  void        init();
-  void        terminate();
+  inline GLFWwindow* getGLFWwindow() { return window_; };
 
 private:
   const int   width_;
@@ -26,8 +29,6 @@ private:
 
   vk_wrapper::VkWrapper vk_wrapper_;
 
-  // TODO: decide whether this pointer should live here or in vulkan_backend.hpp
-  // If it lives in the wrapper, initializing is slightly simpler
   GLFWwindow* window_;
 };
 } // namespace eldr

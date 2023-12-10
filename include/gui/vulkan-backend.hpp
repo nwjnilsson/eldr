@@ -54,8 +54,6 @@ public:
     debug_messenger_ = VK_NULL_HANDLE;
     pipeline_cache_  = VK_NULL_HANDLE;
     descriptor_pool_ = VK_NULL_HANDLE;
-    width_           = 0;
-    height_          = 0;
     swapchain_       = VK_NULL_HANDLE;
     surface_         = VK_NULL_HANDLE;
     render_pass_     = VK_NULL_HANDLE;
@@ -89,8 +87,7 @@ private:
   VkDescriptorPool         descriptor_pool_;
 
   // WINDOW RELATED
-  int                      width_;  //!
-  int                      height_; //!
+  GLFWwindow*              window_;
   VkSwapchainKHR           swapchain_;
   std::vector<VkImage>     swapchain_images_;
   std::vector<VkImageView> swapchain_image_views_;
@@ -126,9 +123,11 @@ private:
 #endif
   // Creation
   void createInstance(std::vector<const char*>& instance_extensions);
-  void createSurface(GLFWwindow* window);
+  void createSurface();
   void createLogicalDevice();
-  void createSwapChain(GLFWwindow* window);
+  void createSwapchain();
+  void cleanupSwapchain();
+  void recreateSwapchain();
   void createImageViews();
   void createRenderPass();
   void createGraphicsPipeline();

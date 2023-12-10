@@ -9,8 +9,6 @@
 #include <set>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
-
-#include <gui/gui.hpp>
 #include <vulkan/vulkan_core.h>
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
@@ -396,7 +394,7 @@ VkPresentModeKHR selectSwapPresentMode(
   return VK_PRESENT_MODE_FIFO_KHR; // guaranteed to exist (vertical sync)
 }
 
-VkExtent2D selectSwapExtent(GLFWwindow*                     window,
+VkExtent2D selectSwapExtent(GLFWwindow*                     window_,
                             const VkSurfaceCapabilitiesKHR& capabilities)
 {
   // Match the resolution of the current window, unless the value is the max
@@ -407,7 +405,7 @@ VkExtent2D selectSwapExtent(GLFWwindow*                     window,
   }
   else {
     int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
+    glfwGetFramebufferSize(window_, &width, &height);
 
     VkExtent2D extent = { static_cast<uint32_t>(width),
                           static_cast<uint32_t>(height) };
@@ -420,13 +418,13 @@ VkExtent2D selectSwapExtent(GLFWwindow*                     window,
   }
 }
 
-void VkWrapper::createSwapChain(GLFWwindow* window)
+void VkWrapper::createSwapchain()
 {
   SwapChainSupportDetails swapchain_support =
     swapChainSupportDetails(physical_device_, surface_);
   surface_format_   = selectSwapSurfaceFormat(swapchain_support.formats);
   present_mode_     = selectSwapPresentMode(swapchain_support.present_modes);
-  VkExtent2D extent = selectSwapExtent(window, swapchain_support.capabilities);
+  VkExtent2D extent = selectSwapExtent(window_, swapchain_support.capabilities);
 
   // TODO: keep this image count?
   min_image_count_ = swapchain_support.capabilities.minImageCount + 1;
@@ -475,6 +473,25 @@ void VkWrapper::createSwapChain(GLFWwindow* window)
                           swapchain_images_.data());
   swapchain_extent_       = extent;
   swapchain_image_format_ = surface_format_.format;
+}
+
+void VkWrapper::cleanupSwapchain()
+{
+  for (size_t i = 0; i < swapchain_framebuffers_.size(); ++i)
+    vkDestroyFramebuffer(device_, swapchain_framebuffers_[i], allocator_);
+  for (size_t i = 0; i < swapchain_image_views_.size(); ++i)
+    vkDestroyImageView(device_, swapchain_image_views_[i], allocator_);
+
+  vkDestroySwapchainKHR(device_, swapchain_, allocator_);
+}
+
+void VkWrapper::recreateSwapchain()
+{
+  vkDeviceWaitIdle(device_);
+  cleanupSwapchain();
+  createSwapchain();
+  createImageViews();
+  createFramebuffers();
 }
 
 void VkWrapper::createImageViews()
@@ -778,10 +795,10 @@ void VkWrapper::createCommandBuffers()
     throwVkErr("Failed to create command buffer!");
 }
 
-void VkWrapper::createSurface(GLFWwindow* window)
+void VkWrapper::createSurface()
 {
   // Create surface
-  if (glfwCreateWindowSurface(instance_, window, allocator_, &surface_) !=
+  if (glfwCreateWindowSurface(instance_, window_, allocator_, &surface_) !=
       VK_SUCCESS)
     throwVkErr("Failed to create window surface!");
 }
@@ -812,13 +829,14 @@ void VkWrapper::createSyncObjects()
 
 void VkWrapper::init(VkWrapperInitInfo& init_info)
 {
+  window_ = init_info.window;
   createInstance(init_info.instance_extensions);
 #ifdef ELDR_VULKAN_DEBUG_REPORT
   setupDebugMessenger();
 #endif
-  createSurface(init_info.window);
+  createSurface();
   createLogicalDevice(); // Also selects physical device
-  createSwapChain(init_info.window);
+  createSwapchain();
   createImageViews();
   createRenderPass();
   createGraphicsPipeline();
@@ -841,17 +859,12 @@ void VkWrapper::destroy()
 
   vkDestroyCommandPool(device_, command_pool_, allocator_);
 
-  for (auto& framebuffer : swapchain_framebuffers_)
-    vkDestroyFramebuffer(device_, framebuffer, allocator_);
+  cleanupSwapchain();
 
   vkDestroyPipeline(device_, graphics_pipeline_, allocator_);
   vkDestroyPipelineLayout(device_, pipeline_layout_, allocator_);
   vkDestroyRenderPass(device_, render_pass_, allocator_);
 
-  for (auto& image_view : swapchain_image_views_)
-    vkDestroyImageView(device_, image_view, allocator_);
-
-  vkDestroySwapchainKHR(device_, swapchain_, allocator_);
   vkDestroyDescriptorPool(device_, descriptor_pool_, allocator_);
   vkDestroySurfaceKHR(instance_, surface_, allocator_);
   vkDestroyDevice(device_, allocator_);
@@ -873,7 +886,8 @@ void VkWrapper::recordCommandBuffer(uint32_t image_index)
   command_buffer_info.flags = 0;
   command_buffer_info.pInheritanceInfo = nullptr;
 
-  if (vkBeginCommandBuffer(command_buffers_[current_frame_], &command_buffer_info) != VK_SUCCESS)
+  if (vkBeginCommandBuffer(command_buffers_[current_frame_],
+                           &command_buffer_info) != VK_SUCCESS)
     throwVkErr("Failed to create command buffer!");
 
   VkRenderPassBeginInfo render_pass_info{};
@@ -890,8 +904,8 @@ void VkWrapper::recordCommandBuffer(uint32_t image_index)
   vkCmdBeginRenderPass(command_buffers_[current_frame_], &render_pass_info,
                        VK_SUBPASS_CONTENTS_INLINE);
 
-  vkCmdBindPipeline(command_buffers_[current_frame_], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    graphics_pipeline_);
+  vkCmdBindPipeline(command_buffers_[current_frame_],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
   VkViewport viewport{};
   viewport.x        = 0.0f;
   viewport.y        = 0.0f;
@@ -919,8 +933,9 @@ void VkWrapper::drawFrame()
   vkResetFences(device_, 1, &in_flight_fences_[current_frame_]);
 
   uint32_t image_index;
-  vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX, image_available_sem_[current_frame_],
-                        VK_NULL_HANDLE, &image_index);
+  vkAcquireNextImageKHR(device_, swapchain_, UINT64_MAX,
+                        image_available_sem_[current_frame_], VK_NULL_HANDLE,
+                        &image_index);
   vkResetCommandBuffer(command_buffers_[current_frame_], 0);
   recordCommandBuffer(image_index);
 
