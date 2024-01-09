@@ -1,7 +1,7 @@
-#include <core/util.hpp>
+#include <eldr/core/util.hpp>
+#include <eldr/gui/gui.hpp>
+#include <eldr/gui/vulkan-wrapper.hpp>
 #include <cstdint>
-#include <gui/gui.hpp>
-#include <gui/vulkan-backend.hpp>
 #include <imgui.h>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
@@ -15,7 +15,11 @@ static void glfwErrorCallback(int error, const char* description)
   fprintf(stderr, "GLFW Error %d: %s", error, description);
 }
 
-void EldrGUI::display() { vk_wrapper_.drawFrame(); }
+void EldrGUI::display(Scene scene)
+{
+  (void) scene;
+  vk_wrapper_.drawFrame();
+}
 
 void EldrGUI::init()
 {

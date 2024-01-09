@@ -1,4 +1,4 @@
-src = ['gui.cpp', 'vulkan-backend.cpp']
+src = ['gui.cpp', 'vulkan-wrapper.cpp']
 eldr_gui = static_library(
   'eldr-gui',
   sources : src,

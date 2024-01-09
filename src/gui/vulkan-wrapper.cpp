@@ -1,9 +1,10 @@
-#include <core/util.hpp>
 #include <cstdint>
 #include <cstdlib>
+#include <eldr/core/util.hpp>
+#include <eldr/gui/vulkan-wrapper.hpp>
 #include <filesystem>
 #include <fstream>
-#include <gui/vulkan-backend.hpp>
+#include <glm/glm.hpp>
 #include <iostream>
 #include <limits>
 #include <set>
@@ -15,6 +16,7 @@
 
 namespace eldr {
 namespace vk_wrapper {
+
 
 void throwVkErr(std::string msg)
 {
@@ -583,6 +585,35 @@ VkShaderModule createShaderModule(VkDevice&                device,
   return shader_module;
 }
 
+struct VkVertex {
+  glm::vec2 pos;
+  glm::vec3 color;
+
+  static VkVertexInputBindingDescription getBindingDescription()
+  {
+    VkVertexInputBindingDescription binding_description{};
+    binding_description.binding   = 0;
+    binding_description.stride    = sizeof(VkVertex);
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return binding_description;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2>
+  getAttributeDescriptions()
+  {
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+    attributeDescriptions[0].binding  = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset   = offsetof(VkVertex, pos);
+    attributeDescriptions[1].binding  = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset   = offsetof(VkVertex, color);
+    return attributeDescriptions;
+  }
+};
+
 void VkWrapper::createGraphicsPipeline()
 {
   std::vector<char> vert_shader = loadShader("vertex");
@@ -619,12 +650,16 @@ void VkWrapper::createGraphicsPipeline()
                                                       frag_shader_stage_ci };
 
   VkPipelineVertexInputStateCreateInfo vertex_input_info{};
+  auto binding_description    = VkVertex::getBindingDescription();
+  auto attribute_descriptions = VkVertex::getAttributeDescriptions();
   vertex_input_info.sType =
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertex_input_info.vertexBindingDescriptionCount   = 0;
-  vertex_input_info.pVertexBindingDescriptions      = nullptr; // Optional
-  vertex_input_info.vertexAttributeDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions    = nullptr; // Optional
+  vertex_input_info.vertexBindingDescriptionCount = 1;
+  vertex_input_info.pVertexBindingDescriptions    = &binding_description;
+  vertex_input_info.vertexAttributeDescriptionCount =
+    static_cast<uint32_t>(attribute_descriptions.size());
+  vertex_input_info.pVertexAttributeDescriptions =
+    attribute_descriptions.data();
 
   VkPipelineInputAssemblyStateCreateInfo input_assembly{};
   input_assembly.sType =

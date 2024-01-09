@@ -1,7 +1,8 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
-#include <gui/vulkan-backend.hpp>
+#include <eldr/render/scene.hpp>
+#include <eldr/gui/vulkan-wrapper.hpp>
 
 namespace eldr {
 
@@ -15,7 +16,7 @@ public:
   // EldrGUI(const EldrGUI &)            = delete;
   // EldrGUI &operator=(const EldrGUI &) = delete;
 
-  void display();
+  void display(Scene scene);
   void init();
   void terminate();
 

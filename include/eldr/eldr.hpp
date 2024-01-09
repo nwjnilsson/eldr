@@ -1,5 +1,5 @@
 #pragma once
-#include <gui/gui.hpp>
+#include <eldr/gui/gui.hpp>
 
 namespace eldr {
 
@@ -13,7 +13,8 @@ private:
   static constexpr int WIDTH  = 1280;
   static constexpr int HEIGHT = 720;
   // Initializing and cleaning up of GUI happens in constructor/destructor
-  EldrGUI              gui_{ WIDTH, HEIGHT, "Eldr" };
+  EldrGUI gui_{ WIDTH, HEIGHT, "Eldr" };
+  Scene   scene_;
 };
 
 } // Namespace eldr
