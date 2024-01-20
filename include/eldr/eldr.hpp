@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/gui/gui.hpp>
+#include <eldr/render/scene.hpp>
 
 namespace eldr {
 

@@ -1,4 +1,3 @@
-#include <array>
 
 namespace eldr {
 

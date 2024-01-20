@@ -9,7 +9,9 @@
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+#include <array>
 #include <cstring> // TODO: remove if not using memset
+#include <glm/glm.hpp>
 #include <optional>
 #include <string>
 #include <vector>
@@ -19,27 +21,40 @@ const uint8_t MAX_FRAMES_IN_FLIGHT = 2;
 namespace eldr {
 namespace vk_wrapper {
 
+struct VkVertex {
+  glm::vec2 pos;
+  glm::vec3 color;
+
+  static VkVertexInputBindingDescription getBindingDescription()
+  {
+    VkVertexInputBindingDescription binding_description{};
+    binding_description.binding   = 0;
+    binding_description.stride    = sizeof(VkVertex);
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return binding_description;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2>
+  getAttributeDescriptions()
+  {
+    std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions{};
+    attribute_descriptions[0].binding  = 0;
+    attribute_descriptions[0].location = 0;
+    attribute_descriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descriptions[0].offset   = offsetof(VkVertex, pos);
+    attribute_descriptions[1].binding  = 0;
+    attribute_descriptions[1].location = 1;
+    attribute_descriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descriptions[1].offset   = offsetof(VkVertex, color);
+    return attribute_descriptions;
+  }
+};
+
 struct VkWrapperInitInfo {
   GLFWwindow*               window;
-  int                       width;
-  int                       height;
   std::vector<const char*>& instance_extensions;
 };
 
-struct SwapChainSupportDetails {
-  VkSurfaceCapabilitiesKHR        capabilities;
-  std::vector<VkSurfaceFormatKHR> formats;
-  std::vector<VkPresentModeKHR>   present_modes;
-};
-
-struct QueueFamilyIndices {
-  std::optional<uint32_t> graphics_family;
-  std::optional<uint32_t> present_family;
-  bool                    isComplete()
-  {
-    return graphics_family.has_value() && present_family.has_value();
-  }
-};
 
 class VkWrapper {
 public:
@@ -114,14 +129,12 @@ private:
   std::vector<VkCommandBuffer> command_buffers_;
   // Frame*                     frames_;
   // VulkanFrameSemaphores*     frame_semaphores_;
-  uint32_t min_image_count_;
-  bool     swapchain_rebuild_;
+  VkBuffer       vertex_buffer_;
+  VkDeviceMemory vertex_buffer_memory_;
+  uint32_t       min_image_count_;
+  bool           swapchain_rebuild_;
 
   // FUNCTIONS
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-  void setupDebugMessenger();
-#endif
-  // Creation
   void createInstance(std::vector<const char*>& instance_extensions);
   void createSurface();
   void createLogicalDevice();
@@ -133,17 +146,11 @@ private:
   void createGraphicsPipeline();
   void createFramebuffers();
   void createCommandPool();
+  void createVertexBuffer();
   void createCommandBuffers();
   void createSyncObjects();
-
-  // Util
-  void selectPhysicalDevice(std::vector<const char*>& device_extensions);
-
-  // Other
   void recordCommandBuffer(uint32_t im_index);
 };
-// TODO: ?
-void checkVkResult(VkResult);
 
 } // Namespace vk_wrapper
 } // Namespace eldr

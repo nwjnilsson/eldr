@@ -1,10 +1,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <eldr/core/util.hpp>
-#include <eldr/gui/vulkan-wrapper.hpp>
+#include <eldr/render/vulkan-wrapper.hpp>
 #include <filesystem>
 #include <fstream>
-#include <glm/glm.hpp>
 #include <iostream>
 #include <limits>
 #include <set>
@@ -17,7 +16,27 @@
 namespace eldr {
 namespace vk_wrapper {
 
+const std::vector<VkVertex> vertices = {
+  { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+  { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
+  { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
+};
+struct SwapChainSupportDetails {
+  VkSurfaceCapabilitiesKHR        capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR>   present_modes;
+};
 
+struct QueueFamilyIndices {
+  std::optional<uint32_t> graphics_family;
+  std::optional<uint32_t> present_family;
+  bool                    isComplete()
+  {
+    return graphics_family.has_value() && present_family.has_value();
+  }
+};
+
+// HELPERS AND DEVICE QUERYING FUNCTIONS
 void throwVkErr(std::string msg)
 {
   throw std::runtime_error("[VULKAN]: " + msg);
@@ -95,119 +114,6 @@ bool checkValidationLayerSupport(
 
   return true;
 }
-
-void VkWrapper::createInstance(std::vector<const char*>& instance_extensions)
-{
-  VkApplicationInfo app_info{};
-  app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  app_info.pApplicationName   = "Eldr";
-  app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName        = "No Engine";
-  app_info.engineVersion      = VK_MAKE_VERSION(0, 0, 1);
-  app_info.apiVersion         = VK_API_VERSION_1_2;
-
-  VkResult err;
-  {
-    // Create Vulkan instance
-    VkInstanceCreateInfo create_info = {};
-    create_info.sType                = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.pApplicationInfo     = &app_info;
-
-    uint32_t                           properties_count;
-    std::vector<VkExtensionProperties> properties;
-    vkEnumerateInstanceExtensionProperties(nullptr, &properties_count, nullptr);
-    properties.resize(properties_count);
-    err = vkEnumerateInstanceExtensionProperties(nullptr, &properties_count,
-                                                 properties.data());
-    checkVkResult(err);
-
-    if (isAvailableVkExtension(
-          properties, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
-      instance_extensions.push_back(
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
-#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-    if (isAvailableVkExtension(properties,
-                               VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-      instance_extensions.push_back(
-        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-      create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
-#endif
-    // Enabling validation layers
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-    const std::vector<const char*> validation_layers = {
-      "VK_LAYER_KHRONOS_validation"
-    };
-    if (!checkValidationLayerSupport(validation_layers)) {
-      throwVkErr("Validation layers requested, but not available!");
-    }
-    create_info.enabledLayerCount =
-      static_cast<uint32_t>(validation_layers.size());
-    create_info.ppEnabledLayerNames = validation_layers.data();
-    instance_extensions.push_back(VK_EXT_DEBUG_UTILS_NAME);
-#endif
-
-    create_info.enabledExtensionCount =
-      static_cast<uint32_t>(instance_extensions.size());
-    create_info.ppEnabledExtensionNames = instance_extensions.data();
-
-    err = vkCreateInstance(&create_info, allocator_, &instance_);
-    checkVkResult(err);
-  }
-}
-
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
-  VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
-  VkDebugUtilsMessageTypeFlagsEXT             messageType,
-  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
-{
-  switch (messageSeverity) {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-      spdlog::trace("[VULKAN]: {}", pCallbackData->pMessage);
-      break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-      spdlog::info("[VULKAN]: {}", pCallbackData->pMessage);
-      break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-      spdlog::warn("[VULKAN]: {}", pCallbackData->pMessage);
-      break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-      spdlog::error("[VULKAN]: {}", pCallbackData->pMessage);
-      break;
-    default:
-      break;
-  }
-
-  return VK_FALSE;
-}
-
-void VkWrapper::setupDebugMessenger()
-{
-  // Debug report callback
-  VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{};
-
-  debug_report_ci.sType =
-    VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  debug_report_ci.messageSeverity =
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  debug_report_ci.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  debug_report_ci.pfnUserCallback = vkDebugReportCallback;
-  debug_report_ci.pUserData       = nullptr; // Optional
-
-  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance_, "vkCreateDebugUtilsMessengerEXT");
-  EASSERT(func != nullptr);
-  VkResult err =
-    func(instance_, &debug_report_ci, allocator_, &debug_messenger_);
-  checkVkResult(err);
-}
-#endif
 
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device,
                                      VkSurfaceKHR     surface)
@@ -293,85 +199,6 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
          !swapchain_support.present_modes.empty();
 }
 
-void VkWrapper::selectPhysicalDevice(
-  std::vector<const char*>& device_extensions)
-{
-  uint32_t gpu_count;
-  VkResult err = vkEnumeratePhysicalDevices(instance_, &gpu_count, nullptr);
-  checkVkResult(err);
-
-  if (gpu_count == 0)
-    throwVkErr("No compatible device found");
-
-  std::vector<VkPhysicalDevice> gpus;
-  gpus.resize(gpu_count);
-  err = vkEnumeratePhysicalDevices(instance_, &gpu_count, gpus.data());
-  checkVkResult(err);
-
-  // Find discrete GPU if available
-  // It is possible to add additional criteria for what is to be considered
-  // a suitable GPU. The Vulkan programming tutorial suggests implementing a
-  // scoring system where each usable property of a device would add to its
-  // overall score, and when the properties of all devices have been
-  // evaluated, the highest scoring device is considered the most suitable
-  // one. For now I don't really think it matters. Just use a discrete GPU if
-  // it's available.
-  for (VkPhysicalDevice& device : gpus) {
-    VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(device, &props);
-    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-        isDeviceSuitable(device, surface_, device_extensions)) {
-      physical_device_ = device;
-      return;
-    }
-  }
-  // Return integrated GPU if no discrete one is present
-  physical_device_ = gpus[0];
-}
-
-void VkWrapper::createLogicalDevice()
-{
-  std::vector<const char*> device_extensions;
-  device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-  device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-#endif
-
-  selectPhysicalDevice(device_extensions);
-
-  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
-  std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-  std::set<uint32_t> unique_queue_families = { indices.graphics_family.value(),
-                                               indices.present_family.value() };
-
-  float queue_priority = 1.0f;
-  for (uint32_t queue_family : unique_queue_families) {
-    VkDeviceQueueCreateInfo queue_create_info{};
-    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_create_info.queueFamilyIndex = queue_family;
-    queue_create_info.queueCount       = 1;
-    queue_create_info.pQueuePriorities = &queue_priority;
-    queue_create_infos.push_back(queue_create_info);
-  }
-
-  // Logical device creation
-  VkDeviceCreateInfo create_info = {};
-  create_info.sType              = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  create_info.queueCreateInfoCount =
-    static_cast<uint32_t>(queue_create_infos.size());
-  create_info.pQueueCreateInfos = queue_create_infos.data();
-  create_info.enabledExtensionCount =
-    static_cast<uint32_t>(device_extensions.size());
-  create_info.ppEnabledExtensionNames = device_extensions.data();
-  VkResult err =
-    vkCreateDevice(physical_device_, &create_info, allocator_, &device_);
-  checkVkResult(err);
-
-  vkGetDeviceQueue(device_, indices.present_family.value(), 0, &present_queue_);
-  vkGetDeviceQueue(device_, indices.graphics_family.value(), 0,
-                   &graphics_queue_);
-}
-
 VkSurfaceFormatKHR selectSwapSurfaceFormat(
   const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
@@ -418,6 +245,215 @@ VkExtent2D selectSwapExtent(GLFWwindow*                     window_,
                  capabilities.maxImageExtent.height);
     return extent;
   }
+}
+
+uint32_t findMemoryType(VkPhysicalDevice device, uint32_t type_filter,
+                        VkMemoryPropertyFlags properties)
+{
+  VkPhysicalDeviceMemoryProperties mem_props;
+  vkGetPhysicalDeviceMemoryProperties(device, &mem_props);
+  for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
+    if (type_filter & (1 << i) &&
+        (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+  throwVkErr("Failed to find suitable memory type!");
+  return -1;
+}
+
+void selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
+                          VkPhysicalDevice&         physical_device,
+                          std::vector<const char*>& device_extensions)
+{
+  uint32_t gpu_count;
+  VkResult err = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
+  checkVkResult(err);
+
+  if (gpu_count == 0)
+    throwVkErr("No compatible device found");
+
+  std::vector<VkPhysicalDevice> gpus;
+  gpus.resize(gpu_count);
+  err = vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.data());
+  checkVkResult(err);
+
+  // Find discrete GPU if available
+  // It is possible to add additional criteria for what is to be considered
+  // a suitable GPU. The Vulkan programming tutorial suggests implementing a
+  // scoring system where each usable property of a device would add to its
+  // overall score, and when the properties of all devices have been
+  // evaluated, the highest scoring device is considered the most suitable
+  // one. For now I don't really think it matters. Just use a discrete GPU if
+  // it's available.
+  for (VkPhysicalDevice& device : gpus) {
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(device, &props);
+    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+        isDeviceSuitable(device, surface, device_extensions)) {
+      physical_device = device;
+      return;
+    }
+  }
+  // Return integrated GPU if no discrete one is present
+  physical_device = gpus[0];
+}
+////////////////////////////////////////////////////////////////////////////////
+
+void VkWrapper::createInstance(std::vector<const char*>& instance_extensions)
+{
+  VkApplicationInfo app_info{};
+  app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  app_info.pApplicationName   = "Eldr";
+  app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
+  app_info.pEngineName        = "No Engine";
+  app_info.engineVersion      = VK_MAKE_VERSION(0, 0, 1);
+  app_info.apiVersion         = VK_API_VERSION_1_2;
+
+  VkResult err;
+  {
+    // Create Vulkan instance
+    VkInstanceCreateInfo create_info = {};
+    create_info.sType                = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.pApplicationInfo     = &app_info;
+
+    uint32_t                           properties_count;
+    std::vector<VkExtensionProperties> properties;
+    vkEnumerateInstanceExtensionProperties(nullptr, &properties_count, nullptr);
+    properties.resize(properties_count);
+    err = vkEnumerateInstanceExtensionProperties(nullptr, &properties_count,
+                                                 properties.data());
+    checkVkResult(err);
+
+    if (isAvailableVkExtension(
+          properties, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+      instance_extensions.push_back(
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
+#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+    if (isAvailableVkExtension(properties,
+                               VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+      instance_extensions.push_back(
+        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+      create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
+#endif
+    // Enabling validation layers
+#ifdef ELDR_VULKAN_DEBUG_REPORT
+    const std::vector<const char*> validation_layers = {
+      "VK_LAYER_KHRONOS_validation"
+    };
+    if (!checkValidationLayerSupport(validation_layers)) {
+      throwVkErr("Validation layers requested, but not available!");
+    }
+    create_info.enabledLayerCount =
+      static_cast<uint32_t>(validation_layers.size());
+    create_info.ppEnabledLayerNames = validation_layers.data();
+    instance_extensions.push_back(VK_EXT_DEBUG_UTILS_NAME);
+#endif
+
+    create_info.enabledExtensionCount =
+      static_cast<uint32_t>(instance_extensions.size());
+    create_info.ppEnabledExtensionNames = instance_extensions.data();
+
+    err = vkCreateInstance(&create_info, allocator_, &instance_);
+    checkVkResult(err);
+  }
+}
+
+#ifdef ELDR_VULKAN_DEBUG_REPORT
+static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
+  VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
+  VkDebugUtilsMessageTypeFlagsEXT             messageType,
+  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+{
+  switch (messageSeverity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+      spdlog::trace("[VULKAN]: {}", pCallbackData->pMessage);
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+      spdlog::info("[VULKAN]: {}", pCallbackData->pMessage);
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+      spdlog::warn("[VULKAN]: {}", pCallbackData->pMessage);
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+      spdlog::error("[VULKAN]: {}", pCallbackData->pMessage);
+      break;
+    default:
+      break;
+  }
+  return VK_FALSE;
+}
+
+void setupDebugMessenger(VkDebugUtilsMessengerEXT& debug_messenger,
+                         VkInstance& instance, VkAllocationCallbacks* allocator)
+{
+  // Debug report callback
+  VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{};
+
+  debug_report_ci.sType =
+    VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  debug_report_ci.messageSeverity =
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  debug_report_ci.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  debug_report_ci.pfnUserCallback = vkDebugReportCallback;
+  debug_report_ci.pUserData       = nullptr; // Optional
+
+  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance, "vkCreateDebugUtilsMessengerEXT");
+  EASSERT(func != nullptr);
+  VkResult err = func(instance, &debug_report_ci, allocator, &debug_messenger);
+  checkVkResult(err);
+}
+#endif
+
+void VkWrapper::createLogicalDevice()
+{
+  std::vector<const char*> device_extensions;
+  device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+  device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
+
+  selectPhysicalDevice(instance_, surface_, physical_device_,
+                       device_extensions);
+
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
+  std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+  std::set<uint32_t> unique_queue_families = { indices.graphics_family.value(),
+                                               indices.present_family.value() };
+
+  float queue_priority = 1.0f;
+  for (uint32_t queue_family : unique_queue_families) {
+    VkDeviceQueueCreateInfo queue_create_info{};
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.queueFamilyIndex = queue_family;
+    queue_create_info.queueCount       = 1;
+    queue_create_info.pQueuePriorities = &queue_priority;
+    queue_create_infos.push_back(queue_create_info);
+  }
+
+  // Logical device creation
+  VkDeviceCreateInfo create_info = {};
+  create_info.sType              = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  create_info.queueCreateInfoCount =
+    static_cast<uint32_t>(queue_create_infos.size());
+  create_info.pQueueCreateInfos = queue_create_infos.data();
+  create_info.enabledExtensionCount =
+    static_cast<uint32_t>(device_extensions.size());
+  create_info.ppEnabledExtensionNames = device_extensions.data();
+  VkResult err =
+    vkCreateDevice(physical_device_, &create_info, allocator_, &device_);
+  checkVkResult(err);
+
+  vkGetDeviceQueue(device_, indices.present_family.value(), 0, &present_queue_);
+  vkGetDeviceQueue(device_, indices.graphics_family.value(), 0,
+                   &graphics_queue_);
 }
 
 void VkWrapper::createSwapchain()
@@ -584,35 +620,6 @@ VkShaderModule createShaderModule(VkDevice&                device,
   }
   return shader_module;
 }
-
-struct VkVertex {
-  glm::vec2 pos;
-  glm::vec3 color;
-
-  static VkVertexInputBindingDescription getBindingDescription()
-  {
-    VkVertexInputBindingDescription binding_description{};
-    binding_description.binding   = 0;
-    binding_description.stride    = sizeof(VkVertex);
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return binding_description;
-  }
-
-  static std::array<VkVertexInputAttributeDescription, 2>
-  getAttributeDescriptions()
-  {
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-    attributeDescriptions[0].binding  = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset   = offsetof(VkVertex, pos);
-    attributeDescriptions[1].binding  = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset   = offsetof(VkVertex, color);
-    return attributeDescriptions;
-  }
-};
 
 void VkWrapper::createGraphicsPipeline()
 {
@@ -862,12 +869,41 @@ void VkWrapper::createSyncObjects()
   }
 }
 
+void VkWrapper::createVertexBuffer()
+{
+  VkBufferCreateInfo buffer_ci{};
+  buffer_ci.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_ci.size        = sizeof(vertices[0]) * vertices.size();
+  buffer_ci.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  if (vkCreateBuffer(device_, &buffer_ci, allocator_, &vertex_buffer_))
+    throwVkErr("Failed to create vertex buffer!");
+
+  VkMemoryRequirements mem_requirements;
+  vkGetBufferMemoryRequirements(device_, vertex_buffer_, &mem_requirements);
+  VkMemoryAllocateInfo mem_ai{};
+  mem_ai.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mem_ai.allocationSize  = mem_requirements.size;
+  mem_ai.memoryTypeIndex = findMemoryType(
+    physical_device_, mem_requirements.memoryTypeBits,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  if (vkAllocateMemory(device_, &mem_ai, allocator_, &vertex_buffer_memory_))
+    throwVkErr("Failed to allocate vertex buffer memory!");
+  vkBindBufferMemory(device_, vertex_buffer_, vertex_buffer_memory_, 0);
+
+  void* data;
+  vkMapMemory(device_, vertex_buffer_memory_, 0, buffer_ci.size, 0, &data);
+  memcpy(data, vertices.data(), (size_t) buffer_ci.size);
+  vkUnmapMemory(device_, vertex_buffer_memory_);
+}
+
 void VkWrapper::init(VkWrapperInitInfo& init_info)
 {
   window_ = init_info.window;
   createInstance(init_info.instance_extensions);
 #ifdef ELDR_VULKAN_DEBUG_REPORT
-  setupDebugMessenger();
+  setupDebugMessenger(debug_messenger_, instance_, allocator_);
 #endif
   createSurface();
   createLogicalDevice(); // Also selects physical device
@@ -877,6 +913,7 @@ void VkWrapper::init(VkWrapperInitInfo& init_info)
   createGraphicsPipeline();
   createFramebuffers();
   createCommandPool();
+  createVertexBuffer();
   createCommandBuffers();
   createSyncObjects();
 }
@@ -895,6 +932,8 @@ void VkWrapper::destroy()
   vkDestroyCommandPool(device_, command_pool_, allocator_);
 
   cleanupSwapchain();
+  vkDestroyBuffer(device_, vertex_buffer_, allocator_);
+  vkFreeMemory(device_, vertex_buffer_memory_, allocator_);
 
   vkDestroyPipeline(device_, graphics_pipeline_, allocator_);
   vkDestroyPipelineLayout(device_, pipeline_layout_, allocator_);
@@ -955,7 +994,16 @@ void VkWrapper::recordCommandBuffer(uint32_t image_index)
   scissor.extent = swapchain_extent_;
   vkCmdSetScissor(command_buffers_[current_frame_], 0, 1, &scissor);
 
-  vkCmdDraw(command_buffers_[current_frame_], 3, 1, 0, 0);
+  vkCmdBindPipeline(command_buffers_[current_frame_],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
+  VkBuffer     vertex_buffers[] = { vertex_buffer_ };
+  VkDeviceSize offsets[]        = { 0 };
+  vkCmdBindVertexBuffers(command_buffers_[current_frame_], 0, 1, vertex_buffers,
+                         offsets);
+
+  vkCmdDraw(command_buffers_[current_frame_],
+      static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
   vkCmdEndRenderPass(command_buffers_[current_frame_]);
   if (vkEndCommandBuffer(command_buffers_[current_frame_]) != VK_SUCCESS)
     throwVkErr("Failed to record command buffer!");

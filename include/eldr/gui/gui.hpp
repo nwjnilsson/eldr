@@ -1,8 +1,7 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-#include <eldr/render/scene.hpp>
-#include <eldr/gui/vulkan-wrapper.hpp>
+#include <eldr/render/vulkan-wrapper.hpp>
+#include <string>
 
 namespace eldr {
 
@@ -16,7 +15,7 @@ public:
   // EldrGUI(const EldrGUI &)            = delete;
   // EldrGUI &operator=(const EldrGUI &) = delete;
 
-  void display(Scene scene);
+  void display();
   void init();
   void terminate();
 
@@ -28,7 +27,7 @@ private:
   const int   height_;
   std::string window_name_;
 
-  vk_wrapper::VkWrapper vk_wrapper_;
+  vk_wrapper::VkWrapper vk_wrapper_; // TODO: move
 
   GLFWwindow* window_;
 };

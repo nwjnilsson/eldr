@@ -10,7 +10,7 @@ void EldrApp::run()
   while (!gui_.shouldClose()) {
     glfwPollEvents();
     scene_.update();
-    gui_.display(scene_);
+    gui_.display();
   }
   gui_.terminate();
 }
