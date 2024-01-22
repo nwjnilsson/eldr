@@ -1,6 +1,3 @@
 #pragma once
-
-#ifndef EASSERT
 #include <assert.h>
-#define EASSERT(_expr)  assert(_expr)
-#endif
+#include <spdlog/spdlog.h>

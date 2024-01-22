@@ -1,26 +1,21 @@
-#include <cstdint>
-#include <cstdlib>
 #include <eldr/core/util.hpp>
 #include <eldr/render/vulkan-wrapper.hpp>
+
+#include <glm/glm.hpp>
+#include <vulkan/vulkan_core.h>
+
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <limits>
+#include <optional>
 #include <set>
-#include <spdlog/spdlog.h>
-#include <stdexcept>
-#include <vulkan/vulkan_core.h>
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 
 namespace eldr {
-namespace vk_wrapper {
+namespace render {
 
-const std::vector<VkVertex> vertices = {
-  { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-  { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
-  { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
-};
+// TYPES
 struct SwapChainSupportDetails {
   VkSurfaceCapabilitiesKHR        capabilities;
   std::vector<VkSurfaceFormatKHR> formats;
@@ -34,6 +29,134 @@ struct QueueFamilyIndices {
   {
     return graphics_family.has_value() && present_family.has_value();
   }
+};
+
+struct VkData {
+  VkData()
+  {
+    allocator_       = nullptr;
+    instance_        = VK_NULL_HANDLE;
+    physical_device_ = VK_NULL_HANDLE;
+    device_          = VK_NULL_HANDLE;
+    present_queue_   = VK_NULL_HANDLE;
+    graphics_queue_  = VK_NULL_HANDLE;
+    debug_messenger_ = VK_NULL_HANDLE;
+    pipeline_cache_  = VK_NULL_HANDLE;
+    descriptor_pool_ = VK_NULL_HANDLE;
+    swapchain_       = VK_NULL_HANDLE;
+    surface_         = VK_NULL_HANDLE;
+    render_pass_     = VK_NULL_HANDLE;
+    // useDynamic_rendering_ = false;
+    // clear_enable_         = false;
+    graphics_pipeline_ = VK_NULL_HANDLE;
+    // frames_            = nullptr;
+    // frame_semaphores_  = nullptr;
+    min_image_count_   = 2;
+    swapchain_rebuild_ = false;
+    // surface_format_       = VK_NULL_HANDLE;
+    // present_mode_         = VK_NULL_HANDLE;
+    // clear_value_          = VK_NULL_HANDLE;
+    current_frame_ = 0;
+  }
+
+  // DEVICE RELATED
+  VkAllocationCallbacks*   allocator_;
+  VkInstance               instance_;
+  VkPhysicalDevice         physical_device_;
+  VkDevice                 device_;
+  VkQueue                  present_queue_;
+  VkQueue                  graphics_queue_;
+  VkDebugUtilsMessengerEXT debug_messenger_;
+  VkPipelineCache          pipeline_cache_;
+  VkDescriptorPool         descriptor_pool_;
+
+  // WINDOW RELATED
+  GLFWwindow*              window_;
+  VkSwapchainKHR           swapchain_;
+  std::vector<VkImage>     swapchain_images_;
+  std::vector<VkImageView> swapchain_image_views_;
+  VkFormat                 swapchain_image_format_;
+  VkExtent2D               swapchain_extent_;
+  VkSurfaceKHR             surface_;
+  VkSurfaceFormatKHR       surface_format_;
+  VkPresentModeKHR         present_mode_; //!
+  // bool                     useDynamic_rendering_;
+  // bool                     clear_enable_;
+  // VkClearValue             clear_value_;
+  // uint32_t                 frame_index_;
+  uint32_t image_count_;
+  // uint32_t                 semaphore_index_;
+  std::vector<VkSemaphore>     image_available_sem_;
+  std::vector<VkSemaphore>     render_finished_sem_;
+  std::vector<VkFence>         in_flight_fences_;
+  uint32_t                     current_frame_;
+  VkPipeline                   graphics_pipeline_;
+  VkRenderPass                 render_pass_;
+  VkPipelineLayout             pipeline_layout_;
+  std::vector<VkFramebuffer>   swapchain_framebuffers_;
+  VkCommandPool                command_pool_;
+  std::vector<VkCommandBuffer> command_buffers_;
+  // Frame*                     frames_;
+  // VulkanFrameSemaphores*     frame_semaphores_;
+  VkBuffer       vertex_buffer_;
+  VkDeviceMemory vertex_buffer_memory_;
+  uint32_t       min_image_count_;
+  bool           swapchain_rebuild_;
+
+  // FUNCTIONS
+  void setupDebugMessenger();
+  void createInstance(std::vector<const char*>& instance_extensions);
+  void createSurface();
+  void createLogicalDevice();
+  void createSwapchain();
+  void cleanupSwapchain();
+  void recreateSwapchain();
+  void createImageViews();
+  void createRenderPass();
+  void createGraphicsPipeline();
+  void createFramebuffers();
+  void createCommandPool();
+  void createVertexBuffer();
+  void createCommandBuffers();
+  void createSyncObjects();
+  void recordCommandBuffer(uint32_t im_index);
+  void drawFrame();
+  void cleanup();
+};
+
+struct VkVertex {
+  glm::vec2 pos;
+  glm::vec3 color;
+
+  static VkVertexInputBindingDescription getBindingDescription()
+  {
+    VkVertexInputBindingDescription binding_description{};
+    binding_description.binding   = 0;
+    binding_description.stride    = sizeof(VkVertex);
+    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return binding_description;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2>
+  getAttributeDescriptions()
+  {
+    std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions{};
+    attribute_descriptions[0].binding  = 0;
+    attribute_descriptions[0].location = 0;
+    attribute_descriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descriptions[0].offset   = offsetof(VkVertex, pos);
+    attribute_descriptions[1].binding  = 0;
+    attribute_descriptions[1].location = 1;
+    attribute_descriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descriptions[1].offset   = offsetof(VkVertex, color);
+    return attribute_descriptions;
+  }
+};
+
+const std::vector<VkVertex> vertices = {
+  { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+  { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
+  { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
 };
 
 // HELPERS AND DEVICE QUERYING FUNCTIONS
@@ -298,9 +421,10 @@ void selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
   // Return integrated GPU if no discrete one is present
   physical_device = gpus[0];
 }
-////////////////////////////////////////////////////////////////////////////////
 
-void VkWrapper::createInstance(std::vector<const char*>& instance_extensions)
+// ------------------------------- VkData --------------------------------------
+
+void VkData::createInstance(std::vector<const char*>& instance_extensions)
 {
   VkApplicationInfo app_info{};
   app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -386,8 +510,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
   return VK_FALSE;
 }
 
-void setupDebugMessenger(VkDebugUtilsMessengerEXT& debug_messenger,
-                         VkInstance& instance, VkAllocationCallbacks* allocator)
+void VkData::setupDebugMessenger()
 {
   // Debug report callback
   VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{};
@@ -405,14 +528,15 @@ void setupDebugMessenger(VkDebugUtilsMessengerEXT& debug_messenger,
   debug_report_ci.pUserData       = nullptr; // Optional
 
   auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance, "vkCreateDebugUtilsMessengerEXT");
-  EASSERT(func != nullptr);
-  VkResult err = func(instance, &debug_report_ci, allocator, &debug_messenger);
+    instance_, "vkCreateDebugUtilsMessengerEXT");
+  assert(func != nullptr);
+  VkResult err =
+    func(instance_, &debug_report_ci, allocator_, &debug_messenger_);
   checkVkResult(err);
 }
 #endif
 
-void VkWrapper::createLogicalDevice()
+void VkData::createLogicalDevice()
 {
   std::vector<const char*> device_extensions;
   device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -456,7 +580,7 @@ void VkWrapper::createLogicalDevice()
                    &graphics_queue_);
 }
 
-void VkWrapper::createSwapchain()
+void VkData::createSwapchain()
 {
   SwapChainSupportDetails swapchain_support =
     swapChainSupportDetails(physical_device_, surface_);
@@ -513,7 +637,7 @@ void VkWrapper::createSwapchain()
   swapchain_image_format_ = surface_format_.format;
 }
 
-void VkWrapper::cleanupSwapchain()
+void VkData::cleanupSwapchain()
 {
   for (size_t i = 0; i < swapchain_framebuffers_.size(); ++i)
     vkDestroyFramebuffer(device_, swapchain_framebuffers_[i], allocator_);
@@ -523,7 +647,7 @@ void VkWrapper::cleanupSwapchain()
   vkDestroySwapchainKHR(device_, swapchain_, allocator_);
 }
 
-void VkWrapper::recreateSwapchain()
+void VkData::recreateSwapchain()
 {
   vkDeviceWaitIdle(device_);
   cleanupSwapchain();
@@ -532,7 +656,7 @@ void VkWrapper::recreateSwapchain()
   createFramebuffers();
 }
 
-void VkWrapper::createImageViews()
+void VkData::createImageViews()
 {
   swapchain_image_views_.resize(swapchain_images_.size());
   for (size_t i = 0; i < swapchain_images_.size(); i++) {
@@ -560,7 +684,7 @@ void VkWrapper::createImageViews()
   }
 }
 
-void VkWrapper::createRenderPass()
+void VkData::createRenderPass()
 {
   VkAttachmentDescription color_attachment{};
   color_attachment.format         = swapchain_image_format_;
@@ -621,7 +745,7 @@ VkShaderModule createShaderModule(VkDevice&                device,
   return shader_module;
 }
 
-void VkWrapper::createGraphicsPipeline()
+void VkData::createGraphicsPipeline()
 {
   std::vector<char> vert_shader = loadShader("vertex");
   std::vector<char> frag_shader = loadShader("fragment");
@@ -789,7 +913,7 @@ void VkWrapper::createGraphicsPipeline()
   vkDestroyShaderModule(device_, frag_shader_module, allocator_);
 }
 
-void VkWrapper::createFramebuffers()
+void VkData::createFramebuffers()
 {
   swapchain_framebuffers_.resize(swapchain_image_views_.size());
   for (size_t i = 0; i < swapchain_image_views_.size(); ++i) {
@@ -809,7 +933,7 @@ void VkWrapper::createFramebuffers()
   }
 }
 
-void VkWrapper::createCommandPool()
+void VkData::createCommandPool()
 {
   QueueFamilyIndices queue_family_indices =
     findQueueFamilies(physical_device_, surface_);
@@ -823,21 +947,21 @@ void VkWrapper::createCommandPool()
     throwVkErr("Failed to create command pool!");
 }
 
-void VkWrapper::createCommandBuffers()
+void VkData::createCommandBuffers()
 {
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = command_pool_;
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
-  command_buffers_.resize(MAX_FRAMES_IN_FLIGHT);
+  alloc_info.commandBufferCount = max_frames_in_flight;
+  command_buffers_.resize(max_frames_in_flight);
 
   if (vkAllocateCommandBuffers(device_, &alloc_info, command_buffers_.data()) !=
       VK_SUCCESS)
     throwVkErr("Failed to create command buffer!");
 }
 
-void VkWrapper::createSurface()
+void VkData::createSurface()
 {
   // Create surface
   if (glfwCreateWindowSurface(instance_, window_, allocator_, &surface_) !=
@@ -845,11 +969,11 @@ void VkWrapper::createSurface()
     throwVkErr("Failed to create window surface!");
 }
 
-void VkWrapper::createSyncObjects()
+void VkData::createSyncObjects()
 {
-  image_available_sem_.resize(MAX_FRAMES_IN_FLIGHT);
-  render_finished_sem_.resize(MAX_FRAMES_IN_FLIGHT);
-  in_flight_fences_.resize(MAX_FRAMES_IN_FLIGHT);
+  image_available_sem_.resize(max_frames_in_flight);
+  render_finished_sem_.resize(max_frames_in_flight);
+  in_flight_fences_.resize(max_frames_in_flight);
 
   VkSemaphoreCreateInfo semaphore_ci{};
   semaphore_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -858,7 +982,7 @@ void VkWrapper::createSyncObjects()
   fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fence_ci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+  for (size_t i = 0; i < max_frames_in_flight; ++i) {
     if (vkCreateSemaphore(device_, &semaphore_ci, allocator_,
                           &image_available_sem_[i]) != VK_SUCCESS ||
         vkCreateSemaphore(device_, &semaphore_ci, allocator_,
@@ -869,7 +993,7 @@ void VkWrapper::createSyncObjects()
   }
 }
 
-void VkWrapper::createVertexBuffer()
+void VkData::createVertexBuffer()
 {
   VkBufferCreateInfo buffer_ci{};
   buffer_ci.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -898,32 +1022,12 @@ void VkWrapper::createVertexBuffer()
   vkUnmapMemory(device_, vertex_buffer_memory_);
 }
 
-void VkWrapper::init(VkWrapperInitInfo& init_info)
-{
-  window_ = init_info.window;
-  createInstance(init_info.instance_extensions);
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-  setupDebugMessenger(debug_messenger_, instance_, allocator_);
-#endif
-  createSurface();
-  createLogicalDevice(); // Also selects physical device
-  createSwapchain();
-  createImageViews();
-  createRenderPass();
-  createGraphicsPipeline();
-  createFramebuffers();
-  createCommandPool();
-  createVertexBuffer();
-  createCommandBuffers();
-  createSyncObjects();
-}
-
-void VkWrapper::destroy()
+void VkData::cleanup()
 {
   vkDeviceWaitIdle(device_);
 
   // Sync objects
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+  for (size_t i = 0; i < max_frames_in_flight; ++i) {
     vkDestroySemaphore(device_, image_available_sem_[i], allocator_);
     vkDestroySemaphore(device_, render_finished_sem_[i], allocator_);
     vkDestroyFence(device_, in_flight_fences_[i], allocator_);
@@ -953,7 +1057,7 @@ void VkWrapper::destroy()
   vkDestroyInstance(instance_, allocator_);
 }
 
-void VkWrapper::recordCommandBuffer(uint32_t image_index)
+void VkData::recordCommandBuffer(uint32_t image_index)
 {
   VkCommandBufferBeginInfo command_buffer_info{};
   command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1002,14 +1106,14 @@ void VkWrapper::recordCommandBuffer(uint32_t image_index)
                          offsets);
 
   vkCmdDraw(command_buffers_[current_frame_],
-      static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+            static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
   vkCmdEndRenderPass(command_buffers_[current_frame_]);
   if (vkEndCommandBuffer(command_buffers_[current_frame_]) != VK_SUCCESS)
     throwVkErr("Failed to record command buffer!");
 }
 
-void VkWrapper::drawFrame()
+void VkData::drawFrame()
 {
   vkWaitForFences(device_, 1, &in_flight_fences_[current_frame_], VK_TRUE,
                   UINT64_MAX);
@@ -1054,8 +1158,35 @@ void VkWrapper::drawFrame()
 
   vkQueuePresentKHR(present_queue_, &present_info);
 
-  current_frame_ = (current_frame_ + 1) % MAX_FRAMES_IN_FLIGHT;
+  current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }
 
-} // Namespace vk_wrapper
+// ----------------------------- VkWrapper -------------------------------------
+
+VkWrapper::VkWrapper() { vk_data_ = std::make_unique<VkData>(); }
+VkWrapper::~VkWrapper() { vk_data_->cleanup(); }
+
+void VkWrapper::init(VkWrapperInitInfo& init_info)
+{
+  vk_data_->window_ = init_info.window;
+  vk_data_->createInstance(init_info.instance_extensions);
+#ifdef ELDR_VULKAN_DEBUG_REPORT
+  vk_data_->setupDebugMessenger();
+#endif
+  vk_data_->createSurface();
+  vk_data_->createLogicalDevice(); // Also selects physical device
+  vk_data_->createSwapchain();
+  vk_data_->createImageViews();
+  vk_data_->createRenderPass();
+  vk_data_->createGraphicsPipeline();
+  vk_data_->createFramebuffers();
+  vk_data_->createCommandPool();
+  vk_data_->createVertexBuffer();
+  vk_data_->createCommandBuffers();
+  vk_data_->createSyncObjects();
+}
+
+void VkWrapper::drawFrame() { vk_data_->drawFrame(); }
+
+} // namespace render
 } // Namespace eldr

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <eldr/render/vulkan-wrapper.hpp>
+
 #include <string>
 
 namespace eldr {
@@ -19,15 +20,14 @@ public:
   void init();
   void terminate();
 
-  inline bool shouldClose() { return glfwWindowShouldClose(window_); }
+  inline bool        shouldClose() { return glfwWindowShouldClose(window_); }
   inline GLFWwindow* getGLFWwindow() { return window_; };
 
 private:
   const int   width_;
   const int   height_;
   std::string window_name_;
-
-  vk_wrapper::VkWrapper vk_wrapper_; // TODO: move
+  render::VkWrapper vk_wrapper_;
 
   GLFWwindow* window_;
 };

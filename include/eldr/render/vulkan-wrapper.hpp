@@ -1,156 +1,42 @@
 #pragma once
 
-#include <cstdint>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
+// This define will make the glfw3 include also include vulkan.h
 #ifndef GLFW_INCLUDE_VULKAN
 #define GLFW_INCLUDE_VULKAN
 #endif
-
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include <array>
-#include <cstring> // TODO: remove if not using memset
-#include <glm/glm.hpp>
-#include <optional>
-#include <string>
+
+#include <memory>
 #include <vector>
 
-const uint8_t MAX_FRAMES_IN_FLIGHT = 2;
-
 namespace eldr {
-namespace vk_wrapper {
+namespace render {
 
-struct VkVertex {
-  glm::vec2 pos;
-  glm::vec3 color;
+// Constants
+constexpr uint8_t max_frames_in_flight = 2;
 
-  static VkVertexInputBindingDescription getBindingDescription()
-  {
-    VkVertexInputBindingDescription binding_description{};
-    binding_description.binding   = 0;
-    binding_description.stride    = sizeof(VkVertex);
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return binding_description;
-  }
-
-  static std::array<VkVertexInputAttributeDescription, 2>
-  getAttributeDescriptions()
-  {
-    std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions{};
-    attribute_descriptions[0].binding  = 0;
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
-    attribute_descriptions[0].offset   = offsetof(VkVertex, pos);
-    attribute_descriptions[1].binding  = 0;
-    attribute_descriptions[1].location = 1;
-    attribute_descriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
-    attribute_descriptions[1].offset   = offsetof(VkVertex, color);
-    return attribute_descriptions;
-  }
-};
+// fwd
+struct VkData;
+////////////////////////////////////////////////////////////////////////////////
 
 struct VkWrapperInitInfo {
   GLFWwindow*               window;
   std::vector<const char*>& instance_extensions;
 };
 
-
 class VkWrapper {
 public:
-  VkWrapper()
-  {
-    allocator_       = nullptr;
-    instance_        = VK_NULL_HANDLE;
-    physical_device_ = VK_NULL_HANDLE;
-    device_          = VK_NULL_HANDLE;
-    present_queue_   = VK_NULL_HANDLE;
-    graphics_queue_  = VK_NULL_HANDLE;
-    debug_messenger_ = VK_NULL_HANDLE;
-    pipeline_cache_  = VK_NULL_HANDLE;
-    descriptor_pool_ = VK_NULL_HANDLE;
-    swapchain_       = VK_NULL_HANDLE;
-    surface_         = VK_NULL_HANDLE;
-    render_pass_     = VK_NULL_HANDLE;
-    // useDynamic_rendering_ = false;
-    // clear_enable_         = false;
-    graphics_pipeline_ = VK_NULL_HANDLE;
-    // frames_            = nullptr;
-    // frame_semaphores_  = nullptr;
-    min_image_count_   = 2;
-    swapchain_rebuild_ = false;
-    // surface_format_       = VK_NULL_HANDLE;
-    // present_mode_         = VK_NULL_HANDLE;
-    // clear_value_          = VK_NULL_HANDLE;
-    current_frame_ = 0;
-  }
-
-  void init(VkWrapperInitInfo&);
-  void drawFrame();
-  void destroy();
-
-private:
-  // DEVICE RELATED
-  VkAllocationCallbacks*   allocator_;
-  VkInstance               instance_;
-  VkPhysicalDevice         physical_device_;
-  VkDevice                 device_;
-  VkQueue                  present_queue_;
-  VkQueue                  graphics_queue_;
-  VkDebugUtilsMessengerEXT debug_messenger_;
-  VkPipelineCache          pipeline_cache_;
-  VkDescriptorPool         descriptor_pool_;
-
-  // WINDOW RELATED
-  GLFWwindow*              window_;
-  VkSwapchainKHR           swapchain_;
-  std::vector<VkImage>     swapchain_images_;
-  std::vector<VkImageView> swapchain_image_views_;
-  VkFormat                 swapchain_image_format_;
-  VkExtent2D               swapchain_extent_;
-  VkSurfaceKHR             surface_;
-  VkSurfaceFormatKHR       surface_format_;
-  VkPresentModeKHR         present_mode_; //!
-  // bool                     useDynamic_rendering_;
-  // bool                     clear_enable_;
-  // VkClearValue             clear_value_;
-  // uint32_t                 frame_index_;
-  uint32_t image_count_;
-  // uint32_t                 semaphore_index_;
-  std::vector<VkSemaphore>     image_available_sem_;
-  std::vector<VkSemaphore>     render_finished_sem_;
-  std::vector<VkFence>         in_flight_fences_;
-  uint32_t                     current_frame_;
-  VkPipeline                   graphics_pipeline_;
-  VkRenderPass                 render_pass_;
-  VkPipelineLayout             pipeline_layout_;
-  std::vector<VkFramebuffer>   swapchain_framebuffers_;
-  VkCommandPool                command_pool_;
-  std::vector<VkCommandBuffer> command_buffers_;
-  // Frame*                     frames_;
-  // VulkanFrameSemaphores*     frame_semaphores_;
-  VkBuffer       vertex_buffer_;
-  VkDeviceMemory vertex_buffer_memory_;
-  uint32_t       min_image_count_;
-  bool           swapchain_rebuild_;
+  VkWrapper();
+  ~VkWrapper();
 
   // FUNCTIONS
-  void createInstance(std::vector<const char*>& instance_extensions);
-  void createSurface();
-  void createLogicalDevice();
-  void createSwapchain();
-  void cleanupSwapchain();
-  void recreateSwapchain();
-  void createImageViews();
-  void createRenderPass();
-  void createGraphicsPipeline();
-  void createFramebuffers();
-  void createCommandPool();
-  void createVertexBuffer();
-  void createCommandBuffers();
-  void createSyncObjects();
-  void recordCommandBuffer(uint32_t im_index);
+  void init(VkWrapperInitInfo&);
+  void drawFrame();
+
+private:
+  std::unique_ptr<VkData> vk_data_;
 };
 
-} // Namespace vk_wrapper
+} // namespace render
 } // Namespace eldr
