@@ -117,6 +117,9 @@ struct VkData {
   void createFramebuffers();
   void createCommandPool();
   void createVertexBuffer();
+  void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags,
+                    VkBuffer&, VkDeviceMemory&);
+  void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
   void createCommandBuffers();
   void createSyncObjects();
   void recordCommandBuffer(uint32_t im_index);
@@ -167,7 +170,7 @@ void throwVkErr(std::string msg)
 
 void checkVkResult(VkResult result)
 {
-  if (result == 0)
+  if (result == VK_SUCCESS)
     return;
   spdlog::error("[VULKAN] Error: VkResult = %d", result);
   if (result < 0)
@@ -370,7 +373,7 @@ VkExtent2D selectSwapExtent(GLFWwindow*                     window,
   }
 }
 
-uint32_t findMemoryType(VkPhysicalDevice device, uint32_t type_filter,
+uint32_t findMemoryType(VkPhysicalDevice& device, uint32_t type_filter,
                         VkMemoryPropertyFlags properties)
 {
   VkPhysicalDeviceMemoryProperties mem_props;
@@ -990,68 +993,95 @@ void VkData::createSyncObjects()
   }
 }
 
-void VkData::createVertexBuffer()
+void VkData::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                          VkMemoryPropertyFlags properties, VkBuffer& buffer,
+                          VkDeviceMemory& buffer_memory)
 {
   VkBufferCreateInfo buffer_ci{};
   buffer_ci.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buffer_ci.size        = sizeof(vertices[0]) * vertices.size();
-  buffer_ci.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  buffer_ci.size        = size;
+  buffer_ci.usage       = usage;
   buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  if (vkCreateBuffer(device, &buffer_ci, allocator, &vertex_buffer))
-    throwVkErr("Failed to create vertex buffer!");
+
+  if (vkCreateBuffer(device, &buffer_ci, allocator, &buffer) != VK_SUCCESS)
+    throwVkErr("Failed to create buffer!");
 
   VkMemoryRequirements mem_requirements;
-  vkGetBufferMemoryRequirements(device, vertex_buffer, &mem_requirements);
-  VkMemoryAllocateInfo mem_ai{};
-  mem_ai.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mem_ai.allocationSize  = mem_requirements.size;
-  mem_ai.memoryTypeIndex = findMemoryType(
-    physical_device, mem_requirements.memoryTypeBits,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  vkGetBufferMemoryRequirements(device, buffer, &mem_requirements);
 
-  if (vkAllocateMemory(device, &mem_ai, allocator, &vertex_buffer_memory))
-    throwVkErr("Failed to allocate vertex buffer memory!");
-  vkBindBufferMemory(device, vertex_buffer, vertex_buffer_memory, 0);
+  VkMemoryAllocateInfo alloc_info{};
+  alloc_info.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize  = mem_requirements.size;
+  alloc_info.memoryTypeIndex = findMemoryType(
+    physical_device, mem_requirements.memoryTypeBits, properties);
 
-  void* data;
-  vkMapMemory(device, vertex_buffer_memory, 0, buffer_ci.size, 0, &data);
-  memcpy(data, vertices.data(), (size_t) buffer_ci.size);
-  vkUnmapMemory(device, vertex_buffer_memory);
+  if (vkAllocateMemory(device, &alloc_info, allocator, &buffer_memory) !=
+      VK_SUCCESS)
+    throwVkErr("Failed to allocate buffer memory!");
+
+  vkBindBufferMemory(device, buffer, buffer_memory, 0);
 }
 
-void VkData::cleanup()
+void VkData::createVertexBuffer()
 {
-  vkDeviceWaitIdle(device);
+  VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
 
-  // Sync objects
-  for (size_t i = 0; i < max_frames_in_flight; ++i) {
-    vkDestroySemaphore(device, image_available_sem[i], allocator);
-    vkDestroySemaphore(device, render_finished_sem[i], allocator);
-    vkDestroyFence(device, in_flight_fences[i], allocator);
-  }
+  VkBuffer       staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
+  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               staging_buffer, staging_buffer_memory);
 
-  vkDestroyCommandPool(device, command_pool, allocator);
+  void* data;
+  vkMapMemory(device, staging_buffer_memory, 0, buffer_size, 0, &data);
+  memcpy(data, vertices.data(), (size_t) buffer_size);
+  vkUnmapMemory(device, staging_buffer_memory);
 
-  cleanupSwapchain();
-  vkDestroyBuffer(device, vertex_buffer, allocator);
-  vkFreeMemory(device, vertex_buffer_memory, allocator);
+  createBuffer(
+    buffer_size,
+    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer, vertex_buffer_memory);
 
-  vkDestroyPipeline(device, graphics_pipeline, allocator);
-  vkDestroyPipelineLayout(device, pipeline_layout, allocator);
-  vkDestroyRenderPass(device, render_pass, allocator);
+  copyBuffer(staging_buffer, vertex_buffer, buffer_size);
 
-  vkDestroyDescriptorPool(device, descriptor_pool, allocator);
-  vkDestroySurfaceKHR(instance, surface, allocator);
-  vkDestroyDevice(device, allocator);
+  vkDestroyBuffer(device, staging_buffer, allocator);
+  vkFreeMemory(device, staging_buffer_memory, allocator);
+}
 
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance, "vkDestroyDebugUtilsMessengerEXT");
-  if (func != nullptr)
-    func(instance, debug_messenger, allocator);
-#endif
-  // Instance should be destroyed last
-  vkDestroyInstance(instance, allocator);
+// TODO: may want to optimize this function if used often (use fences instead of
+// vkQueueWaitIdle)
+void VkData::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer,
+                        VkDeviceSize size)
+{
+  VkCommandBufferAllocateInfo alloc_info{};
+  alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.commandPool = command_pool;
+  alloc_info.commandBufferCount = 1;
+
+  VkCommandBuffer command_buffer;
+  vkAllocateCommandBuffers(device, &alloc_info, &command_buffer);
+
+  VkCommandBufferBeginInfo begin_info{};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBuffer(command_buffer, &begin_info);
+
+  VkBufferCopy copy_region{}; // There are optional offsets in this struct
+  copy_region.size = size;
+  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+
+  vkEndCommandBuffer(command_buffer);
+
+  VkSubmitInfo submit_info{};
+  submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers    = &command_buffer;
+  vkQueueSubmit(graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphics_queue);
+
+  vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
 
 void VkData::recordCommandBuffer(uint32_t image_index)
@@ -1156,6 +1186,41 @@ void VkData::drawFrame()
   vkQueuePresentKHR(present_queue, &present_info);
 
   current_frame = (current_frame + 1) % max_frames_in_flight;
+}
+
+void VkData::cleanup()
+{
+  vkDeviceWaitIdle(device);
+
+  // Sync objects
+  for (size_t i = 0; i < max_frames_in_flight; ++i) {
+    vkDestroySemaphore(device, image_available_sem[i], allocator);
+    vkDestroySemaphore(device, render_finished_sem[i], allocator);
+    vkDestroyFence(device, in_flight_fences[i], allocator);
+  }
+
+  vkDestroyCommandPool(device, command_pool, allocator);
+
+  cleanupSwapchain();
+  vkDestroyBuffer(device, vertex_buffer, allocator);
+  vkFreeMemory(device, vertex_buffer_memory, allocator);
+
+  vkDestroyPipeline(device, graphics_pipeline, allocator);
+  vkDestroyPipelineLayout(device, pipeline_layout, allocator);
+  vkDestroyRenderPass(device, render_pass, allocator);
+
+  vkDestroyDescriptorPool(device, descriptor_pool, allocator);
+  vkDestroySurfaceKHR(instance, surface, allocator);
+  vkDestroyDevice(device, allocator);
+
+#ifdef ELDR_VULKAN_DEBUG_REPORT
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance, "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr)
+    func(instance, debug_messenger, allocator);
+#endif
+  // Instance should be destroyed last
+  vkDestroyInstance(instance, allocator);
 }
 
 // ----------------------------- VkWrapper -------------------------------------

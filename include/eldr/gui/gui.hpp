@@ -27,6 +27,7 @@ private:
   const int   width_;
   const int   height_;
   std::string window_name_;
+
   render::VkWrapper vk_wrapper_;
 
   GLFWwindow* window_;
