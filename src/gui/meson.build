@@ -1,7 +1,7 @@
 src = ['gui.cpp']
-eldr_gui = static_library(
+eldr_gui = library(
   'eldr-gui',
   sources : src,
   include_directories : [include, inc_imgui],
   dependencies : [libglfw],
-  link_with : [imgui])
+  link_with : [imgui, eldr_render])

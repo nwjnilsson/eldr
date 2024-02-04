@@ -1,5 +1,3 @@
-libglfw = dependency('glfw3')
-libvulkan = dependency('vulkan')
 subdir('render')
 subdir('gui')
 subdir('eldr')

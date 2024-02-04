@@ -1,6 +1,6 @@
 src = ['scene.cpp', 'vulkan-wrapper.cpp']
-eldr_render = static_library(
+eldr_render = library(
   'eldr-render',
   sources : src,
   include_directories : [include],
-  dependencies : [libglfw, libvulkan])
+  dependencies : [libglfw, libvulkan, libspdlog])

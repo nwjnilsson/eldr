@@ -1,6 +1,10 @@
 inc_cxxopts = include_directories('cxxopts/include')
+
+# ------------------------------------------------------------------------------
+# Build Dear Imgui
+# ------------------------------------------------------------------------------
 inc_imgui = include_directories('imgui')
-imgui = static_library(
+imgui = library(
   'imgui',
   sources : [
     'imgui/imgui.cpp',

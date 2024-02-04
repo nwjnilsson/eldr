@@ -20,8 +20,9 @@ The following software is available on Windows as well, so it should be possible
 to build there as well. Note that MSVC 2013 is not compatible with
 [cxxopts](https://github.com/jarro2783/cxxopts#requirements).
 ```
-$ sudo apt-get install build-essential ninja-build meson python3 python3-pip clang \
-    python3-setuptools python3-wheel libspdlog-dev libglfw3-dev libglm-dev libvulkan-dev
+$ sudo apt-get install build-essential ninja-build meson python3 python3-pip \
+    python3-setuptools python3-wheel libspdlog-dev libglfw3-dev libglm-dev \
+    libvulkan-dev libjpeg-turbo8
 ```
 For debugging:
 ```
