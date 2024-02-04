@@ -17,8 +17,8 @@ build instructions etc. will therefore be Linux(debian)-oriented to begin with.
 
 ## Requirements
 The following software is available on Windows as well, so it should be possible
-to build there as well. Note that MSVC 2013 is not compatible with
-[cxxopts](https://github.com/jarro2783/cxxopts#requirements).
+to build there as well. MSVC 2013 is not compatible with
+[cxxopts](https://github.com/jarro2783/cxxopts#requirements), however.
 ```
 $ sudo apt-get install build-essential ninja-build meson python3 python3-pip \
     python3-setuptools python3-wheel libspdlog-dev libglfw3-dev libglm-dev \
@@ -26,8 +26,12 @@ $ sudo apt-get install build-essential ninja-build meson python3 python3-pip \
 ```
 For debugging:
 ```
-sudo apt install vulkan-validationlayers-dev spirv-tools
+sudo apt-get install vulkan-validationlayers-dev spirv-tools
 ```
+
+Note that:
+- [spdlog](https://github.com/gabime/spdlog/tree/v1.13.0) is a header only
+library but I have been using a compiled library for faster compilation of Eldr.
 
 ## Build
 ### App

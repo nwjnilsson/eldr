@@ -1,9 +1,11 @@
-#include <cstdlib>
-#include <cxxopts.hpp>
 #include <eldr/eldr.hpp>
-#include <iostream>
+
+#include <cxxopts.hpp>
 #include <spdlog/spdlog.h>
+
+#include <iostream>
 #include <stdexcept>
+#include <cstdlib>
 
 int main(int argc, char* argv[])
 {

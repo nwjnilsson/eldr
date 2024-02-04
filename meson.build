@@ -6,13 +6,12 @@ project('eldr', 'cpp',
     'buildtype=debug',
     'warning_level=2',    # -Wall -Wextra
     'b_ndebug=if-release',
-    'default_library=shared'
+    'default_library=static'
     ]
   )
 
 add_global_arguments(
     #'-fmodules-ts',       # Needed to get module support in GCC (didn't work, try in future)
-    '-DSPDLOG_COMPILED_LIB',
     language : 'cpp'
     )
 
@@ -34,8 +33,7 @@ endif
 libglfw       = dependency('glfw3',   version: '>=3.3.2')
 libvulkan     = dependency('vulkan',  version: '>=1.2.131')
 libjpeg       = dependency('libjpeg', version: '>=2.0.3')
-libspdlog     = dependency('spdlog',  version: '>=1.5.0',
-                                      modules: ['spdlog::spdlog'], static: true)
+libspdlog     = dependency('spdlog',  version: '>=1.5.0')
 
 # ------------------------------------------------------------------------------
 # The rest

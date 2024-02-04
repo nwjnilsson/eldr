@@ -1,5 +1,4 @@
 #include <eldr/eldr.hpp>
-#include <spdlog/spdlog.h>
 
 namespace eldr {
 

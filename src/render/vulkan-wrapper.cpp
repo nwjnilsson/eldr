@@ -1,9 +1,8 @@
-#include <eldr/core/util.hpp>
+#include <eldr/core/bitmap.hpp>
+#include <eldr/core/logger.hpp>
+#include <eldr/core/math.hpp>
 #include <eldr/render/vulkan-wrapper.hpp>
 
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan_core.h>
 
 #include <chrono> // TODO: remove once not used by updateUniformBuffer()
@@ -135,6 +134,7 @@ struct VkData {
   void createGraphicsPipeline();
   void createFramebuffers();
   void createCommandPool();
+  void createTextureImage(); // TODO: remove
   void createVertexBuffer();
   void createIndexBuffer();
   void createUniformBuffers();
@@ -1046,6 +1046,18 @@ void VkData::createCommandPool()
     throwVkErr("Failed to create command pool!");
 }
 
+void VkData::createTextureImage()
+{
+
+  const char* env_p = std::getenv("ELDR_DIR");
+  if (env_p == nullptr) {
+    throw std::runtime_error("Environment not set up correctly");
+  }
+  std::string filename = std::string(env_p) + "/resources/texture.jpg";
+
+  // use bitmap class somehow
+}
+
 void VkData::createCommandBuffers()
 {
   VkCommandBufferAllocateInfo alloc_info{};
@@ -1437,6 +1449,7 @@ void VkWrapper::init(VkWrapperInitInfo& init_info)
   vk_data_->createGraphicsPipeline();
   vk_data_->createFramebuffers();
   vk_data_->createCommandPool();
+  vk_data_->createTextureImage(); // TODO: remove
   vk_data_->createVertexBuffer();
   vk_data_->createIndexBuffer();
   vk_data_->createUniformBuffers();
