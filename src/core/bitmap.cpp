@@ -1,4 +1,6 @@
-// TODO: implement libjpeg wrapper for loading and writing jpeg
+/**
+ * Bitmap implementation adapted from the Mitsuba project
+ */
 #include <eldr/core/bitmap.hpp>
 #include <eldr/core/fstream.hpp>
 #include <eldr/core/logger.hpp>
@@ -15,8 +17,9 @@ namespace eldr {
 Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
                const glm::uvec2& size, size_t channel_count,
                const std::vector<std::string>& channel_names, uint8_t* data)
-  : data_(data), component_format_(component_format), pixel_format_(px_format),
-    size_(size)
+  : pixel_format_(px_format), component_format_(component_format), size_(size),
+    data_(data)
+
 {
   if (component_format_ == Struct::Type::UInt8)
     srgb_gamma_ = true;
@@ -24,47 +27,40 @@ Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
     srgb_gamma_ = false;
 
   if (!data_) {
-    data_ = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
+    data_ = std::make_unique<uint8_t[]>(bufferSize());
 
     owns_data_ = true;
   }
 }
 
-/* TODO: Implement
-Bitmap::Bitmap(const Bitmap &bitmap)
-    : Object(), m_pixel_format(bitmap.m_pixel_format),
-      m_component_format(bitmap.m_component_format),
-      m_size(bitmap.m_size),
-      m_struct(new Struct(*bitmap.m_struct)),
-      m_srgb_gamma(bitmap.m_srgb_gamma),
-      m_premultiplied_alpha(bitmap.m_premultiplied_alpha),
-      m_owns_data(true) {
-    size_t size = buffer_size();
-    m_data = std::unique_ptr<uint8_t[]>(new uint8_t[size]);
-    memcpy(m_data.get(), bitmap.m_data.get(), size);
+Bitmap::Bitmap(const Bitmap& bitmap)
+  : pixel_format_(bitmap.pixel_format_),
+    component_format_(bitmap.component_format_), size_(bitmap.size_),
+    struct_(std::make_unique<Struct>(*bitmap.struct_.get())),
+    srgb_gamma_(bitmap.srgb_gamma_),
+    premultiplied_alpha_(bitmap.premultiplied_alpha_), owns_data_(true)
+{
+  size_t size = bufferSize();
+  data_       = std::make_unique<uint8_t[]>(size);
+  memcpy(data_.get(), bitmap.data_.get(), size);
 }
 
-
-Bitmap::Bitmap(Bitmap &&bitmap)
-    : m_data(std::move(bitmap.m_data)),
-      m_pixel_format(bitmap.m_pixel_format),
-      m_component_format(bitmap.m_component_format),
-      m_size(bitmap.m_size),
-      m_struct(std::move(bitmap.m_struct)),
-      m_srgb_gamma(bitmap.m_srgb_gamma),
-      m_premultiplied_alpha(bitmap.m_premultiplied_alpha),
-      m_owns_data(bitmap.m_owns_data) {
+Bitmap::Bitmap(Bitmap&& bitmap)
+  : pixel_format_(bitmap.pixel_format_),
+    component_format_(bitmap.component_format_), size_(bitmap.size_),
+    struct_(std::move(bitmap.struct_)), srgb_gamma_(bitmap.srgb_gamma_),
+    premultiplied_alpha_(bitmap.premultiplied_alpha_),
+    data_(std::move(bitmap.data_)), owns_data_(bitmap.owns_data_)
+{
 }
 
-Bitmap::Bitmap(Stream *stream, FileFormat format) {
-    read(stream, format);
-}
+Bitmap::Bitmap(Stream* stream, FileFormat format) { read(stream, format); }
 
-Bitmap::Bitmap(const fs::path &filename, FileFormat format) {
-    ref<FileStream> fs = new FileStream(filename);
-    read(fs, format);
+Bitmap::Bitmap(const std::filesystem::path& path, FileFormat format)
+{
+  auto fs = std::make_unique<FileStream>(path);
+  read(fs.get(), format);
 }
-*/
 
 Bitmap::~Bitmap()
 {
@@ -118,7 +114,7 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
           "format (%s)!",
           channel_count, (uint32_t) pixel_format_);
 
-  struct_ = std::make_shared<Struct>();
+  struct_ = std::make_unique<Struct>();
   for (auto ch : channels) {
     bool     is_alpha = ch == "A" && pixel_format_ != PixelFormat::MultiChannel;
     uint32_t flags    = (uint32_t) Struct::Flags::Empty;
@@ -172,6 +168,83 @@ size_t Bitmap::bytesPerPixel() const
                                std::to_string((uint32_t) component_format_));
   }
   return result * channelCount();
+}
+
+void Bitmap::read(Stream* stream, FileFormat format)
+{
+  if (format == FileFormat::Auto)
+    format = detectFileFormat(stream);
+
+  switch (format) {
+    // case FileFormat::BMP:
+    //   read_bmp(stream);
+    //   break;
+    case FileFormat::JPEG:
+      readJPEG(stream);
+      break;
+    // case FileFormat::OpenEXR:
+    //   read_exr(stream);
+    //   break;
+    // case FileFormat::RGBE:
+    //   read_rgbe(stream);
+    //   break;
+    // case FileFormat::PFM:
+    //   read_pfm(stream);
+    //   break;
+    // case FileFormat::PPM:
+    //   read_ppm(stream);
+    //   break;
+    // case FileFormat::TGA:
+    //   read_tga(stream);
+    //   break;
+    // case FileFormat::PNG:
+    //   read_png(stream);
+    //   break;
+    default:
+      Throw("Bitmap: Unknown file format!");
+  }
+}
+
+Bitmap::FileFormat Bitmap::detectFileFormat(Stream* stream)
+{
+  FileFormat format = FileFormat::Unknown;
+
+  // Try to automatically detect the file format
+  size_t  pos = stream->tell();
+  uint8_t start[8];
+  stream->read(start, 8);
+
+  //  if (start[0] == 'B' && start[1] == 'M') {
+  //    format = FileFormat::BMP;
+  //  }
+  //  else if (start[0] == '#' && start[1] == '?') {
+  //    format = FileFormat::RGBE;
+  //  }
+  //  else if (start[0] == 'P' && (start[1] == 'F' || start[1] == 'f')) {
+  //    format = FileFormat::PFM;
+  //  }
+  //  else if (start[0] == 'P' && start[1] == '6') {
+  //    format = FileFormat::PPM;
+  //  }
+  if (start[0] == 0xFF && start[1] == 0xD8) {
+    format = FileFormat::JPEG;
+  }
+  //  else if (png_sig_cmp(start, 0, 8) == 0) {
+  //    format = FileFormat::PNG;
+  //  }
+  //  else if (Imf::isImfMagic((const char*) start)) {
+  //    format = FileFormat::OpenEXR;
+  //  }
+  //  else {
+  //    // Check for a TGAv2 file
+  //    char footer[18];
+  //    stream->seek(stream->size() - 18);
+  //    stream->read(footer, 18);
+  //    if (footer[17] == 0 && strncmp(footer, "TRUEVISION-XFILE.", 17) == 0)
+  //      format = FileFormat::TGA;
+  //  }
+  stream->seek(pos);
+  return format;
 }
 
 extern "C" {
@@ -324,10 +397,10 @@ void Bitmap::readJPEG(Stream* stream)
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
 
-  data_      = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
+  data_      = std::make_unique<uint8_t[]>(bufferSize());
   owns_data_ = true;
 
-  std::unique_ptr<uint8_t*[]> scanlines(new uint8_t*[size_.y]);
+  auto scanlines = std::make_unique<uint8_t*[]>(size_.y);
 
   for (size_t i = 0; i < size_.y; ++i)
     scanlines[i] = uint8Data() + row_stride * i;

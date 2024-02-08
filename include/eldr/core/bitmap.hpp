@@ -1,3 +1,6 @@
+/**
+ * Bitmap class adapted from Mitsuba3
+ */
 #pragma once
 
 #include <eldr/core/struct.hpp>
@@ -24,7 +27,7 @@ public:
     MultiChannel
   };
 
-  enum class FileFormat { JPEG, Auto };
+  enum class FileFormat { JPEG, Auto, Unknown };
 
   Bitmap(PixelFormat px_format, Struct::Type component_format,
          const glm::uvec2& size, size_t channel_count,
@@ -38,6 +41,10 @@ public:
 
   /// Move constructor
   Bitmap(Bitmap&& bitmap);
+
+  Bitmap(Stream* stream, FileFormat format);
+
+  virtual ~Bitmap();
 
   /// Return the pixel format of this bitmap
   PixelFormat pixelFormat() const { return pixel_format_; }
@@ -69,13 +76,13 @@ public:
   size_t   pixelCount() const { return (size_t) size_.x * size_.y; }
   size_t   bytesPerPixel() const;
   size_t   bufferSize() const;
+  static FileFormat detectFileFormat(Stream* stream);
 
 protected:
-  virtual ~Bitmap();
   void rebuildStruct(size_t                          channel_count = 0,
                      const std::vector<std::string>& channel_names = {});
   /// Read a file from a stream
-  // void read(Stream* stream, FileFormat format);
+  void read(Stream* stream, FileFormat format);
 
   /// Read a file encoded using the OpenEXR file format
   // void read_exr(Stream* stream);
@@ -120,13 +127,13 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  std::unique_ptr<uint8_t[]> data_;
-  Struct::Type               component_format_;
   PixelFormat                pixel_format_;
+  Struct::Type               component_format_;
   glm::uvec2                 size_;
-  std::shared_ptr<Struct>    struct_;
+  std::unique_ptr<Struct>    struct_;
   bool                       srgb_gamma_;
   bool                       premultiplied_alpha_;
+  std::unique_ptr<uint8_t[]> data_;
   bool                       owns_data_;
 };
 

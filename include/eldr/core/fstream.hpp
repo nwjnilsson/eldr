@@ -1,3 +1,6 @@
+/**
+ * FileStream class adapted from Mitsuba3
+ */
 #pragma once
 
 #include <eldr/core/logger.hpp>
@@ -5,7 +8,8 @@
 
 #include <filesystem>
 #include <stdexcept>
-using path = std::filesystem::path;
+
+namespace fs = std::filesystem;
 
 namespace eldr {
 class EOFException : public std::runtime_error {
@@ -36,7 +40,10 @@ public:
    * Throws if trying to open a non-existing file in with write disabled.
    * Throws an exception if the file cannot be opened / created.
    */
-  FileStream(const path& p, EMode mode = ERead);
+  FileStream(const fs::path& p, EMode mode = ERead);
+
+  /// Virtual destructor
+  virtual ~FileStream();
 
   /** \brief Closes the stream and the underlying file.
    * No further read or write operations are permitted.
@@ -56,7 +63,7 @@ public:
   std::fstream* native() { return file_.get(); }
 
   /// Return the path descriptor associated with this FileStream
-  const path& path() const { return path_; }
+  const fs::path& path() const { return path_; }
 
   // =========================================================================
   //! @{ \name Implementation of the Stream interface
@@ -111,13 +118,9 @@ public:
   /// Returns a string representation
   virtual std::string toString() const override;
 
-protected:
-    /// Protected destructor
-    virtual ~FileStream();
-
 private:
     EMode mode_;
-    ::path path_;
+    fs::path path_;
     mutable std::unique_ptr<std::fstream> file_;
 };
 } // namespace eldr

@@ -1,3 +1,6 @@
+/**
+ * Struct class adapted from Mitsuba3
+ */
 #pragma once
 
 #include <stdexcept>
@@ -226,7 +229,7 @@ public:
   bool operator!=(const Struct& s) const { return !operator==(s); }
 
   /// Return a string representation
-  std::string to_string() const; // override;
+  std::string toString() const; // override;
 
   /// Check whether the given type is an unsigned type
   static bool isUnsigned(Type type)

@@ -1,4 +1,4 @@
-#include <eldr/core/util.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/gui/gui.hpp>
 #include <eldr/render/vulkan-wrapper.hpp>
 
@@ -18,12 +18,12 @@ void EldrGUI::init()
   // Initialize GLFW
   glfwSetErrorCallback(glfwErrorCallback);
   if (!glfwInit()) {
-    throw std::runtime_error("[GLFW]: Failed to initialize");
+    Throw("[GLFW]: Failed to initialize");
   }
 
   // Vulkan pre-check
   if (!glfwVulkanSupported()) {
-    throw std::runtime_error("[GLFW]: Vulkan not supported");
+    Throw("[GLFW]: Vulkan not supported");
   }
 
   // Create GLFW Window with Vulkan context

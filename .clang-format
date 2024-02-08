@@ -24,6 +24,7 @@ DerivePointerBinding: false
 ExperimentalAutoDetectBinPacking: false
 IndentCaseLabels: true
 IndentFunctionDeclarationAfterType: false
+IndentPPDirectives: AfterHash
 IndentWidth:     2
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
