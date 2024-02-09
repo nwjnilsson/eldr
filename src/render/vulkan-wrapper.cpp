@@ -167,6 +167,7 @@ struct VkData {
 struct VkVertex {
   glm::vec2 pos;
   glm::vec3 color;
+  glm::vec2 tex_coord;
 
   static VkVertexInputBindingDescription getBindingDescription()
   {
@@ -177,27 +178,34 @@ struct VkVertex {
     return binding_description;
   }
 
-  static std::array<VkVertexInputAttributeDescription, 2>
+  static std::array<VkVertexInputAttributeDescription, 3>
   getAttributeDescriptions()
   {
-    std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions{};
+    std::array<VkVertexInputAttributeDescription, 3> attribute_descriptions{};
     attribute_descriptions[0].binding  = 0;
     attribute_descriptions[0].location = 0;
     attribute_descriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
     attribute_descriptions[0].offset   = offsetof(VkVertex, pos);
+
     attribute_descriptions[1].binding  = 0;
     attribute_descriptions[1].location = 1;
     attribute_descriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
     attribute_descriptions[1].offset   = offsetof(VkVertex, color);
+
+    attribute_descriptions[2].binding  = 0;
+    attribute_descriptions[2].location = 2;
+    attribute_descriptions[2].format   = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descriptions[2].offset   = offsetof(VkVertex, tex_coord);
+
     return attribute_descriptions;
   }
 };
 
 const std::vector<VkVertex> vertices = {
-  { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
-  { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
-  { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
-  { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
+  { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+  { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+  { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+  { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
 };
 
 const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
@@ -358,7 +366,7 @@ VkSurfaceFormatKHR selectSwapSurfaceFormat(
   const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
   for (const auto& a_format : available_formats) {
-    if (a_format.format == VK_FORMAT_B8G8R8_SRGB &&
+    if (a_format.format == VK_FORMAT_B8G8R8A8_SRGB &&
         a_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return a_format;
     }
@@ -527,18 +535,38 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
   VkDebugUtilsMessageTypeFlagsEXT             messageType,
   const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
+  (void) pUserData; // TODO: figure out how to use
+  std::string type{};
+  switch (messageType) {
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+      type = "general";
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+      type = "validation";
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+      type = "performance";
+      break;
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT:
+      type = "flag bits max"; // what even
+      break;
+    default:
+      type = "invalid";
+      break;
+  }
+
   switch (messageSeverity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-      spdlog::trace("[VULKAN]: {}", pCallbackData->pMessage);
+      spdlog::trace("[VULKAN DBG ({})]: {}", pCallbackData->pMessage, type);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-      spdlog::info("[VULKAN]: {}", pCallbackData->pMessage);
+      spdlog::info("[VULKAN DBG ({})]: {}", pCallbackData->pMessage, type);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-      spdlog::warn("[VULKAN]: {}", pCallbackData->pMessage);
+      spdlog::warn("[VULKAN DBG ({})]: {}", pCallbackData->pMessage, type);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-      spdlog::error("[VULKAN]: {}", pCallbackData->pMessage);
+      spdlog::error("[VULKAN DBG ({})]: {}", pCallbackData->pMessage, type);
       break;
     default:
       break;
@@ -801,10 +829,22 @@ void VkData::createDescriptorSetLayout()
   ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
   ubo_layout_binding.pImmutableSamplers = nullptr; // optional
 
+  VkDescriptorSetLayoutBinding sampler_layout_binding{};
+  sampler_layout_binding.binding         = 1;
+  sampler_layout_binding.descriptorCount = 1;
+  sampler_layout_binding.descriptorType =
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  sampler_layout_binding.pImmutableSamplers = nullptr;
+  sampler_layout_binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+  std::array<VkDescriptorSetLayoutBinding, 2> bindings{
+    ubo_layout_binding, sampler_layout_binding
+  };
+
   VkDescriptorSetLayoutCreateInfo layout_ci{};
   layout_ci.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layout_ci.bindingCount = 1;
-  layout_ci.pBindings    = &ubo_layout_binding;
+  layout_ci.bindingCount = static_cast<uint32_t>(bindings.size());
+  layout_ci.pBindings    = bindings.data();
 
   if (vkCreateDescriptorSetLayout(device, &layout_ci, allocator,
                                   &descriptor_set_layout) != VK_SUCCESS)
@@ -813,15 +853,31 @@ void VkData::createDescriptorSetLayout()
 
 void VkData::createDescriptorPool()
 {
+  /**
+   * From Vulkan tutorial:
+   *
+   * Inadequate descriptor pools are a good example of a problem that the
+   * validation layers will not catch: As of Vulkan 1.1,
+   * vkAllocateDescriptorSets may fail with the error code
+   * VK_ERROR_POOL_OUT_OF_MEMORY if the pool is not sufficiently large, but the
+   * driver may also try to solve the problem internally. This means that
+   * sometimes (depending on hardware, pool size and allocation size) the driver
+   * will let us get away with an allocation that exceeds the limits of our
+   * descriptor pool. Other times, vkAllocateDescriptorSets will fail and return
+   * VK_ERROR_POOL_OUT_OF_MEMORY. This can be particularly frustrating if the
+   * allocation succeeds on some machines, but fails on others.
+   */
 
-  VkDescriptorPoolSize pool_size{};
-  pool_size.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  pool_size.descriptorCount = static_cast<uint32_t>(max_frames_in_flight);
+  std::array<VkDescriptorPoolSize, 2> pool_sizes{};
+  pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  pool_sizes[0].descriptorCount = static_cast<uint32_t>(max_frames_in_flight);
+  pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  pool_sizes[1].descriptorCount = static_cast<uint32_t>(max_frames_in_flight);
 
   VkDescriptorPoolCreateInfo pool_ci{};
   pool_ci.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  pool_ci.poolSizeCount = 1;
-  pool_ci.pPoolSizes    = &pool_size;
+  pool_ci.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
+  pool_ci.pPoolSizes    = pool_sizes.data();
   pool_ci.maxSets       = static_cast<uint32_t>(max_frames_in_flight);
 
   if (vkCreateDescriptorPool(device, &pool_ci, allocator, &descriptor_pool) !=
@@ -851,19 +907,38 @@ void VkData::createDescriptorSets()
     buffer_info.offset = 0;
     buffer_info.range  = sizeof(UniformBufferObject);
 
-    VkWriteDescriptorSet descriptor_write{};
-    descriptor_write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.dstSet          = descriptor_sets[i];
-    descriptor_write.dstBinding      = 0;
-    descriptor_write.dstArrayElement = 0;
-    descriptor_write.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_write.descriptorCount = 1;
-    // Either pBufferInfo or pImageInfo or pTexelBufferView is set
-    descriptor_write.pBufferInfo      = &buffer_info;
-    descriptor_write.pImageInfo       = nullptr;
-    descriptor_write.pTexelBufferView = nullptr;
+    VkDescriptorImageInfo image_info{};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView   = texture_image_view;
+    image_info.sampler     = texture_sampler;
 
-    vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
+    std::array<VkWriteDescriptorSet, 2> descriptor_writes{};
+    descriptor_writes[0].sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[0].dstSet     = descriptor_sets[i];
+    descriptor_writes[0].dstBinding = 0;
+    descriptor_writes[0].dstArrayElement = 0;
+    descriptor_writes[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_writes[0].descriptorCount = 1;
+    // Either pBufferInfo or pImageInfo or pTexelBufferView is set
+    descriptor_writes[0].pBufferInfo      = &buffer_info;
+    descriptor_writes[0].pImageInfo       = nullptr;
+    descriptor_writes[0].pTexelBufferView = nullptr;
+
+    descriptor_writes[1].sType      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[1].dstSet     = descriptor_sets[i];
+    descriptor_writes[1].dstBinding = 1;
+    descriptor_writes[1].dstArrayElement = 0;
+    descriptor_writes[1].descriptorType =
+      VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[1].descriptorCount = 1;
+    // Either pBufferInfo or pImageInfo or pTexelBufferView is set
+    descriptor_writes[1].pBufferInfo      = nullptr;
+    descriptor_writes[1].pImageInfo       = &image_info;
+    descriptor_writes[1].pTexelBufferView = nullptr;
+
+    vkUpdateDescriptorSets(device,
+                           static_cast<uint32_t>(descriptor_writes.size()),
+                           descriptor_writes.data(), 0, nullptr);
   }
 }
 
@@ -1074,6 +1149,10 @@ void VkData::createImage(Bitmap* bitmap, VkImageTiling tiling, VkFormat format,
                          VkMemoryPropertyFlags properties, VkImage& image,
                          VkDeviceMemory& image_memory)
 {
+  VkFormatProperties format_properties;
+  vkGetPhysicalDeviceFormatProperties(physical_device, format,
+                                      &format_properties);
+
   VkImageCreateInfo image_ci{};
   image_ci.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   image_ci.imageType     = VK_IMAGE_TYPE_2D;
@@ -1146,7 +1225,7 @@ void VkData::transitionImageLayout(VkImage image, VkFormat format,
     destination_stage     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   }
   else {
-    throw std::invalid_argument("Unsupported layout transition!");
+    ThrowSpecific(std::invalid_argument, "Unsupported layout transition!");
   }
 
   vkCmdPipelineBarrier(command_buffer, source_stage, destination_stage, 0, 0,
@@ -1184,7 +1263,7 @@ void VkData::createTextureImage()
 
   const char* env_p = std::getenv("ELDR_DIR");
   if (env_p == nullptr) {
-    throw std::runtime_error("Environment not set up correctly");
+    Throw("Environment not set up correctly");
   }
   std::filesystem::path filepath =
     std::string(env_p) + "/resources/texture.jpg";
@@ -1194,16 +1273,10 @@ void VkData::createTextureImage()
   // use bitmap class somehow
   auto bitmap = std::make_unique<Bitmap>(filepath);
 
-  switch (bitmap->pixelFormat()) {
-    case Bitmap::PixelFormat::RGB:
-      texture_image_format = VK_FORMAT_R8G8B8_SRGB;
-      break;
-    case Bitmap::PixelFormat::RGBA:
-      texture_image_format = VK_FORMAT_R8G8B8A8_SRGB;
-      break;
-    default:
-      Throw("Unsupported image format!");
-  }
+  if (bitmap->pixelFormat() == Bitmap::PixelFormat::RGBA)
+    texture_image_format = VK_FORMAT_R8G8B8A8_SRGB;
+  else
+    Throw("Unsupported image format!");
 
   VkDeviceSize image_size =
     bitmap->width() * bitmap->height() * bitmap->channelCount();
@@ -1226,7 +1299,7 @@ void VkData::createTextureImage()
 
   transitionImageLayout(texture_image, texture_image_format,
                         VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
   copyBufferToImage(staging_buffer, texture_image, bitmap->width(),
                     bitmap->height());

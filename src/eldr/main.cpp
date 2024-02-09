@@ -1,11 +1,12 @@
+#include <eldr/core/logger.hpp>
 #include <eldr/eldr.hpp>
 
 #include <cxxopts.hpp>
-#include <spdlog/spdlog.h>
 
-#include <iostream>
-#include <stdexcept>
 #include <cstdlib>
+#include <iostream>
+#include <spdlog/spdlog.h>
+#include <stdexcept>
 
 int main(int argc, char* argv[])
 {
@@ -30,6 +31,8 @@ Running Eldr with the following settings:
             << threads << R"(
 ###########################################
 )";
+
+  spdlog::set_level((spdlog::level::level_enum) SPDLOG_ACTIVE_LEVEL);
 
   // Run Eldr main app
   eldr::EldrApp main_app{};

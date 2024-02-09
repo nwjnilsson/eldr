@@ -98,7 +98,7 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
         std::sort(channels_sorted.begin(), channels_sorted.end());
         for (size_t i = 1; i < channels_sorted.size(); ++i) {
           if (channels_sorted[i] == channels_sorted[i - 1])
-            Throw("Bitmap::rebuild_struct(): duplicate channel name \"%s\"",
+            Throw("Bitmap::rebuildStruct(): duplicate channel name \"%s\"",
                   channels_sorted[i]);
         }
         for (size_t i = 0; i < channel_count; ++i)
@@ -340,10 +340,7 @@ METHODDEF(void) jpeg_error_exit(j_common_ptr cinfo)
 {
   char msg[JMSG_LENGTH_MAX];
   (*cinfo->err->format_message)(cinfo, msg);
-  std::string err{};
-  for (size_t i = 0; i < JMSG_LENGTH_MAX; ++i)
-    err += msg[i];
-  throw std::runtime_error("Critical libjpeg error: " + err);
+  Throw("Critical libjpeg error: %s", msg);
 }
 };
 
@@ -368,6 +365,7 @@ void Bitmap::readJPEG(Stream* stream)
   jbuf.stream                = stream;
 
   jpeg_read_header(&cinfo, TRUE);
+  cinfo.out_color_space = JCS_EXT_RGBA; // Force additional opaque alpha channel
   jpeg_start_decompress(&cinfo);
 
   size_                = glm::uvec2(cinfo.output_width, cinfo.output_height);
@@ -375,17 +373,11 @@ void Bitmap::readJPEG(Stream* stream)
   srgb_gamma_          = true;
   premultiplied_alpha_ = false;
 
-  switch (cinfo.output_components) {
-    case 1:
-      pixel_format_ = PixelFormat::Y;
-      break;
-    case 3:
-      pixel_format_ = PixelFormat::RGB;
-      break;
-    default:
-      throw std::runtime_error(
-        "read_jpeg(): Unsupported number of components!");
-  }
+  if (cinfo.output_components == 4)
+    // Add component to JPEGs so that the data can be given to Vulkan
+    pixel_format_ = PixelFormat::RGBA;
+  else
+    Throw("readJPEG(): Unexpected number of components!");
 
   rebuildStruct();
 
