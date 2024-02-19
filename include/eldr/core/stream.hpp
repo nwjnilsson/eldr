@@ -15,7 +15,7 @@
 #pragma once
 
 #include <eldr/core/logger.hpp>
-#include <eldr/core/array_utils.hpp>
+#include <eldr/core/arrayutils.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <set>

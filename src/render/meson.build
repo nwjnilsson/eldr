@@ -1,4 +1,4 @@
-src = ['scene.cpp', 'vulkan-wrapper.cpp']
+src = ['scene.cpp']
 eldr_render = library(
   'eldr-render',
   sources : src,

@@ -1355,7 +1355,6 @@ VkCommandBuffer VkData::beginSingleTimeCommands()
   alloc_info.commandPool = command_pool;
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = 1;
-  command_buffers.resize(max_frames_in_flight);
 
   VkCommandBuffer command_buffer;
   vkAllocateCommandBuffers(device, &alloc_info, &command_buffer);
@@ -1385,12 +1384,12 @@ void VkData::endSingleTimeCommands(VkCommandBuffer command_buffer)
 
 void VkData::createCommandBuffers()
 {
+  command_buffers.resize(max_frames_in_flight);
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = command_pool;
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = max_frames_in_flight;
-  command_buffers.resize(max_frames_in_flight);
 
   if (vkAllocateCommandBuffers(device, &alloc_info, command_buffers.data()) !=
       VK_SUCCESS)

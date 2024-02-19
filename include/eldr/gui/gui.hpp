@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eldr/render/vulkan-wrapper.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <string>
 
@@ -28,7 +28,7 @@ private:
   const int   height_;
   std::string window_name_;
 
-  render::VkWrapper vk_wrapper_;
+  std::unique_ptr<vk::VulkanWrapper> vk_wrapper_;
 
   GLFWwindow* window_;
 };

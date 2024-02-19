@@ -11,7 +11,7 @@ static void glfwErrorCallback(int error, const char* description)
   fprintf(stderr, "GLFW Error %d: %s", error, description);
 }
 
-void EldrGUI::display() { vk_wrapper_.drawFrame(); }
+void EldrGUI::display() { vk_wrapper_->drawFrame(); }
 
 void EldrGUI::init()
 {
@@ -39,10 +39,7 @@ void EldrGUI::init()
   for (size_t i = 0; i < extensions_count; i++)
     extensions.push_back(glfw_extensions[i]);
 
-  // Initialize Vulkan
-  render::VkWrapperInitInfo info{ .window              = window_,
-                                  .instance_extensions = extensions };
-  vk_wrapper_.init(info);
+  vk_wrapper_ = std::make_unique<vk::VulkanWrapper>(window_, extensions);
 }
 
 void EldrGUI::terminate()
