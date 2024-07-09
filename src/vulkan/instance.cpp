@@ -1,6 +1,5 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/instance.hpp>
-#include <vulkan/vulkan_core.h>
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 

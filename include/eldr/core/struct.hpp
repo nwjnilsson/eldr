@@ -3,9 +3,11 @@
  */
 #pragma once
 
-#include <stdexcept>
+#include <eldr/core/logger.hpp>
 #include <string>
 #include <vector>
+
+#include <spdlog/fmt/ostr.h>
 
 namespace eldr {
 class Struct {
@@ -187,7 +189,7 @@ public:
 #elif defined(BIG_ENDIAN)
     return ByteOrder::LittleEndian;
 #else
-#error Either LITTLE_ENDIAN or BIG_ENDIAN must be defined!
+#  error Either LITTLE_ENDIAN or BIG_ENDIAN must be defined!
 #endif
   };
 
@@ -260,36 +262,8 @@ protected:
   ByteOrder          byte_order_;
 };
 
-constexpr const char* toString(Struct::Type type)
-{
-  switch (type) {
-    case Struct::Type::Invalid:
-      return "Invalid";
-    case Struct::Type::UInt8:
-      return "UInt8";
-    case Struct::Type::Int8:
-      return "Int8";
-    case Struct::Type::UInt16:
-      return "UInt16";
-    case Struct::Type::Int16:
-      return "Int16";
-    case Struct::Type::UInt32:
-      return "UInt32";
-    case Struct::Type::Int32:
-      return "Int32";
-    case Struct::Type::UInt64:
-      return "UInt64";
-    case Struct::Type::Int64:
-      return "Int64";
-    case Struct::Type::Float16:
-      return "Float16";
-    case Struct::Type::Float32:
-      return "Float32";
-    case Struct::Type::Float64:
-      return "Float64";
-    default:
-      throw std::invalid_argument("Struct type not implemented!");
-  }
-}
+extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
 
 } // namespace eldr
+template <>
+struct fmt::formatter<eldr::Struct::Type> : fmt::ostream_formatter {};

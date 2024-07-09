@@ -1,14 +1,14 @@
+#include <eldr/vulkan/command.hpp>
 #include <eldr/vulkan/helpers.hpp>
 #include <eldr/vulkan/image.hpp>
-#include <eldr/vulkan/command.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {
 Image::Image() : image_(VK_NULL_HANDLE), image_memory_(VK_NULL_HANDLE) {}
 
 Image::Image(const Device* device, const ImageInfo& image_info)
-  : device_(device), width_(image_info.bitmap->width()), height_(image_info.bitmap->height())
+  : device_(device), format_(image_info.format),
+    width_(image_info.extent.width), height_(image_info.extent.height)
 {
   VkFormatProperties format_properties;
   vkGetPhysicalDeviceFormatProperties(device_->physical(), image_info.format,
@@ -38,16 +38,39 @@ Image::Image(const Device* device, const ImageInfo& image_info)
   vkGetImageMemoryRequirements(device_->logical(), image_, &mem_requirements);
 
   VkMemoryAllocateInfo alloc_info{};
-  alloc_info.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.allocationSize  = mem_requirements.size;
-  alloc_info.memoryTypeIndex = findMemoryType(
-    device_->physical(), mem_requirements.memoryTypeBits, image_info.properties);
+  alloc_info.sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = mem_requirements.size;
+  alloc_info.memoryTypeIndex =
+    findMemoryType(device_->physical(), mem_requirements.memoryTypeBits,
+                   image_info.properties);
 
   if (vkAllocateMemory(device_->logical(), &alloc_info, nullptr,
                        &image_memory_) != VK_SUCCESS)
     ThrowVk("Failed to allocate memory!");
 
   vkBindImageMemory(device_->logical(), image_, image_memory_, 0);
+}
+
+ImageInfo getImageInfoFromBitmap(const Bitmap& bitmap)
+{
+  VkFormat image_format;
+  if (bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA)
+    image_format = VK_FORMAT_R8G8B8A8_SRGB;
+  else
+    Throw("Unsupported image format!");
+
+  ImageInfo image_info{ .extent = { bitmap.width(), bitmap.height() },
+                        .format = image_format,
+                        .tiling = VK_IMAGE_TILING_OPTIMAL,
+                        .usage  = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                 VK_IMAGE_USAGE_SAMPLED_BIT,
+                        .properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
+  return image_info;
+}
+
+Image::Image(const Device* device, const Bitmap& bitmap)
+  : Image(device, getImageInfoFromBitmap(bitmap))
+{
 }
 
 Image::~Image()
@@ -68,6 +91,7 @@ Image& Image::operator=(Image&& other)
     device_       = other.device_;
     image_        = other.image_;
     image_memory_ = other.image_memory_;
+    format_       = other.format_;
     width_        = other.width_;
     height_       = other.height_;
 
@@ -81,8 +105,8 @@ Image& Image::operator=(Image&& other)
 }
 
 // TODO: figure out command buffers
-void Image::transitionLayout(CommandPool& command_pool, VkImageLayout old_layout,
-                             VkImageLayout new_layout)
+void Image::transitionLayout(CommandPool&  command_pool,
+                             VkImageLayout old_layout, VkImageLayout new_layout)
 {
   SingleTimeCommand command(device_, &command_pool);
 

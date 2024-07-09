@@ -136,8 +136,8 @@ static bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
   // Queue families
   QueueFamilyIndices indices = findQueueFamilies(device, surface);
   // Swap chain
-  SwapChainSupportDetails swapchain_support =
-    swapChainSupportDetails(device, surface);
+  SwapchainSupportDetails swapchain_support =
+    swapchainSupportDetails(device, surface);
 
   VkPhysicalDeviceFeatures supported_features;
   vkGetPhysicalDeviceFeatures(device, &supported_features);

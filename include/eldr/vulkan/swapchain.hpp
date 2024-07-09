@@ -8,39 +8,48 @@
 
 namespace eldr {
 namespace vk {
+struct SwapchainSupportDetails {
+  VkSurfaceCapabilitiesKHR        capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR>   present_modes;
+};
 
 class Swapchain {
 public:
-  Swapchain(const Device*, Surface&, GLFWwindow*);
+  Swapchain(const Device*, Surface&, GLFWwindow* const);
   ~Swapchain();
 
   const VkExtent2D&     extent() const { return extent_; }
   VkFormat              format() const { return image_format_; }
   const VkSwapchainKHR& get() const { return swapchain_; }
   VkSwapchainKHR&       get() { return swapchain_; }
-  const VkFramebuffer&  framebuffer(uint32_t index) const
-  {
-    return framebuffers_[index];
-  }
 
-  void createFramebuffers(RenderPass&);
+  void recreate(Surface& surface, GLFWwindow* const window);
 
 private:
-  void clean();
-  // void recreate();
+  void createSwapchain(Surface&);
+  void createFramebuffers();
+  void createImageViews();
+  void cleanup();
 
 private:
-  // Create info
-  const Device* device_;
+  const Device*           device_;
+  SwapchainSupportDetails support_details_;
+  VkExtent2D              extent_;
+  VkFormat                image_format_;
+  VkSwapchainKHR          swapchain_;
+  uint32_t                min_image_count_;
+  uint32_t                image_count_;
+  Image                   depth_image_;
+  ImageView               depth_image_view_;
 
-  VkSwapchainKHR swapchain_;
-  VkExtent2D     extent_;
-  VkFormat       image_format_;
-  uint32_t       min_image_count_;
-  uint32_t       image_count_;
+  std::vector<VkImage> images_; // needs to be VkImage unless array is converted
+                                // to this type before call to
+                                // vkGetSwapchainImagesKHR
+  std::vector<ImageView> image_views_;
 
-  std::vector<VkImage>       images_;
-  std::vector<ImageView>     image_views_;
+public:
+  RenderPass                 render_pass_;
   std::vector<VkFramebuffer> framebuffers_;
 };
 } // namespace vk

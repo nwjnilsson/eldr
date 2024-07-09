@@ -9,7 +9,7 @@
 namespace eldr {
 namespace vk {
 struct ImageInfo {
-  Bitmap*               bitmap;
+  VkExtent2D            extent;
   VkFormat              format;
   VkImageTiling         tiling;
   VkImageUsageFlags     usage;
@@ -20,6 +20,7 @@ class Image {
 public:
   Image();
   Image(const Device*, const ImageInfo&);
+  Image(const Device*, const Bitmap&);
   ~Image();
 
   Image& operator=(Image&&);
@@ -29,12 +30,14 @@ public:
 
   void copyFromBuffer(const Buffer&, CommandPool&);
 
-  const VkImage& get() const { return image_; }
+  const VkImage&  get() const { return image_; }
+  const VkFormat& format() const { return format_; }
 
 protected:
   const Device* device_;
 
   VkImage        image_;
+  VkFormat       format_;
   VkDeviceMemory image_memory_;
   uint32_t       width_;
   uint32_t       height_;

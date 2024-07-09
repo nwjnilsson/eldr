@@ -1,7 +1,5 @@
-
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/surface.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {

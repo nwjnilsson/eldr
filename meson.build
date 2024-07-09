@@ -31,7 +31,8 @@ elif get_option('buildtype').startswith('debug')
     )
 elif get_option('buildtype').startswith('release')
   add_project_arguments(
-    '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_WARNING',
+    '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_WARN',
+    '-DNDEBUG',
     language : 'cpp'
     )
 endif  
@@ -42,6 +43,7 @@ endif
 libglfw       = dependency('glfw3',   version: '>=3.3.2')
 libvulkan     = dependency('vulkan',  version: '>=1.2.131')
 libjpeg       = dependency('libjpeg', version: '>=2.0.3')
+libpng        = dependency('libpng',  version: '>=1.6.3')
 libspdlog     = dependency('spdlog',  version: '>=1.5.0')
 
 # ------------------------------------------------------------------------------

@@ -1,44 +1,53 @@
-#include "eldr/vulkan/common.hpp"
+#include <eldr/core/fwd.hpp>
 #include <eldr/core/logger.hpp>
+#include <eldr/core/math.hpp>
+#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/helpers.hpp>
+#include <eldr/vulkan/vertex.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 
+#include <memory>
 #include <string>
-#include <vulkan/vulkan_core.h>
+#include <unordered_map>
 
 namespace eldr {
 namespace vk {
-const std::vector<VkVertex> vertices = {
-  { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-  { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-  { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-  { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
+struct UniformBufferObject {
+  ELDR_IMPORT_CORE_TYPES();
+  alignas(16) Mat4f model;
+  alignas(16) Mat4f view;
+  alignas(16) Mat4f proj;
 };
 
-const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
 // fwd
 // -----------------------------------------------------------------------------
+#ifdef ELDR_DEBUG_REPORT
 static VkDebugUtilsMessengerEXT
 setupDebugMessenger(VkInstance& instance, VkAllocationCallbacks* allocator);
+#endif
 // -----------------------------------------------------------------------------
+
 VulkanWrapper::VulkanWrapper(GLFWwindow* const         window,
                              std::vector<const char*>& instance_extensions)
   : window_(window), current_frame_(0), instance_(instance_extensions),
+#ifdef ELDR_DEBUG_REPORT
     debug_messenger_(setupDebugMessenger(instance_.get(), nullptr)),
+#endif
     surface_(&instance_, window), device_(instance_, surface_),
     swapchain_(&device_, surface_, window),
-    render_pass_(&device_, swapchain_.format()),
+    // render_pass_(&device_, swapchain_.format()),
     descriptor_set_layout_(&device_), descriptor_pool_(&device_),
-    pipeline_(&device_, swapchain_, render_pass_, descriptor_set_layout_),
+    pipeline_(&device_, swapchain_, swapchain_.render_pass_,
+              descriptor_set_layout_),
     command_pool_(&device_, surface_),
-    texture_sampler_(&device_, command_pool_),
-    vertex_buffer_(&device_, vertices, command_pool_),
-    index_buffer_(&device_, indices, command_pool_),
+    texture_sampler_(&device_, command_pool_), vertices_(), indices_(),
+    vertex_buffer_(&device_, vertices_, command_pool_),
+    index_buffer_(&device_, indices_, command_pool_),
     uniform_buffers_(max_frames_in_flight),
     uniform_buffers_mapped_(max_frames_in_flight),
     command_buffers_(max_frames_in_flight),
     descriptor_sets_(max_frames_in_flight)
 {
-  swapchain_.createFramebuffers(render_pass_);
 
   createUniformBuffers();
 
@@ -140,7 +149,8 @@ VkDebugUtilsMessengerEXT setupDebugMessenger(VkInstance&            instance,
 }
 #endif
 
-void VulkanWrapper::createUniformBuffers() {
+void VulkanWrapper::createUniformBuffers()
+{
   BufferInfo   buffer_info{ .size       = sizeof(UniformBufferObject),
                             .usage      = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             .properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -232,16 +242,19 @@ void VulkanWrapper::record(uint32_t image_index)
                            &command_buffer_info) != VK_SUCCESS)
     ThrowVk("Failed to begin command buffer!");
 
+  // Note that the order matters, depth is on index 1
+  std::array<VkClearValue, 2> clear_values{};
+  clear_values[0].color        = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+  clear_values[1].depthStencil = { 1.0f, 0 };
+
   VkRenderPassBeginInfo render_pass_info{};
   render_pass_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  render_pass_info.renderPass        = render_pass_.get();
-  render_pass_info.framebuffer       = swapchain_.framebuffer(image_index);
+  render_pass_info.renderPass        = swapchain_.render_pass_.get();
+  render_pass_info.framebuffer       = swapchain_.framebuffers_[image_index];
   render_pass_info.renderArea.offset = { 0, 0 };
   render_pass_info.renderArea.extent = swapchain_.extent();
-
-  VkClearValue clear_color         = { { { 0.0f, 0.0f, 0.0f, 1.0f } } };
-  render_pass_info.clearValueCount = 1;
-  render_pass_info.pClearValues    = &clear_color;
+  render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+  render_pass_info.pClearValues    = clear_values.data();
 
   vkCmdBeginRenderPass(command_buffers_[current_frame_], &render_pass_info,
                        VK_SUBPASS_CONTENTS_INLINE);
@@ -271,14 +284,14 @@ void VulkanWrapper::record(uint32_t image_index)
   vkCmdBindVertexBuffers(command_buffers_[current_frame_], 0, 1, vertex_buffers,
                          offsets);
   vkCmdBindIndexBuffer(command_buffers_[current_frame_], index_buffer_.get(), 0,
-                       VK_INDEX_TYPE_UINT16);
+                       VK_INDEX_TYPE_UINT32);
 
   vkCmdBindDescriptorSets(command_buffers_[current_frame_],
                           VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_.layout(),
                           0, 1, &descriptor_sets_[current_frame_], 0, nullptr);
 
   vkCmdDrawIndexed(command_buffers_[current_frame_],
-                   static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+                   static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
 
   vkCmdEndRenderPass(command_buffers_[current_frame_]);
   if (vkEndCommandBuffer(command_buffers_[current_frame_]) != VK_SUCCESS)
@@ -287,30 +300,42 @@ void VulkanWrapper::record(uint32_t image_index)
 
 void VulkanWrapper::updateUniformBuffer(uint32_t current_image)
 {
-  static auto start_time = std::chrono::high_resolution_clock::now();
-
-  auto current_time = std::chrono::high_resolution_clock::now();
-
-  float time = std::chrono::duration<float, std::chrono::seconds::period>(
+  static auto start_time   = std::chrono::high_resolution_clock::now();
+  auto        current_time = std::chrono::high_resolution_clock::now();
+  float       time = std::chrono::duration<float, std::chrono::seconds::period>(
                  current_time - start_time)
                  .count();
 
   UniformBufferObject ubo{};
-  ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
-                          glm::vec3(0.0f, 0.0f, 1.0f));
-
-  ubo.view =
-    glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 0.0f, 1.0f));
-
-  ubo.proj = glm::perspective(glm::radians(45.0f),
-                              swapchain_.extent().width /
-                                (float) swapchain_.extent().height,
-                              0.1f, 10.0f);
-
+  ubo.model = glm::rotate(Mat4f(1.0f), time * glm::radians(90.0f),
+                          Vec3f(0.0f, 0.0f, 1.0f));
+  ubo.view  = glm::lookAt(Vec3f(2.0f, 2.0f, 2.0f), Vec3f(0.0f, 0.0f, 0.0f),
+                          Vec3f(0.0f, 0.0f, 1.0f));
+  ubo.proj  = glm::perspective(glm::radians(45.0f),
+                               swapchain_.extent().width /
+                                 (float) swapchain_.extent().height,
+                               0.1f, 10.0f);
   ubo.proj[1][1] *= -1;
-
   memcpy(uniform_buffers_mapped_[current_image], &ubo, sizeof(ubo));
+}
+
+void VulkanWrapper::submitGeometry(const std::vector<Vec3f>& positions,
+                                   const std::vector<Vec2f>& texcoords)
+{
+  vertices_.clear();
+  indices_.clear();
+  std::unordered_map<Vertex, uint32_t> unique_vertices{};
+
+  for (uint32_t i = 0; i < positions.size(); ++i) {
+    Vertex v{ positions[i], { 1.0f, 1.0f, 1.0f }, texcoords[i] };
+    if (unique_vertices.count(v) == 0) {
+      unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
+      vertices_.push_back(v);
+    }
+    indices_.push_back(unique_vertices[v]);
+  }
+  vertex_buffer_ = Buffer(&device_, vertices_, command_pool_);
+  index_buffer_  = Buffer(&device_, indices_, command_pool_);
 }
 
 void VulkanWrapper::drawFrame()
@@ -318,12 +343,21 @@ void VulkanWrapper::drawFrame()
   vkWaitForFences(device_.logical(), 1,
                   &in_flight_fences_[current_frame_].get(), VK_TRUE,
                   UINT64_MAX);
-  vkResetFences(device_.logical(), 1, &in_flight_fences_[current_frame_].get());
 
   uint32_t image_index;
-  vkAcquireNextImageKHR(device_.logical(), swapchain_.get(), UINT64_MAX,
-                        image_available_sem_[current_frame_].get(),
-                        VK_NULL_HANDLE, &image_index);
+  VkResult result = vkAcquireNextImageKHR(
+    device_.logical(), swapchain_.get(), UINT64_MAX,
+    image_available_sem_[current_frame_].get(), VK_NULL_HANDLE, &image_index);
+
+  if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    swapchain_.recreate(surface_, window_);
+    return;
+  }
+  else if (result != VK_SUCCESS) {
+    ThrowVk("Failed to acquire swapchain image!");
+  }
+
+  vkResetFences(device_.logical(), 1, &in_flight_fences_[current_frame_].get());
   vkResetCommandBuffer(command_buffers_[current_frame_], 0);
 
   record(image_index);
@@ -364,7 +398,16 @@ void VulkanWrapper::drawFrame()
   present_info.pSwapchains    = swapchains;
   present_info.pImageIndices  = &image_index;
 
-  vkQueuePresentKHR(device_.presentQueue(), &present_info);
+  result = vkQueuePresentKHR(device_.presentQueue(), &present_info);
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
+      framebuffer_resized_) {
+    framebuffer_resized_ = false;
+    swapchain_.recreate(surface_, window_);
+    return;
+  }
+  else if (result != VK_SUCCESS) {
+    ThrowVk("Failed to present swapchain image!");
+  }
 
   current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }

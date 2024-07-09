@@ -4,6 +4,8 @@
 #include <eldr/vulkan/instance.hpp>
 #include <eldr/vulkan/surface.hpp>
 
+#include <GLFW/glfw3.h>
+
 namespace eldr {
 namespace vk {
 

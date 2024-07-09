@@ -1,4 +1,5 @@
 inc_cxxopts = include_directories('cxxopts/include')
+inc_tinyobjloader = include_directories('tinyobjloader')
 
 # ------------------------------------------------------------------------------
 # Build Dear Imgui

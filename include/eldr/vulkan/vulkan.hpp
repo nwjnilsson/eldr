@@ -18,6 +18,8 @@ namespace eldr {
 namespace vk {
 
 class VulkanWrapper {
+  ELDR_IMPORT_CORE_TYPES();
+
 public:
   VulkanWrapper();
   VulkanWrapper(GLFWwindow* const,
@@ -25,6 +27,10 @@ public:
   ~VulkanWrapper();
 
   void drawFrame();
+  void submitGeometry(const std::vector<Vec3f>& positions,
+                      const std::vector<Vec2f>& texcoords);
+
+  bool framebuffer_resized_;
 
 private:
   void createUniformBuffers();
@@ -43,12 +49,13 @@ private:
   Surface                      surface_;
   Device                       device_;
   Swapchain                    swapchain_;
-  RenderPass                   render_pass_;
   DescriptorSetLayout          descriptor_set_layout_;
   DescriptorPool               descriptor_pool_;
   Pipeline                     pipeline_;
   CommandPool                  command_pool_;
   TextureSampler               texture_sampler_;
+  std::vector<Vertex>          vertices_;
+  std::vector<uint32_t>        indices_;
   Buffer                       vertex_buffer_;
   Buffer                       index_buffer_;
   std::vector<Buffer>          uniform_buffers_;

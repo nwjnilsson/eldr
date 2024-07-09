@@ -31,7 +31,7 @@ FileStream::FileStream(const fs::path& p, EMode mode)
   file_->open(p.string(), detail::ios_flag(mode));
 
   if (!file_->good())
-    Throw("\"%s\": I/O error while attempting to open file: %s", path_.string(),
+    Throw("{}: I/O error while attempting to open file: {}", path_.string(),
           strerror(errno));
 }
 

@@ -10,6 +10,7 @@ public:
   Instance(std::vector<const char*>& instance_extensions);
   ~Instance();
 
+  //VkInstance& get() { return instance_; }
   const VkInstance& get() const { return instance_; }
   VkInstance& get() { return instance_; }
 

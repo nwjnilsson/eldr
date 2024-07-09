@@ -1,6 +1,5 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/imageview.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {
@@ -8,7 +7,9 @@ ImageView::ImageView()
   : device_(nullptr), image_view_(VK_NULL_HANDLE), format_(VK_FORMAT_UNDEFINED)
 {
 }
-ImageView::ImageView(const Device* device, VkImage image, VkFormat format)
+
+ImageView::ImageView(const Device* device, VkImage image, VkFormat format,
+                     VkImageAspectFlags aspect_flags)
   : device_(device)
 {
   VkImageViewCreateInfo image_view_ci{};
@@ -22,7 +23,7 @@ ImageView::ImageView(const Device* device, VkImage image, VkFormat format)
   image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
   image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-  image_view_ci.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  image_view_ci.subresourceRange.aspectMask     = aspect_flags;
   image_view_ci.subresourceRange.baseMipLevel   = 0;
   image_view_ci.subresourceRange.levelCount     = 1;
   image_view_ci.subresourceRange.baseArrayLayer = 0;

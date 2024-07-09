@@ -20,18 +20,21 @@ The following software is available on Windows as well, so it should be possible
 to build there as well. MSVC 2013 is not compatible with
 [cxxopts](https://github.com/jarro2783/cxxopts#requirements), however.
 ```
-$ sudo apt-get install build-essential ninja-build meson python3 python3-pip \
-    python3-setuptools python3-wheel libspdlog-dev libglfw3-dev libglm-dev \
-    libvulkan-dev libjpeg-turbo8
+$ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
+    python3-pip python3-setuptools python3-wheel libspdlog-dev libglfw3-dev \
+    libglm-dev libvulkan-dev libjpeg62-turbo-dev
 ```
 For debugging:
 ```
 sudo apt-get install vulkan-validationlayers-dev spirv-tools
 ```
 
-Note that:
+Some other notes:
 - [spdlog](https://github.com/gabime/spdlog/tree/v1.13.0) is a header only
 library but I have been using a compiled library for faster compilation of Eldr.
+- For initial testing, I've been using the [Viking room](https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
+model by [nigelgoh](https://sketchfab.com/nigelgoh)[CC BY 4.0](https://web.archive.org/web/20200428202538/https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
+
 
 ## Build
 ### App
@@ -43,8 +46,8 @@ $ ninja
 ### Shaders
 I have been using [glslc](https://github.com/google/shaderc) to compile some
 basic shaders. Eldr will look for the compiled shaders `vert.spv` and `frag.spv`
-in `resources`.
+in `shaders`.
 ```
-glslc src/shaders/shader.vert -o resources/vert.spv
-glslc src/shaders/shader.frag -o resources/frag.spv
+glslc src/shaders/shader.vert -o shaders/vert.spv
+glslc src/shaders/shader.frag -o shaders/frag.spv
 ```

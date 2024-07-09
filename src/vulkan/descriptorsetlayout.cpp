@@ -1,6 +1,5 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/descriptorsetlayout.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {

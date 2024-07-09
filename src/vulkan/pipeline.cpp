@@ -1,11 +1,9 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/pipeline.hpp>
-
-#include <glm/glm.hpp>
+#include <eldr/vulkan/vertex.hpp>
 
 #include <fstream>
 #include <string>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {
@@ -53,8 +51,8 @@ Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
                                                       frag_shader_stage_ci };
 
   VkPipelineVertexInputStateCreateInfo vertex_input_info{};
-  auto binding_description    = VkVertex::getBindingDescription();
-  auto attribute_descriptions = VkVertex::getAttributeDescriptions();
+  auto binding_description    = Vertex::getBindingDescription();
+  auto attribute_descriptions = Vertex::getAttributeDescriptions();
   vertex_input_info.sType =
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertex_input_info.vertexBindingDescriptionCount = 1;
@@ -119,6 +117,21 @@ Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
   multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
   multisampling.alphaToOneEnable      = VK_FALSE; // Optional
 
+  VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+  depth_stencil.sType =
+    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depth_stencil.depthTestEnable = VK_TRUE;
+  depth_stencil.depthWriteEnable = VK_TRUE;
+  depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+  depth_stencil.depthBoundsTestEnable = VK_FALSE;
+  depth_stencil.minDepthBounds = 0.0f; // optional
+  depth_stencil.maxDepthBounds = 1.0f; // optional
+  // Stencil buffer ops not used. Format of depth image must contain a stencil
+  // component if this is to be used.
+  depth_stencil.stencilTestEnable = VK_FALSE;
+  depth_stencil.front = {};
+  depth_stencil.back = {};
+
   // TODO: may want to change
   VkPipelineColorBlendAttachmentState colorBlendAttachment{};
   colorBlendAttachment.colorWriteMask =
@@ -167,7 +180,7 @@ Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
   pipeline_ci.pViewportState      = &viewport_state;
   pipeline_ci.pRasterizationState = &rasterizer;
   pipeline_ci.pMultisampleState   = &multisampling;
-  pipeline_ci.pDepthStencilState  = nullptr;
+  pipeline_ci.pDepthStencilState  = &depth_stencil;
   pipeline_ci.pColorBlendState    = &color_blending;
   pipeline_ci.pDynamicState       = &dynamic_state;
   pipeline_ci.layout              = layout_;
@@ -204,9 +217,9 @@ static std::vector<char> loadShader(const std::string& type)
 
   std::string filename{};
   if (type == "vertex")
-    filename = std::string(env_p) + "/resources/vert.spv";
+    filename = std::string(env_p) + "/shaders/vert.spv";
   else if (type == "fragment")
-    filename = std::string(env_p) + "/resources/frag.spv";
+    filename = std::string(env_p) + "/shaders/frag.spv";
 
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
 

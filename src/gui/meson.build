@@ -1,4 +1,4 @@
-src = ['gui.cpp']
+src = ['window.cpp']
 eldr_gui = library(
   'eldr-gui',
   sources : src,

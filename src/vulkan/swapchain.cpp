@@ -13,22 +13,39 @@ static VkExtent2D selectSwapExtent(GLFWwindow*,
                                    const VkSurfaceCapabilitiesKHR&);
 // -----------------------------------------------------------------------------
 
-Swapchain::Swapchain(const Device* device, Surface& surface, GLFWwindow* window)
-  : device_(device)
+Swapchain::Swapchain(const Device* device, Surface& surface,
+                     GLFWwindow* const window)
+  : device_(device), support_details_(swapchainSupportDetails(
+                       device_->physical(), surface.get())),
+    extent_(selectSwapExtent(window, support_details_.capabilities)),
+    image_format_(selectSwapSurfaceFormat(support_details_.formats).format),
+    depth_image_(device_, { { extent_.width, extent_.height },
+                            findDepthFormat(device_->physical()),
+                            VK_IMAGE_TILING_OPTIMAL,
+                            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT }),
+    depth_image_view_(device_, depth_image_.get(), depth_image_.format(),
+                      VK_IMAGE_ASPECT_DEPTH_BIT),
+    images_(), image_views_(), render_pass_(device_, image_format_),
+    framebuffers_()
 {
-  SwapChainSupportDetails swapchain_support =
-    swapChainSupportDetails(device_->physical(), surface.get());
-  surface.setFormat(selectSwapSurfaceFormat(swapchain_support.formats));
-  surface.setPresentMode(
-    selectSwapPresentMode(swapchain_support.present_modes));
-  VkExtent2D extent = selectSwapExtent(window, swapchain_support.capabilities);
+  createSwapchain(surface);
+  createImageViews();
+  createFramebuffers();
+}
 
-  // TODO: keep this image count?
-  min_image_count_ = swapchain_support.capabilities.minImageCount + 1;
+Swapchain::~Swapchain() { cleanup(); }
+
+void Swapchain::createSwapchain(Surface& surface)
+{
+  surface.setFormat(selectSwapSurfaceFormat(support_details_.formats));
+  surface.setPresentMode(selectSwapPresentMode(support_details_.present_modes));
+
+  min_image_count_ = support_details_.capabilities.minImageCount + 1;
   // If there is an upper limit, make sure we don't exceed it
-  if (swapchain_support.capabilities.maxImageCount > 0) {
+  if (support_details_.capabilities.maxImageCount > 0) {
     min_image_count_ =
-      std::min(min_image_count_, swapchain_support.capabilities.maxImageCount);
+      std::min(min_image_count_, support_details_.capabilities.maxImageCount);
   }
   VkSwapchainCreateInfoKHR swap_ci{};
   swap_ci.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -36,10 +53,10 @@ Swapchain::Swapchain(const Device* device, Surface& surface, GLFWwindow* window)
   swap_ci.minImageCount    = min_image_count_;
   swap_ci.imageFormat      = surface.format().format;
   swap_ci.imageColorSpace  = surface.format().colorSpace;
-  swap_ci.imageExtent      = extent;
+  swap_ci.imageExtent      = extent_;
   swap_ci.imageArrayLayers = 1;
   swap_ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  swap_ci.preTransform     = swapchain_support.capabilities.currentTransform;
+  swap_ci.preTransform     = support_details_.capabilities.currentTransform;
   swap_ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   swap_ci.presentMode      = surface.presentMode();
   swap_ci.clipped      = VK_TRUE; // don't care about color of obscured pixels
@@ -70,34 +87,39 @@ Swapchain::Swapchain(const Device* device, Surface& surface, GLFWwindow* window)
   images_.resize(image_count_);
   vkGetSwapchainImagesKHR(device_->logical(), swapchain_, &image_count_,
                           images_.data());
-  extent_       = extent;
-  image_format_ = surface.format().format;
+}
 
+void Swapchain::createImageViews()
+{
   // Create image views
   for (size_t i = 0; i < images_.size(); i++) {
     image_views_.emplace_back(ImageView(device_, images_[i], image_format_));
   }
 }
 
-Swapchain::~Swapchain() { 
+void Swapchain::cleanup()
+{
   if (swapchain_ != VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device_->logical(), swapchain_, nullptr);
+
+  image_views_.clear();
 
   for (size_t i = 0; i < framebuffers_.size(); ++i)
     if (framebuffers_[i] != VK_NULL_HANDLE)
       vkDestroyFramebuffer(device_->logical(), framebuffers_[i], nullptr);
 }
 
-void Swapchain::createFramebuffers(RenderPass& render_pass)
+void Swapchain::createFramebuffers()
 {
   framebuffers_.resize(image_views_.size());
   for (size_t i = 0; i < image_views_.size(); ++i) {
-    VkImageView             attachments[] = { image_views_[i].get() };
-    VkFramebufferCreateInfo framebuffer_ci{};
+    std::array<VkImageView, 2> attachments = { image_views_[i].get(),
+                                               depth_image_view_.get() };
+    VkFramebufferCreateInfo    framebuffer_ci{};
     framebuffer_ci.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_ci.renderPass      = render_pass.get();
-    framebuffer_ci.attachmentCount = 1;
-    framebuffer_ci.pAttachments    = attachments;
+    framebuffer_ci.renderPass      = render_pass_.get();
+    framebuffer_ci.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebuffer_ci.pAttachments    = attachments.data();
     framebuffer_ci.width           = extent_.width;
     framebuffer_ci.height          = extent_.height;
     framebuffer_ci.layers          = 1;
@@ -108,14 +130,36 @@ void Swapchain::createFramebuffers(RenderPass& render_pass)
   }
 }
 
-/** TODO: implement if needed
- *
-void Swapchain::recreate() {
-  vkDeviceWaitIdle(p_device_->logical());
-  clean();
-  ...
+void Swapchain::recreate(Surface& surface, GLFWwindow* const window)
+{
+  int width  = 0;
+  int height = 0;
+  glfwGetFramebufferSize(window, &width, &height);
+  while (width == 0 || height == 0) {
+    glfwGetFramebufferSize(window, &width, &height);
+    glfwWaitEvents();
+  }
+
+  vkDeviceWaitIdle(device_->logical());
+
+  cleanup();
+
+  support_details_ =
+    swapchainSupportDetails(device_->physical(), surface.get());
+  extent_      = selectSwapExtent(window, support_details_.capabilities);
+  depth_image_ = Image(device_, { { extent_.width, extent_.height },
+                                  findDepthFormat(device_->physical()),
+                                  VK_IMAGE_TILING_OPTIMAL,
+                                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT });
+  depth_image_view_ =
+    ImageView(device_, depth_image_.get(), depth_image_.format(),
+              VK_IMAGE_ASPECT_DEPTH_BIT);
+
+  createSwapchain(surface);
+  createImageViews();
+  createFramebuffers();
 }
-*/
 
 // -----------------------------------------------------------------------------
 static VkSurfaceFormatKHR selectSwapSurfaceFormat(

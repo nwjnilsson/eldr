@@ -8,4 +8,4 @@ eldr_core = library(
   'eldr-core',
   sources : src,
   include_directories : [include],
-  dependencies : [libspdlog, libjpeg])
+  dependencies : [libspdlog, libjpeg, libpng])

@@ -3,10 +3,13 @@
  */
 #include <eldr/core/bitmap.hpp>
 #include <eldr/core/fstream.hpp>
-#include <eldr/core/logger.hpp>
 
+extern "C" {
 #include <jerror.h>
 #include <jpeglib.h>
+}
+
+#include <png.h>
 
 #include <memory>
 #include <stdexcept>
@@ -15,7 +18,7 @@
 namespace eldr {
 
 Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
-               const glm::uvec2& size, size_t channel_count,
+               const Vec2u& size, size_t channel_count,
                const std::vector<std::string>& channel_names, uint8_t* data)
   : pixel_format_(px_format), component_format_(component_format), size_(size),
     data_(data)
@@ -197,9 +200,9 @@ void Bitmap::read(Stream* stream, FileFormat format)
     // case FileFormat::TGA:
     //   read_tga(stream);
     //   break;
-    // case FileFormat::PNG:
-    //   read_png(stream);
-    //   break;
+    case FileFormat::PNG:
+      readPNG(stream);
+      break;
     default:
       Throw("Bitmap: Unknown file format!");
   }
@@ -229,9 +232,9 @@ Bitmap::FileFormat Bitmap::detectFileFormat(Stream* stream)
   if (start[0] == 0xFF && start[1] == 0xD8) {
     format = FileFormat::JPEG;
   }
-  //  else if (png_sig_cmp(start, 0, 8) == 0) {
-  //    format = FileFormat::PNG;
-  //  }
+  else if (png_sig_cmp(start, 0, 8) == 0) {
+    format = FileFormat::PNG;
+  }
   //  else if (Imf::isImfMagic((const char*) start)) {
   //    format = FileFormat::OpenEXR;
   //  }
@@ -246,6 +249,10 @@ Bitmap::FileFormat Bitmap::detectFileFormat(Stream* stream)
   stream->seek(pos);
   return format;
 }
+
+// -----------------------------------------------------------------------------
+// Bitmap JPEG I/O
+// -----------------------------------------------------------------------------
 
 extern "C" {
 static const size_t jpeg_buffer_size = 0x8000;
@@ -365,26 +372,33 @@ void Bitmap::readJPEG(Stream* stream)
   jbuf.stream                = stream;
 
   jpeg_read_header(&cinfo, TRUE);
-  cinfo.out_color_space = JCS_EXT_RGBA; // Force additional opaque alpha channel
   jpeg_start_decompress(&cinfo);
 
-  size_                = glm::uvec2(cinfo.output_width, cinfo.output_height);
+  size_                = Vec2u(cinfo.output_width, cinfo.output_height);
   component_format_    = Struct::Type::UInt8;
   srgb_gamma_          = true;
   premultiplied_alpha_ = false;
 
-  if (cinfo.output_components == 4)
-    // Add component to JPEGs so that the data can be given to Vulkan
-    pixel_format_ = PixelFormat::RGBA;
-  else
-    Throw("readJPEG(): Unexpected number of components!");
+  switch (cinfo.output_components) {
+    case 1:
+      pixel_format_ = PixelFormat::Y;
+      break;
+    case 3:
+      pixel_format_ = PixelFormat::RGB;
+      break;
+    case 4:
+      pixel_format_ = PixelFormat::RGBA;
+      break;
+    default:
+      Throw("readJPEG(): Unexpected number of components!");
+  }
 
   rebuildStruct();
 
   auto fs = dynamic_cast<FileStream*>(stream);
   spdlog::debug("Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
                 fs ? fs->path().string() : "<stream>", size_.x, size_.y,
-                toString(pixel_format_), toString(component_format_));
+                pixel_format_, component_format_);
 
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
@@ -408,6 +422,7 @@ void Bitmap::readJPEG(Stream* stream)
   jpeg_finish_decompress(&cinfo);
   jpeg_destroy_decompress(&cinfo);
 }
+
 /*
 void Bitmap::write_jpeg(Stream* stream, int quality) const
 {
@@ -467,4 +482,262 @@ void Bitmap::write_jpeg(Stream* stream, int quality) const
   jpeg_destroy_compress(&cinfo);
 }
 */
+
+// -----------------------------------------------------------------------------
+// Bitmap PNG I/O
+// -----------------------------------------------------------------------------
+
+static void png_flush_data(png_structp png_ptr)
+{
+  png_voidp flush_io_ptr = png_get_io_ptr(png_ptr);
+  ((Stream*) flush_io_ptr)->flush();
+}
+
+static void png_read_data(png_structp png_ptr, png_bytep data,
+                          png_size_t length)
+{
+  png_voidp read_io_ptr = png_get_io_ptr(png_ptr);
+  ((Stream*) read_io_ptr)->read(data, length);
+}
+
+static void png_write_data(png_structp png_ptr, png_bytep data,
+                           png_size_t length)
+{
+  png_voidp write_io_ptr = png_get_io_ptr(png_ptr);
+  ((Stream*) write_io_ptr)->write(data, length);
+}
+
+static void png_error_func(png_structp, png_const_charp msg)
+{
+  Throw("Fatal libpng error: %s\n", msg);
+}
+
+static void png_warn_func(png_structp, png_const_charp msg)
+{
+  if (strstr(msg, "iCCP: known incorrect sRGB profile") != nullptr)
+    return;
+  spdlog::warn("libpng warning: {}", msg);
+}
+
+void Bitmap::readPNG(Stream* stream)
+{
+  png_bytepp rows = nullptr;
+
+  // Create buffers
+  png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
+                                               &png_error_func, &png_warn_func);
+  if (png_ptr == nullptr)
+    Throw("readPNG(): Unable to create PNG data structure");
+
+  png_infop info_ptr = png_create_info_struct(png_ptr);
+  if (info_ptr == nullptr) {
+    png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+    Throw("readPNG(): Unable to create PNG information structure");
+  }
+
+  // Error handling
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+    delete[] rows;
+    Throw("readPNG(): Error reading the PNG file!");
+  }
+
+  // Set read helper function
+  png_set_read_fn(png_ptr, stream, (png_rw_ptr) png_read_data);
+
+  int bit_depth, color_type, interlace_type, compression_type, filter_type;
+  png_read_info(png_ptr, info_ptr);
+  png_uint_32 width = 0, height = 0;
+  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+               &interlace_type, &compression_type, &filter_type);
+
+  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+    png_set_expand_gray_1_2_4_to_8(png_ptr); // Expand 1-, 2- and 4-bit
+                                             // grayscale
+
+  if (color_type == PNG_COLOR_TYPE_PALETTE)
+    png_set_palette_to_rgb(png_ptr); // Always expand indexed files
+
+  if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+    png_set_tRNS_to_alpha(png_ptr); // Expand transparency to a proper alpha
+                                    // channel
+
+// Request various transformations from libpng as necessary
+#if defined(LITTLE_ENDIAN)
+  if (bit_depth == 16)
+    png_set_swap(png_ptr); // Swap the byte order on little endian machines
+#endif
+
+  png_set_interlace_handling(png_ptr);
+
+  // Update the information based on the transformations
+  png_read_update_info(png_ptr, info_ptr);
+  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+               &interlace_type, &compression_type, &filter_type);
+  size_ = Vec2u(width, height);
+
+  switch (color_type) {
+    case PNG_COLOR_TYPE_GRAY:
+      pixel_format_ = PixelFormat::Y;
+      break;
+    case PNG_COLOR_TYPE_GRAY_ALPHA:
+      pixel_format_ = PixelFormat::YA;
+      break;
+    case PNG_COLOR_TYPE_RGB:
+      pixel_format_ = PixelFormat::RGB;
+      break;
+    case PNG_COLOR_TYPE_RGB_ALPHA:
+      pixel_format_ = PixelFormat::RGBA;
+      break;
+    default:
+      Throw("readPNG(): Unknown color type %i", color_type);
+      break;
+  }
+
+  switch (bit_depth) {
+    case 8:
+      component_format_ = Struct::Type::UInt8;
+      break;
+    case 16:
+      component_format_ = Struct::Type::UInt16;
+      break;
+    default:
+      Throw("readPNG(): Unsupported bit depth: %i", bit_depth);
+  }
+
+  srgb_gamma_          = true;
+  premultiplied_alpha_ = false;
+
+  rebuildStruct();
+
+  // Load any string-valued metadata
+  int       text_idx = 0;
+  png_textp text_ptr;
+  png_get_text(png_ptr, info_ptr, &text_ptr, &text_idx);
+
+  // TODO: metadata not implemented yet
+  // for (int i = 0; i < text_idx; ++i, text_ptr++)
+  //  metadata_.set_string(text_ptr->key, text_ptr->text);
+
+  auto fs = dynamic_cast<FileStream*>(stream);
+  spdlog::debug("Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
+                fs ? fs->path().string() : "<stream>", size_.x, size_.y,
+                pixel_format_, component_format_);
+
+  size_t size = bufferSize();
+  data_       = std::make_unique<uint8_t[]>(size);
+  owns_data_  = true;
+
+  rows             = new png_bytep[size_.y];
+  size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+  assert(row_bytes == size / size_.y);
+
+  for (size_t i = 0; i < size_.y; i++)
+    rows[i] = uint8Data() + i * row_bytes;
+
+  png_read_image(png_ptr, rows);
+  png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
+  delete[] rows;
+}
+
+void Bitmap::rgbToRgba()
+{
+  if (pixel_format_ != PixelFormat::RGB)
+    Throw("convertToRGBA(): Unexpected pixel format ({})", pixel_format_);
+
+  pixel_format_ = PixelFormat::RGBA;
+  rebuildStruct();
+
+  if (owns_data_) {
+    size_t                     size   = bufferSize();
+    std::unique_ptr<uint8_t[]> tmp    = std::make_unique<uint8_t[]>(size);
+    uint8_t*                   p_tmp  = tmp.get();
+    uint8_t*                   p_data = uint8Data();
+
+    // TODO: This may need to be optimized for high resolution textures.
+    // A 1024x1024 texture was converted in about a millisecond on my laptop.
+    const uint32_t rgb_channels = 3;
+    for (uint32_t i = 0; i < size_.y; ++i) {
+      uint32_t row_i = i * size_.x;
+      for (uint32_t j = 0; j < size_.x; ++j) {
+        uint32_t index        = row_i + j;
+        uint32_t rgb_index    = rgb_channels * index;
+        uint32_t rgba_index   = rgb_index + index;
+        p_tmp[rgba_index]     = p_data[rgb_index];
+        p_tmp[rgba_index + 1] = p_data[rgb_index + 1];
+        p_tmp[rgba_index + 2] = p_data[rgb_index + 2];
+        p_tmp[rgba_index + 3] = 0xff;
+      }
+    }
+    data_ = std::move(tmp);
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const Bitmap::PixelFormat& value)
+{
+  switch (value) {
+    case Bitmap::PixelFormat::Y:
+      os << "y";
+      break;
+    case Bitmap::PixelFormat::YA:
+      os << "ya";
+      break;
+    case Bitmap::PixelFormat::RGB:
+      os << "rgb";
+      break;
+    case Bitmap::PixelFormat::RGBA:
+      os << "rgba";
+      break;
+    case Bitmap::PixelFormat::RGBW:
+      os << "rgbw";
+      break;
+    case Bitmap::PixelFormat::RGBAW:
+      os << "rgbaw";
+      break;
+    case Bitmap::PixelFormat::XYZ:
+      os << "xyz";
+      break;
+    case Bitmap::PixelFormat::XYZA:
+      os << "xyza";
+      break;
+    case Bitmap::PixelFormat::MultiChannel:
+      os << "multichannel";
+      break;
+  }
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
+{
+  switch (value) {
+    case Bitmap::FileFormat::PNG:
+      os << "PNG";
+      break;
+    case Bitmap::FileFormat::OpenEXR:
+      os << "OpenEXR";
+      break;
+    case Bitmap::FileFormat::JPEG:
+      os << "JPEG";
+      break;
+    case Bitmap::FileFormat::BMP:
+      os << "BMP";
+      break;
+    case Bitmap::FileFormat::PFM:
+      os << "PFM";
+      break;
+    case Bitmap::FileFormat::PPM:
+      os << "PPM";
+      break;
+    case Bitmap::FileFormat::RGBE:
+      os << "RGBE";
+      break;
+    case Bitmap::FileFormat::Auto:
+      os << "Auto";
+      break;
+    default:
+      Throw("Unknown file format!");
+  }
+  return os;
+}
 }; // namespace eldr

@@ -1,12 +1,11 @@
 /**
  * Struct implementation adapted from the Mitsuba project
  */
-#include <eldr/core/logger.hpp>
-#include <eldr/core/struct.hpp>
 #include <eldr/core/hash.hpp>
+#include <eldr/core/math.hpp>
+#include <eldr/core/struct.hpp>
 
-#include <glm/common.hpp>
-#include <glm/glm.hpp>
+#include <spdlog/fmt/ostr.h>
 
 #include <cmath>
 
@@ -103,7 +102,7 @@ Struct& Struct::append(const std::string& name, Struct::Type type,
   return *this;
 }
 
-std::ostream& operator<<(std::ostream& os, Struct::Type value)
+std::ostream& operator<<(std::ostream& os, const Struct::Type& value)
 {
   switch (value) {
     case Struct::Type::Int8:
@@ -273,6 +272,6 @@ size_t hash(const Struct::Field& f)
 size_t hash(const Struct& s)
 {
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
-                      hash(s.byte_order_));
+                     hash(s.byte_order_));
 }
 } // namespace eldr

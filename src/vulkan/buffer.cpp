@@ -1,9 +1,11 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/buffer.hpp>
 #include <eldr/vulkan/helpers.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace eldr {
 namespace vk {
+
 Buffer::Buffer()
   : device_(nullptr), buffer_(VK_NULL_HANDLE), buffer_memory_(VK_NULL_HANDLE)
 {
@@ -12,6 +14,12 @@ Buffer::Buffer()
 Buffer::Buffer(const Device* device, const BufferInfo& buffer_info)
   : device_(device), size_(buffer_info.size)
 {
+  if (buffer_info.size == 0) {
+    buffer_        = VK_NULL_HANDLE;
+    buffer_memory_ = VK_NULL_HANDLE;
+    return;
+  }
+
   VkBufferCreateInfo buffer_ci{};
   buffer_ci.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buffer_ci.size        = size_;
@@ -39,13 +47,16 @@ Buffer::Buffer(const Device* device, const BufferInfo& buffer_info)
   vkBindBufferMemory(device_->logical(), buffer_, buffer_memory_, 0);
 }
 
-Buffer::Buffer(const Device* device, const std::vector<VkVertex>& vertices,
+Buffer::Buffer(const Device* device, const std::vector<Vertex>& vertices,
                CommandPool& command_pool)
   : Buffer(device, { sizeof(vertices[0]) * vertices.size(),
                      VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT })
 {
+  if (size_ == 0)
+    return;
+
   Buffer staging_buffer(device, { size_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT });
@@ -58,13 +69,16 @@ Buffer::Buffer(const Device* device, const std::vector<VkVertex>& vertices,
   copyFrom(staging_buffer, command_pool);
 }
 
-Buffer::Buffer(const Device* device, const std::vector<uint16_t>& indices,
+Buffer::Buffer(const Device* device, const std::vector<uint32_t>& indices,
                CommandPool& command_pool)
   : Buffer(device, { sizeof(indices[0]) * indices.size(),
                      VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT })
 {
+  if (size_ == 0)
+    return;
+
   Buffer staging_buffer(device, { size_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT });
@@ -96,10 +110,12 @@ Buffer& Buffer::operator=(Buffer&& other)
     device_        = other.device_;
     buffer_        = other.buffer_;
     buffer_memory_ = other.buffer_memory_;
+    size_          = other.size_;
 
     other.device_        = nullptr;
     other.buffer_        = VK_NULL_HANDLE;
     other.buffer_memory_ = VK_NULL_HANDLE;
+    other.size_          = 0;
   }
 
   return *this;

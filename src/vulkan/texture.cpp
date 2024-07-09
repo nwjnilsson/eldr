@@ -3,7 +3,7 @@
 #include <eldr/vulkan/buffer.hpp>
 #include <eldr/vulkan/helpers.hpp>
 #include <eldr/vulkan/texture.hpp>
-#include <vulkan/vulkan_core.h>
+#include <eldr/render/scene.hpp>
 
 namespace eldr {
 namespace vk {
@@ -14,19 +14,15 @@ Texture::Texture(const Device* device, CommandPool& command_pool)
   if (env_p == nullptr) {
     Throw("Environment not set up correctly");
   }
+  // FIXME: set this some other way
+  const std::string texture_path = "/textures/viking_room.png";
   std::filesystem::path filepath =
-    std::string(env_p) + "/resources/texture.jpg";
-
-  auto fstream = std::make_unique<FileStream>(filepath, FileStream::ERead);
+    std::string(env_p) + texture_path;
 
   // use bitmap class somehow
   auto bitmap = std::make_unique<Bitmap>(filepath);
-
-  VkFormat image_format;
-  if (bitmap->pixelFormat() == Bitmap::PixelFormat::RGBA)
-    image_format = VK_FORMAT_R8G8B8A8_SRGB;
-  else
-    Throw("Unsupported image format!");
+  if (bitmap->pixelFormat() != Bitmap::PixelFormat::RGBA)
+    bitmap->rgbToRgba();
 
   VkDeviceSize image_size =
     bitmap->width() * bitmap->height() * bitmap->channelCount();
@@ -45,13 +41,7 @@ Texture::Texture(const Device* device, CommandPool& command_pool)
   vkUnmapMemory(device->logical(), staging_buffer.memory());
 
   // TODO: write move semantics instead of using unique ptr
-  ImageInfo image_info{ .bitmap = bitmap.get(),
-                        .format = image_format,
-                        .tiling = VK_IMAGE_TILING_OPTIMAL,
-                        .usage  = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                 VK_IMAGE_USAGE_SAMPLED_BIT,
-                        .properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
-  image_ = Image(device, image_info);
+  image_ = Image(device, *bitmap);
 
   image_.transitionLayout(command_pool, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -63,7 +53,7 @@ Texture::Texture(const Device* device, CommandPool& command_pool)
 
   // TODO: this was createTextureImageView(), should
   // maybe not be placed here
-  image_view_ = ImageView(device, image_.get(), image_format);
+  image_view_ = ImageView(device, image_.get(), image_.format());
 }
 
 // Texture& Texture::operator=(Texture&& other) {
