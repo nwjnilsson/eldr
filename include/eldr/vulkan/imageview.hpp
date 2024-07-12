@@ -10,7 +10,7 @@ namespace vk {
 class ImageView {
 public:
   ImageView();
-  ImageView(const Device*, VkImage, VkFormat,
+  ImageView(const Device*, VkImage, VkFormat, uint32_t mip_levels,
             VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT);
   ImageView(ImageView&&);
   ~ImageView();

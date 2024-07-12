@@ -4,7 +4,7 @@
 namespace eldr {
 namespace vk {
 
-Sampler::Sampler(const Device* device) : device_(device)
+Sampler::Sampler(const Device* device, uint32_t mip_levels) : device_(device)
 {
   VkSamplerCreateInfo sampler_info{};
   // TODO: these should be options
@@ -27,7 +27,7 @@ Sampler::Sampler(const Device* device) : device_(device)
   sampler_info.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   sampler_info.mipLodBias              = 0.0f;
   sampler_info.minLod                  = 0.0f;
-  sampler_info.maxLod                  = 0.0f;
+  sampler_info.maxLod                  = static_cast<float>(mip_levels);
   if (vkCreateSampler(device_->logical(), &sampler_info, nullptr, &sampler_) !=
       VK_SUCCESS) {
     ThrowVk("Failed to create texture sampler!");

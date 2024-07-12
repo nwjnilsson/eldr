@@ -8,7 +8,7 @@ namespace vk {
 
 class Sampler {
 public:
-  Sampler(const Device*);
+  Sampler(const Device*, uint32_t mip_levels);
   ~Sampler();
 
   const VkSampler& get() const { return sampler_; }

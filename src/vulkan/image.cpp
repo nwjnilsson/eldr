@@ -8,7 +8,7 @@ Image::Image() : image_(VK_NULL_HANDLE), image_memory_(VK_NULL_HANDLE) {}
 
 Image::Image(const Device* device, const ImageInfo& image_info)
   : device_(device), format_(image_info.format),
-    width_(image_info.extent.width), height_(image_info.extent.height)
+    size_({ image_info.extent.width, image_info.extent.height })
 {
   VkFormatProperties format_properties;
   vkGetPhysicalDeviceFormatProperties(device_->physical(), image_info.format,
@@ -17,10 +17,10 @@ Image::Image(const Device* device, const ImageInfo& image_info)
   VkImageCreateInfo image_ci{};
   image_ci.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   image_ci.imageType     = VK_IMAGE_TYPE_2D;
-  image_ci.extent.width  = width_;
-  image_ci.extent.height = height_;
+  image_ci.extent.width  = size_.x;
+  image_ci.extent.height = size_.y;
   image_ci.extent.depth  = 1;
-  image_ci.mipLevels     = 1;
+  image_ci.mipLevels     = image_info.mip_levels;
   image_ci.arrayLayers   = 1;
   image_ci.format        = image_info.format;
   image_ci.tiling        = image_info.tiling;
@@ -51,28 +51,6 @@ Image::Image(const Device* device, const ImageInfo& image_info)
   vkBindImageMemory(device_->logical(), image_, image_memory_, 0);
 }
 
-ImageInfo getImageInfoFromBitmap(const Bitmap& bitmap)
-{
-  VkFormat image_format;
-  if (bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA)
-    image_format = VK_FORMAT_R8G8B8A8_SRGB;
-  else
-    Throw("Unsupported image format!");
-
-  ImageInfo image_info{ .extent = { bitmap.width(), bitmap.height() },
-                        .format = image_format,
-                        .tiling = VK_IMAGE_TILING_OPTIMAL,
-                        .usage  = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                 VK_IMAGE_USAGE_SAMPLED_BIT,
-                        .properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT };
-  return image_info;
-}
-
-Image::Image(const Device* device, const Bitmap& bitmap)
-  : Image(device, getImageInfoFromBitmap(bitmap))
-{
-}
-
 Image::~Image()
 {
   if (image_ != VK_NULL_HANDLE)
@@ -92,21 +70,22 @@ Image& Image::operator=(Image&& other)
     image_        = other.image_;
     image_memory_ = other.image_memory_;
     format_       = other.format_;
-    width_        = other.width_;
-    height_       = other.height_;
+    size_.x       = other.size_.x;
+    size_.y       = other.size_.y;
 
     other.device_       = nullptr;
     other.image_        = VK_NULL_HANDLE;
     other.image_memory_ = VK_NULL_HANDLE;
-    other.width_        = 0;
-    other.height_       = 0;
+    other.size_.x       = 0;
+    other.size_.y       = 0;
   }
   return *this;
 }
 
 // TODO: figure out command buffers
 void Image::transitionLayout(CommandPool&  command_pool,
-                             VkImageLayout old_layout, VkImageLayout new_layout)
+                             VkImageLayout old_layout, VkImageLayout new_layout,
+                             uint32_t mip_levels)
 {
   SingleTimeCommand command(device_, &command_pool);
 
@@ -119,7 +98,7 @@ void Image::transitionLayout(CommandPool&  command_pool,
   barrier.image                       = image_;
   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = 1;
+  barrier.subresourceRange.levelCount     = mip_levels;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = 1;
 
@@ -165,7 +144,7 @@ void Image::copyFromBuffer(const Buffer& buffer, CommandPool& command_pool)
   region.imageSubresource.layerCount     = 1;
 
   region.imageOffset = { 0, 0, 0 };
-  region.imageExtent = { width_, height_, 1 };
+  region.imageExtent = { size_.x, size_.y, 1 };
 
   vkCmdCopyBufferToImage(command.buffer(), buffer.get(), image_,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);

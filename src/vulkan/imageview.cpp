@@ -9,7 +9,7 @@ ImageView::ImageView()
 }
 
 ImageView::ImageView(const Device* device, VkImage image, VkFormat format,
-                     VkImageAspectFlags aspect_flags)
+                     uint32_t mip_levels, VkImageAspectFlags aspect_flags)
   : device_(device)
 {
   VkImageViewCreateInfo image_view_ci{};
@@ -25,7 +25,7 @@ ImageView::ImageView(const Device* device, VkImage image, VkFormat format,
 
   image_view_ci.subresourceRange.aspectMask     = aspect_flags;
   image_view_ci.subresourceRange.baseMipLevel   = 0;
-  image_view_ci.subresourceRange.levelCount     = 1;
+  image_view_ci.subresourceRange.levelCount     = mip_levels;
   image_view_ci.subresourceRange.baseArrayLayer = 0;
   image_view_ci.subresourceRange.layerCount     = 1;
 

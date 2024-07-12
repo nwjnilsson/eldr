@@ -15,7 +15,7 @@ struct TextureSampler {
   Sampler sampler;
 
   TextureSampler(const Device* device, CommandPool& command_pool)
-    : texture(device, command_pool), sampler(device)
+    : texture(device, command_pool), sampler(device, texture.mipLevels())
   {
   }
 };

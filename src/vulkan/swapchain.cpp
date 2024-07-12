@@ -24,7 +24,7 @@ Swapchain::Swapchain(const Device* device, Surface& surface,
                             VK_IMAGE_TILING_OPTIMAL,
                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT }),
-    depth_image_view_(device_, depth_image_.get(), depth_image_.format(),
+    depth_image_view_(device_, depth_image_.get(), depth_image_.format(), 1,
                       VK_IMAGE_ASPECT_DEPTH_BIT),
     images_(), image_views_(), render_pass_(device_, image_format_),
     framebuffers_()
@@ -93,7 +93,7 @@ void Swapchain::createImageViews()
 {
   // Create image views
   for (size_t i = 0; i < images_.size(); i++) {
-    image_views_.emplace_back(ImageView(device_, images_[i], image_format_));
+    image_views_.emplace_back(ImageView(device_, images_[i], image_format_, 1));
   }
 }
 
@@ -153,7 +153,7 @@ void Swapchain::recreate(Surface& surface, GLFWwindow* const window)
                                   VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT });
   depth_image_view_ =
-    ImageView(device_, depth_image_.get(), depth_image_.format(),
+    ImageView(device_, depth_image_.get(), depth_image_.format(), 1,
               VK_IMAGE_ASPECT_DEPTH_BIT);
 
   createSwapchain(surface);

@@ -9,11 +9,10 @@ namespace vk {
 class SingleTimeCommand {
 public:
   SingleTimeCommand();
-  SingleTimeCommand(const Device* device_, CommandPool*);
+  SingleTimeCommand(const Device* device_, CommandPool* const);
   ~SingleTimeCommand();
 
   VkCommandBuffer& buffer() { return command_buffer_; }
-  void             begin();
   void             submit();
 
 private:

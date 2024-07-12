@@ -21,7 +21,7 @@ struct UniformBufferObject {
 
 // fwd
 // -----------------------------------------------------------------------------
-#ifdef ELDR_DEBUG_REPORT
+#ifdef ELDR_VULKAN_DEBUG_REPORT
 static VkDebugUtilsMessengerEXT
 setupDebugMessenger(VkInstance& instance, VkAllocationCallbacks* allocator);
 #endif
@@ -30,7 +30,7 @@ setupDebugMessenger(VkInstance& instance, VkAllocationCallbacks* allocator);
 VulkanWrapper::VulkanWrapper(GLFWwindow* const         window,
                              std::vector<const char*>& instance_extensions)
   : window_(window), current_frame_(0), instance_(instance_extensions),
-#ifdef ELDR_DEBUG_REPORT
+#ifdef ELDR_VULKAN_DEBUG_REPORT
     debug_messenger_(setupDebugMessenger(instance_.get(), nullptr)),
 #endif
     surface_(&instance_, window), device_(instance_, surface_),
