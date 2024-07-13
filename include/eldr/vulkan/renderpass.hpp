@@ -8,7 +8,7 @@ namespace vk {
 
 class RenderPass {
 public:
-  RenderPass(const Device*, VkFormat);
+  RenderPass(const Device*, VkFormat, VkSampleCountFlagBits);
   ~RenderPass();
 
   const VkRenderPass& get() const { return render_pass_; }

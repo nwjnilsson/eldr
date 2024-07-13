@@ -11,7 +11,7 @@ namespace vk {
 class Pipeline {
 public:
   Pipeline(const Device*, const Swapchain&, const RenderPass&,
-           const DescriptorSetLayout&);
+           const DescriptorSetLayout&, VkSampleCountFlagBits);
   ~Pipeline();
 
   const VkPipeline&       get() const { return pipeline_; }

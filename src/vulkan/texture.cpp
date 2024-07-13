@@ -50,6 +50,7 @@ Texture::Texture(const Device* device, CommandPool& command_pool)
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                  VK_IMAGE_USAGE_SAMPLED_BIT,
                         .properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                        .num_samples = VK_SAMPLE_COUNT_1_BIT,
                         .mip_levels = mip_levels_ };
 
   image_ = Image(device, image_info);

@@ -23,6 +23,7 @@ public:
   VkFormat              format() const { return image_format_; }
   const VkSwapchainKHR& get() const { return swapchain_; }
   VkSwapchainKHR&       get() { return swapchain_; }
+  VkSampleCountFlagBits msaaSamples() const { return msaa_samples_; }
 
   void recreate(Surface& surface, GLFWwindow* const window);
 
@@ -37,9 +38,12 @@ private:
   SwapchainSupportDetails support_details_;
   VkExtent2D              extent_;
   VkFormat                image_format_;
+  VkSampleCountFlagBits   msaa_samples_ = VK_SAMPLE_COUNT_1_BIT;
   VkSwapchainKHR          swapchain_;
   uint32_t                min_image_count_;
   uint32_t                image_count_;
+  Image                   color_image_;
+  ImageView               color_image_view_;
   Image                   depth_image_;
   ImageView               depth_image_view_;
 

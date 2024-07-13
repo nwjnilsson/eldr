@@ -9,12 +9,14 @@
 
 namespace eldr {
 namespace vk {
+// Minimum info required for image creation
 struct ImageInfo {
   VkExtent2D            extent;
   VkFormat              format;
   VkImageTiling         tiling;
   VkImageUsageFlags     usage;
   VkMemoryPropertyFlags properties;
+  VkSampleCountFlagBits num_samples;
   uint32_t              mip_levels = 1;
 };
 

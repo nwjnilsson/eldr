@@ -46,6 +46,7 @@ Device::Device(const Instance& instance, const Surface& surface)
 
   VkPhysicalDeviceFeatures device_features{};
   device_features.samplerAnisotropy = VK_TRUE;
+  device_features.sampleRateShading = VK_TRUE;
 
   // Logical device creation
   VkDeviceCreateInfo create_info = {};

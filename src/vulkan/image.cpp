@@ -27,7 +27,7 @@ Image::Image(const Device* device, const ImageInfo& image_info)
   image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_ci.usage         = image_info.usage;
   image_ci.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-  image_ci.samples       = VK_SAMPLE_COUNT_1_BIT;
+  image_ci.samples       = image_info.num_samples;
   image_ci.flags         = 0;
 
   if (vkCreateImage(device_->logical(), &image_ci, nullptr, &image_) !=

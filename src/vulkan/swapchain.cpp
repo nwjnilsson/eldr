@@ -11,6 +11,7 @@ static VkPresentModeKHR
                   selectSwapPresentMode(const std::vector<VkPresentModeKHR>&);
 static VkExtent2D selectSwapExtent(GLFWwindow*,
                                    const VkSurfaceCapabilitiesKHR&);
+VkSampleCountFlagBits getMsaaSampleCount(const Device&);
 // -----------------------------------------------------------------------------
 
 Swapchain::Swapchain(const Device* device, Surface& surface,
@@ -19,15 +20,26 @@ Swapchain::Swapchain(const Device* device, Surface& surface,
                        device_->physical(), surface.get())),
     extent_(selectSwapExtent(window, support_details_.capabilities)),
     image_format_(selectSwapSurfaceFormat(support_details_.formats).format),
+    msaa_samples_(getMsaaSampleCount(*device_)),
+    color_image_(device_, { { extent_.width, extent_.height },
+                            image_format_,
+                            VK_IMAGE_TILING_OPTIMAL,
+                            VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                              VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                            msaa_samples_ }),
+    color_image_view_(device_, color_image_.get(), color_image_.format(), 1,
+                      VK_IMAGE_ASPECT_COLOR_BIT),
     depth_image_(device_, { { extent_.width, extent_.height },
                             findDepthFormat(device_->physical()),
                             VK_IMAGE_TILING_OPTIMAL,
                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT }),
+                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                            msaa_samples_ }),
     depth_image_view_(device_, depth_image_.get(), depth_image_.format(), 1,
                       VK_IMAGE_ASPECT_DEPTH_BIT),
-    images_(), image_views_(), render_pass_(device_, image_format_),
-    framebuffers_()
+    images_(), image_views_(),
+    render_pass_(device_, image_format_, msaa_samples_), framebuffers_()
 {
   createSwapchain(surface);
   createImageViews();
@@ -113,8 +125,9 @@ void Swapchain::createFramebuffers()
 {
   framebuffers_.resize(image_views_.size());
   for (size_t i = 0; i < image_views_.size(); ++i) {
-    std::array<VkImageView, 2> attachments = { image_views_[i].get(),
-                                               depth_image_view_.get() };
+    std::array<VkImageView, 3> attachments = { color_image_view_.get(),
+                                               depth_image_view_.get(),
+                                               image_views_[i].get() };
     VkFramebufferCreateInfo    framebuffer_ci{};
     framebuffer_ci.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_ci.renderPass      = render_pass_.get();
@@ -146,12 +159,25 @@ void Swapchain::recreate(Surface& surface, GLFWwindow* const window)
 
   support_details_ =
     swapchainSupportDetails(device_->physical(), surface.get());
-  extent_      = selectSwapExtent(window, support_details_.capabilities);
+  extent_ = selectSwapExtent(window, support_details_.capabilities);
+
+  color_image_ = Image(device_, { { extent_.width, extent_.height },
+                                  image_format_,
+                                  VK_IMAGE_TILING_OPTIMAL,
+                                  VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                  msaa_samples_ });
+  color_image_view_ =
+    ImageView(device_, color_image_.get(), color_image_.format(), 1,
+              VK_IMAGE_ASPECT_COLOR_BIT);
+
   depth_image_ = Image(device_, { { extent_.width, extent_.height },
                                   findDepthFormat(device_->physical()),
                                   VK_IMAGE_TILING_OPTIMAL,
                                   VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT });
+                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                  msaa_samples_ });
   depth_image_view_ =
     ImageView(device_, depth_image_.get(), depth_image_.format(), 1,
               VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -208,6 +234,34 @@ static VkExtent2D selectSwapExtent(GLFWwindow*                     window,
                  capabilities.maxImageExtent.height);
     return extent;
   }
+}
+VkSampleCountFlagBits getMsaaSampleCount(const Device& device)
+{
+  VkPhysicalDeviceProperties physical_device_props{};
+  vkGetPhysicalDeviceProperties(device.physical(), &physical_device_props);
+
+  VkSampleCountFlags counts =
+    physical_device_props.limits.framebufferColorSampleCounts &
+    physical_device_props.limits.framebufferDepthSampleCounts;
+  if (counts & VK_SAMPLE_COUNT_64_BIT) {
+    return VK_SAMPLE_COUNT_64_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_32_BIT) {
+    return VK_SAMPLE_COUNT_32_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_16_BIT) {
+    return VK_SAMPLE_COUNT_16_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_8_BIT) {
+    return VK_SAMPLE_COUNT_8_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_4_BIT) {
+    return VK_SAMPLE_COUNT_4_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_2_BIT) {
+    return VK_SAMPLE_COUNT_2_BIT;
+  }
+  return VK_SAMPLE_COUNT_1_BIT;
 }
 } // namespace vk
 } // namespace eldr

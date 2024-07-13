@@ -2,8 +2,8 @@
 
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/device.hpp>
-#include <eldr/vulkan/texture.hpp>
 #include <eldr/vulkan/sampler.hpp>
+#include <eldr/vulkan/texture.hpp>
 
 namespace eldr {
 namespace vk {

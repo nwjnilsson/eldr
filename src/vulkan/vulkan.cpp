@@ -27,8 +27,8 @@ setupDebugMessenger(VkInstance& instance, VkAllocationCallbacks* allocator);
 #endif
 // -----------------------------------------------------------------------------
 
-VulkanWrapper::VulkanWrapper(GLFWwindow* const         window,
-                             std::vector<const char*>& instance_extensions)
+VulkanEngine::VulkanEngine(GLFWwindow* const         window,
+                           std::vector<const char*>& instance_extensions)
   : window_(window), current_frame_(0), instance_(instance_extensions),
 #ifdef ELDR_VULKAN_DEBUG_REPORT
     debug_messenger_(setupDebugMessenger(instance_.get(), nullptr)),
@@ -38,10 +38,10 @@ VulkanWrapper::VulkanWrapper(GLFWwindow* const         window,
     // render_pass_(&device_, swapchain_.format()),
     descriptor_set_layout_(&device_), descriptor_pool_(&device_),
     pipeline_(&device_, swapchain_, swapchain_.render_pass_,
-              descriptor_set_layout_),
+              descriptor_set_layout_, swapchain_.msaaSamples()),
     command_pool_(&device_, surface_),
-    texture_sampler_(&device_, command_pool_), vertices_(), indices_(),
-    vertex_buffer_(&device_, vertices_, command_pool_),
+    texture_sampler_(&device_, command_pool_),
+    vertices_(), indices_(), vertex_buffer_(&device_, vertices_, command_pool_),
     index_buffer_(&device_, indices_, command_pool_),
     uniform_buffers_(max_frames_in_flight),
     uniform_buffers_mapped_(max_frames_in_flight),
@@ -63,7 +63,7 @@ VulkanWrapper::VulkanWrapper(GLFWwindow* const         window,
   }
 }
 
-VulkanWrapper::~VulkanWrapper()
+VulkanEngine::~VulkanEngine()
 {
   vkDeviceWaitIdle(device_.logical());
 #ifdef ELDR_VULKAN_DEBUG_REPORT
@@ -149,7 +149,7 @@ VkDebugUtilsMessengerEXT setupDebugMessenger(VkInstance&            instance,
 }
 #endif
 
-void VulkanWrapper::createUniformBuffers()
+void VulkanEngine::createUniformBuffers()
 {
   BufferInfo   buffer_info{ .size       = sizeof(UniformBufferObject),
                             .usage      = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -163,7 +163,7 @@ void VulkanWrapper::createUniformBuffers()
   }
 }
 
-void VulkanWrapper::createCommandBuffers()
+void VulkanEngine::createCommandBuffers()
 {
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -176,7 +176,7 @@ void VulkanWrapper::createCommandBuffers()
     ThrowVk("Failed to create command buffers!");
 }
 
-void VulkanWrapper::createDescriptorSets()
+void VulkanEngine::createDescriptorSets()
 {
   std::vector<VkDescriptorSetLayout> layouts(max_frames_in_flight,
                                              descriptor_set_layout_.get());
@@ -231,7 +231,7 @@ void VulkanWrapper::createDescriptorSets()
                            descriptor_writes.data(), 0, nullptr);
   }
 }
-void VulkanWrapper::record(uint32_t image_index)
+void VulkanEngine::record(uint32_t image_index)
 {
   VkCommandBufferBeginInfo command_buffer_info{};
   command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -298,7 +298,7 @@ void VulkanWrapper::record(uint32_t image_index)
     ThrowVk("Failed to record command buffer!");
 }
 
-void VulkanWrapper::updateUniformBuffer(uint32_t current_image)
+void VulkanEngine::updateUniformBuffer(uint32_t current_image)
 {
   static auto start_time   = std::chrono::high_resolution_clock::now();
   auto        current_time = std::chrono::high_resolution_clock::now();
@@ -319,8 +319,8 @@ void VulkanWrapper::updateUniformBuffer(uint32_t current_image)
   memcpy(uniform_buffers_mapped_[current_image], &ubo, sizeof(ubo));
 }
 
-void VulkanWrapper::submitGeometry(const std::vector<Vec3f>& positions,
-                                   const std::vector<Vec2f>& texcoords)
+void VulkanEngine::submitGeometry(const std::vector<Vec3f>& positions,
+                                  const std::vector<Vec2f>& texcoords)
 {
   vertices_.clear();
   indices_.clear();
@@ -338,7 +338,7 @@ void VulkanWrapper::submitGeometry(const std::vector<Vec3f>& positions,
   index_buffer_  = Buffer(&device_, indices_, command_pool_);
 }
 
-void VulkanWrapper::drawFrame()
+void VulkanEngine::drawFrame()
 {
   vkWaitForFences(device_.logical(), 1,
                   &in_flight_fences_[current_frame_].get(), VK_TRUE,

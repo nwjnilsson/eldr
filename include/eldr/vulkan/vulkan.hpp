@@ -17,14 +17,14 @@ namespace eldr {
 
 namespace vk {
 
-class VulkanWrapper {
+class VulkanEngine {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
-  VulkanWrapper();
-  VulkanWrapper(GLFWwindow* const,
-                std::vector<const char*>& instance_extensions);
-  ~VulkanWrapper();
+  VulkanEngine();
+  VulkanEngine(GLFWwindow* const,
+               std::vector<const char*>& instance_extensions);
+  ~VulkanEngine();
 
   void drawFrame();
   void submitGeometry(const std::vector<Vec3f>& positions,

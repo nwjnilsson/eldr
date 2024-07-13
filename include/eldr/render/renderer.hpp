@@ -18,10 +18,10 @@ public:
 
   inline bool running() { return !window_.shouldClose(); }
   void submitGeometry(const std::vector<Shape*>& shapes);
-  inline void resize() { vk_wrapper_->framebuffer_resized_ = true; }
+  inline void resize() { vk_engine_->framebuffer_resized_ = true; }
 
 private:
   Window                             window_;
-  std::unique_ptr<vk::VulkanWrapper> vk_wrapper_;
+  std::unique_ptr<vk::VulkanEngine> vk_engine_;
 };
 } // namespace eldr

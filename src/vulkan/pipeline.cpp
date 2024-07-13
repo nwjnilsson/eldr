@@ -14,7 +14,8 @@ VkShaderModule           createShaderModule(VkDevice                 device,
 // -----------------------------------------------------------------------------
 Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
                    const RenderPass&          render_pass,
-                   const DescriptorSetLayout& descriptor_set_layout)
+                   const DescriptorSetLayout& descriptor_set_layout,
+                   VkSampleCountFlagBits      num_samples)
   : device_(device)
 {
   std::vector<char> vert_shader = loadShader("vertex");
@@ -110,9 +111,9 @@ Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
   VkPipelineMultisampleStateCreateInfo multisampling{};
   multisampling.sType =
     VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-  multisampling.sampleShadingEnable   = VK_FALSE;
-  multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
-  multisampling.minSampleShading      = 1.0f;     // Optional
+  multisampling.sampleShadingEnable   = VK_TRUE;
+  multisampling.rasterizationSamples  = num_samples;
+  multisampling.minSampleShading      = 0.2f;
   multisampling.pSampleMask           = nullptr;  // Optional
   multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
   multisampling.alphaToOneEnable      = VK_FALSE; // Optional
@@ -120,17 +121,17 @@ Pipeline::Pipeline(const Device* device, const Swapchain& swapchain,
   VkPipelineDepthStencilStateCreateInfo depth_stencil{};
   depth_stencil.sType =
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-  depth_stencil.depthTestEnable = VK_TRUE;
-  depth_stencil.depthWriteEnable = VK_TRUE;
-  depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+  depth_stencil.depthTestEnable       = VK_TRUE;
+  depth_stencil.depthWriteEnable      = VK_TRUE;
+  depth_stencil.depthCompareOp        = VK_COMPARE_OP_LESS;
   depth_stencil.depthBoundsTestEnable = VK_FALSE;
-  depth_stencil.minDepthBounds = 0.0f; // optional
-  depth_stencil.maxDepthBounds = 1.0f; // optional
+  depth_stencil.minDepthBounds        = 0.0f; // optional
+  depth_stencil.maxDepthBounds        = 1.0f; // optional
   // Stencil buffer ops not used. Format of depth image must contain a stencil
   // component if this is to be used.
   depth_stencil.stencilTestEnable = VK_FALSE;
-  depth_stencil.front = {};
-  depth_stencil.back = {};
+  depth_stencil.front             = {};
+  depth_stencil.back              = {};
 
   // TODO: may want to change
   VkPipelineColorBlendAttachmentState colorBlendAttachment{};
