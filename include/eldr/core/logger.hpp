@@ -1,6 +1,7 @@
 #pragma once
 
 #include <spdlog/spdlog.h>
+#include <eldr/vulkan/vktools/format.hpp>
 
 #include <filesystem>
 #include <stdexcept>
@@ -29,6 +30,6 @@
 #define CheckVkResult(result)                                                  \
   do {                                                                         \
     if (result != VK_SUCCESS) {                                                \
-      ThrowVk(fmt::format("VkResult = {}", static_cast<int32_t>(result)));     \
+      ThrowVk(fmt::format("VkResult = {}", result));                           \
     }                                                                          \
   } while (0)

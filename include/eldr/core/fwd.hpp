@@ -3,6 +3,7 @@
 #include <glm/fwd.hpp>
 
 namespace eldr {
+class Bitmap;
 
 template <size_t size, typename T> using Color = glm::vec<size, T>;
 template <size_t size, typename T> using Point = glm::vec<size, T>;

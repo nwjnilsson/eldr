@@ -1,6 +1,6 @@
 #include <eldr/app.hpp>
 #include <eldr/render/mesh.hpp>
-#include <eldr/vulkan/vulkan.hpp>
+#include <eldr/vulkan/engine.hpp>
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -10,72 +10,18 @@ namespace eldr {
 // -----------------------------------------------------------------------------
 // fwd
 // -----------------------------------------------------------------------------
-static GLFWwindow*              initGLFWwindow(uint32_t width, uint32_t height);
-static std::vector<const char*> getGLFWextensions();
-// -----------------------------------------------------------------------------
 
-static void glfwErrorCallback(int error, const char* description)
-{
-  spdlog::error("GLFW Error %d: %s", error, description);
-}
-
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
-{
-  // Let vulkan wrapper manage resize
-  (void) width;
-  (void) height;
-  auto app = reinterpret_cast<EldrApp*>(glfwGetWindowUserPointer(window));
-  app->resize();
-}
 
 EldrApp::EldrApp()
-  : window_(initGLFWwindow(width, height)),
-    vk_engine_(new vk::VulkanEngine(window_, getGLFWextensions())),
+  : vk_engine_(std::make_unique<vk::VulkanEngine>(width, height)),
     scene_({ model_path_str, texture_path_str })
 {
-  glfwSetWindowUserPointer(window_, this);
-  glfwSetFramebufferSizeCallback(window_, framebufferResizeCallback);
   vk_engine_->initImGui();
 }
 
 EldrApp::~EldrApp()
 {
   vk_engine_->shutdownImGui();
-  glfwDestroyWindow(window_);
-  glfwTerminate();
-  delete vk_engine_;
-}
-
-static GLFWwindow* initGLFWwindow(uint32_t width, uint32_t height)
-{
-  // Initialize GLFW
-  glfwSetErrorCallback(glfwErrorCallback);
-  if (!glfwInit()) {
-    Throw("[GLFW]: Failed to initialize");
-  }
-
-  // Vulkan pre-check
-  if (!glfwVulkanSupported()) {
-    Throw("[GLFW]: Vulkan not supported");
-  }
-
-  // Create GLFW Window with Vulkan context
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow* window =
-    glfwCreateWindow(width, height, "Eldr", nullptr, nullptr);
-
-  return window;
-}
-
-static std::vector<const char*> getGLFWextensions()
-{
-  std::vector<const char*> extensions{};
-  uint32_t                 extensions_count = 0;
-  const char**             glfw_extensions =
-    glfwGetRequiredInstanceExtensions(&extensions_count);
-  for (size_t i = 0; i < extensions_count; i++)
-    extensions.push_back(glfw_extensions[i]);
-  return extensions;
 }
 
 void EldrApp::resize() const { vk_engine_->framebuffer_resized_ = true; }
@@ -84,17 +30,17 @@ void EldrApp::run()
 {
   bool show_demo_window = true;
   submitGeometry(scene_.getShapes());
-  while (!glfwWindowShouldClose(window_)) {
+  while (vk_engine_.running()) {
     glfwPollEvents();
     vk_engine_->newFrame();
     ImGui::ShowDemoWindow(&show_demo_window);
-    //ImGuiIO& io = ImGui::GetIO();
+    // ImGuiIO& io = ImGui::GetIO();
     ImGui::Render();
     vk_engine_->drawFrame();
-    //if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-    //  ImGui::UpdatePlatformWindows();
-    //  ImGui::RenderPlatformWindowsDefault();
-    //}
+    // if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    //   ImGui::UpdatePlatformWindows();
+    //   ImGui::RenderPlatformWindowsDefault();
+    // }
   }
 }
 

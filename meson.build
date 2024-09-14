@@ -1,5 +1,5 @@
-project('eldr', 'cpp',
-  version : '0.0.1',
+project('Eldr', 'cpp',
+  version : '0.1.0',
   license : 'MIT',
   default_options : [
     'cpp_std=c++20',
@@ -9,6 +9,7 @@ project('eldr', 'cpp',
     'default_library=static'
     ]
   )
+
 
 add_global_arguments(
     #'-fmodules-ts',       # Needed to get module support in GCC (didn't work, try in future)
@@ -36,6 +37,28 @@ elif get_option('buildtype').startswith('release')
     language : 'cpp'
     )
 endif  
+
+# ------------------------------------------------------------------------------
+# Vulkan engine conf data
+# ------------------------------------------------------------------------------
+app_version_numbers = meson.project_version().split('.')
+
+engine_version_variant = '0'
+engine_version_major   = '0'
+engine_version_minor   = '1'
+engine_version_patch   = '0'
+
+vulkan_conf_data = configuration_data()
+vulkan_conf_data.set('ELDR_APP_NAME', meson.project_name())
+vulkan_conf_data.set('ELDR_APP_VERSION_MAJOR', app_version_numbers[0])
+vulkan_conf_data.set('ELDR_APP_VERSION_MINOR', app_version_numbers[1])
+vulkan_conf_data.set('ELDR_APP_VERSION_PATCH', app_version_numbers[2])
+vulkan_conf_data.set('ELDR_ENGINE_VERSION_VARIANT', engine_version_variant)
+vulkan_conf_data.set('ELDR_ENGINE_VERSION_MAJOR', engine_version_major)
+vulkan_conf_data.set('ELDR_ENGINE_VERSION_MINOR', engine_version_minor)
+vulkan_conf_data.set('ELDR_ENGINE_VERSION_PATCH', engine_version_patch)
+vulkan_conf_data.set('ELDR_ENGINE_NAME', 'eldr_pbr_engine')
+vulkan_conf_data.set('MESON_BUILD_TYPE', get_option('buildtype'))
 
 # ------------------------------------------------------------------------------
 # Dependencies

@@ -7,8 +7,7 @@
 
 #include <array>
 
-namespace eldr {
-namespace vk {
+namespace eldr::vk::wr {
 
 struct Vertex {
   ELDR_IMPORT_CORE_TYPES();
@@ -26,8 +25,7 @@ struct Vertex {
            tex_coord == other.tex_coord;
   }
 };
-} // namespace vk
-} // namespace eldr
+} // namespace eldr::vk::wr
 namespace std {
 template <> struct hash<eldr::vk::Vertex> {
   ELDR_IMPORT_CORE_TYPES();

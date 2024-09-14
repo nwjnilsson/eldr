@@ -30,9 +30,8 @@ public:
   static constexpr uint32_t height = 720;
 
 private:
-  GLFWwindow*       window_;
-  vk::VulkanEngine* vk_engine_;
-  Scene             scene_;
+  std::unique_ptr<vk::VulkanEngine> vk_engine_;
+  Scene                             scene_;
 };
 
 } // Namespace eldr

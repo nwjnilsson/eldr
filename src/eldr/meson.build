@@ -1,6 +1,6 @@
 src = ['main.cpp', 'app.cpp']
 executable('eldr',
   sources : src,
-  include_directories : [include, inc_cxxopts, inc_imgui],
+  include_directories : [include, cxxopts_inc, imgui_inc],
   dependencies : [libglfw, libvulkan, libspdlog],
-  link_with : [imgui, eldr_vulkan, eldr_render])
+  link_with : [imgui, vulkan_engine, eldr_render])

@@ -1,10 +1,10 @@
-inc_cxxopts = include_directories('cxxopts/include')
-inc_tinyobjloader = include_directories('tinyobjloader')
+cxxopts_inc = include_directories('cxxopts/include')
+tinyobjloader_inc = include_directories('tinyobjloader')
 
 # ------------------------------------------------------------------------------
 # Build Dear Imgui
 # ------------------------------------------------------------------------------
-inc_imgui = include_directories('imgui')
+imgui_inc = include_directories('imgui')
 imgui = library(
   'imgui',
   sources : [
@@ -16,5 +16,5 @@ imgui = library(
     'imgui/backends/imgui_impl_glfw.cpp',
     'imgui/backends/imgui_impl_vulkan.cpp'
     ],
-  include_directories : inc_imgui
+  include_directories : imgui_inc
   )
