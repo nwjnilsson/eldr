@@ -89,29 +89,8 @@ Buffer::~Buffer()
 {
   if (buffer_ != VK_NULL_HANDLE)
     vkDestroyBuffer(device_.logical(), buffer_, nullptr);
-  if (buffer_memory_ != VK_NULL_HANDLE)
-    vkFreeMemory(device_.logical(), buffer_memory_, nullptr);
-}
-
-Buffer& Buffer::operator=(Buffer&& other)
-{
-  if (this != &other) {
-    if (buffer_ != VK_NULL_HANDLE)
-      vkDestroyBuffer(device_.logical(), buffer_, nullptr);
-    if (buffer_memory_ != VK_NULL_HANDLE)
-      vkFreeMemory(device_.logical(), buffer_memory_, nullptr);
-
-    device_        = other.device_;
-    buffer_        = other.buffer_;
-    buffer_memory_ = other.buffer_memory_;
-    size_          = other.size_;
-
-    other.buffer_        = VK_NULL_HANDLE;
-    other.buffer_memory_ = VK_NULL_HANDLE;
-    other.size_          = 0;
-  }
-
-  return *this;
+//  if (buffer_memory_ != VK_NULL_HANDLE)
+//    vkFreeMemory(device_.logical(), buffer_memory_, nullptr);
 }
 
 void Buffer::copyFrom(Buffer& other, CommandPool& command_pool)

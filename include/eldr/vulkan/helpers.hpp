@@ -1,7 +1,8 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 
-namespace eldr::vk::wr {
+// TODO: decide whether to keep or remove helpers
+namespace eldr::vk::helpers {
 
 bool hasStencilComponent(VkFormat format);
 } // namespace eldr::vk::wr

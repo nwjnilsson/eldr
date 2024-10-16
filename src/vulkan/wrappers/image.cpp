@@ -3,7 +3,6 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk::wr {
 
@@ -48,12 +47,30 @@ Image::Image(Device& device, const ImageInfo& image_info)
   CheckVkResult(
     vkAllocateMemory(device_.logical(), &alloc_info, nullptr, &image_memory_));
   vkBindImageMemory(device_.logical(), image_, image_memory_, 0);
+}
 
-  // ---------------------------------------------------------------------------
-  // Create image view
-  // ---------------------------------------------------------------------------
-  image_view_ = device_.createImageView(
-    image_, format_, VK_IMAGE_ASPECT_COLOR_BIT, image_info.mip_levels);
+ImageView::ImageView(const Device& device, const Image& image,
+                     const ImageInfo& image_info)
+  : device_(device)
+{
+  auto image_view_ci     = makeInfo<VkImageViewCreateInfo>();
+  image_view_ci.image    = image.get();
+  image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  image_view_ci.format   = image.format();
+  // Standard color properties
+  image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+  image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+  image_view_ci.subresourceRange.aspectMask     = image_info.aspect_flags;
+  image_view_ci.subresourceRange.baseMipLevel   = 0;
+  image_view_ci.subresourceRange.levelCount     = image_info.mip_levels;
+  image_view_ci.subresourceRange.baseArrayLayer = 0;
+  image_view_ci.subresourceRange.layerCount     = 1;
+
+  CheckVkResult(vkCreateImageView(device_.logical(), &image_view_ci, nullptr,
+                                  &image_view_));
 }
 
 Image::~Image()
@@ -62,20 +79,12 @@ Image::~Image()
     vkDestroyImage(device_.logical(), image_, nullptr);
   if (image_memory_ != VK_NULL_HANDLE)
     vkFreeMemory(device_.logical(), image_memory_, nullptr);
-  if (image_view_ != VK_NULL_HANDLE)
-    vkDestroyImageView(device_.logical(), image_view_, nullptr);
 }
 
-Image::Image(Image&& other)
-  : device_(other.device_), image_(other.image_),
-    image_memory_(other.image_memory_), size_(other.size_),
-    image_view_(other.image_view_)
+ImageView::~ImageView()
 {
-  // invalidate other object
-  other.image_        = VK_NULL_HANDLE;
-  other.image_memory_ = VK_NULL_HANDLE;
-  other.image_view_   = VK_NULL_HANDLE;
-  other.size_         = { 0, 0 };
+  if (image_view_ != VK_NULL_HANDLE)
+    vkDestroyImageView(device_.logical(), image_view_, nullptr);
 }
 
 void Image::transitionLayout(CommandPool&  command_pool,

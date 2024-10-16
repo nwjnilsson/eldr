@@ -7,7 +7,7 @@ namespace eldr::vk::wr {
 
 class Fence {
 public:
-  Fence(Device&);
+  Fence(const Device&);
   Fence(Fence&&);
   ~Fence();
 
@@ -16,8 +16,8 @@ public:
   void    wait();
 
 private:
-  Device& device_;
+  const Device& device_;
 
-  VkFence fence_;
+  VkFence fence_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

@@ -151,9 +151,9 @@ void Swapchain::cleanup()
     image_views_.pop_back();
   }
 
-  for (size_t i = 0; i < framebuffers_.size(); ++i)
-    if (framebuffers_[i] != VK_NULL_HANDLE)
-      vkDestroyFramebuffer(device_.logical(), framebuffers_[i], nullptr);
+  //for (size_t i = 0; i < framebuffers_.size(); ++i)
+  //  if (framebuffers_[i] != VK_NULL_HANDLE)
+  //    vkDestroyFramebuffer(device_.logical(), framebuffers_[i], nullptr);
 }
 
 void Swapchain::createFramebuffers()
@@ -164,18 +164,6 @@ void Swapchain::createFramebuffers()
     std::array<VkImageView, 3> attachments = { color_image_->view(),
                                                depth_image_->view(),
                                                image_views_[i] };
-    VkFramebufferCreateInfo    framebuffer_ci{};
-    framebuffer_ci.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_ci.renderPass      = render_pass_->get();
-    framebuffer_ci.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebuffer_ci.pAttachments    = attachments.data();
-    framebuffer_ci.width           = extent_.width;
-    framebuffer_ci.height          = extent_.height;
-    framebuffer_ci.layers          = 1;
-
-    if (vkCreateFramebuffer(device_.logical(), &framebuffer_ci, nullptr,
-                            &framebuffers_[i]) != VK_SUCCESS)
-      ThrowVk("Failed to create framebuffer!");
   }
 }
 

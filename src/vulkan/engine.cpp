@@ -103,6 +103,10 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height)
   // TODO: implement some kind of render graph, where the pipeline is a member
   // of PhysicalStage and renderpass is a member of PhysicalGraphicsStage, where
   // the latter inherits from the former.
+  //
+  // Start by making a very simple render graph and put the graphics pipeline
+  // constructor etc there
+  //
   pipeline_ = std::make_unique<wr::Pipeline>(device_, swapchain_.get(),
                                              descriptors_[0].getSetLayout();
   // Sync objects

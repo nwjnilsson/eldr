@@ -7,7 +7,7 @@
 
 #include <array>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 
 struct Vertex {
   ELDR_IMPORT_CORE_TYPES();

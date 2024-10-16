@@ -20,6 +20,6 @@ public:
   VkInstance get() const { return instance_; }
 
 private:
-  VkInstance instance_;
+  VkInstance instance_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

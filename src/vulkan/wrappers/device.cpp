@@ -135,6 +135,8 @@ Device::~Device()
 
 void Device::waitIdle() const { vkDeviceWaitIdle(device_); }
 
+// TODO: split this into one function that sets a sample count member variable
+// and a getter for that variable
 VkSampleCountFlagBits Device::getMaxMSAASampleCount() const
 {
   VkPhysicalDeviceProperties physical_device_props{};
@@ -201,33 +203,6 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
     }
   }
   ThrowVk("Failed to find suitable memory type!");
-}
-
-
-VkImageView Device::createImageView(VkImage image, VkFormat format,
-                                    VkImageAspectFlags aspect_flags,
-                                    uint32_t           mip_levels)
-{
-  auto image_view_ci     = makeInfo<VkImageViewCreateInfo>();
-  image_view_ci.image    = image;
-  image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  image_view_ci.format   = format;
-  // Standard color properties
-  image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-  image_view_ci.subresourceRange.aspectMask     = aspect_flags;
-  image_view_ci.subresourceRange.baseMipLevel   = 0;
-  image_view_ci.subresourceRange.levelCount     = mip_levels;
-  image_view_ci.subresourceRange.baseArrayLayer = 0;
-  image_view_ci.subresourceRange.layerCount     = 1;
-
-  VkImageView image_view;
-  CheckVkResult(
-    vkCreateImageView(device_, &image_view_ci, nullptr, &image_view));
-  return image_view;
 }
 
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physical_device,

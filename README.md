@@ -22,7 +22,7 @@ to build there as well. MSVC 2013 is not compatible with
 ```
 $ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
     python3-pip python3-setuptools python3-wheel libspdlog-dev libglfw3-dev \
-    libglm-dev libvulkan-dev libjpeg62-turbo-dev
+    libglm-dev libvulkan-dev libjpeg62-turbo-dev libpng-dev
 ```
 For debugging:
 ```

@@ -36,10 +36,6 @@ public:
   uint32_t findMemoryType(uint32_t              type_filter,
                           VkMemoryPropertyFlags properties) const;
 
-  VkImageView createImageView(VkImage image, VkFormat format,
-                              VkImageAspectFlags aspect_flags,
-                              uint32_t           mip_levels);
-
   // Accessors
   VkPhysicalDevice physical() const { return physical_device_; }
   VkDevice         logical() const { return device_; }

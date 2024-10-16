@@ -21,18 +21,19 @@ public:
   Buffer(Buffer&&);
   ~Buffer();
 
-  Buffer& operator=(Buffer&&);
+  Buffer& operator=(const Buffer&) = delete;
+  Buffer& operator=(Buffer&&)      = delete;
 
-  VkDeviceSize          size() const { return size_; }
-  const VkBuffer&       get() const { return buffer_; }
-  const VkDeviceMemory& memory() const { return buffer_memory_; }
-  void                  copyFrom(Buffer&, CommandPool&);
+  VkDeviceSize    size() const { return size_; }
+  const VkBuffer& get() const { return buffer_; }
+  // const VkDeviceMemory& memory() const { return buffer_memory_; }
+  void copyFrom(Buffer&, CommandPool&);
 
 protected:
-  Device& device_;
+  const Device& device_;
 
-  VkBuffer       buffer_{ VK_NULL_HANDLE };
-  VkDeviceMemory buffer_memory_{ VK_NULL_HANDLE };
-  VkDeviceSize   size_;
+  VkBuffer buffer_{ VK_NULL_HANDLE };
+  // VkDeviceMemory buffer_memory_{ VK_NULL_HANDLE };
+  VkDeviceSize size_;
 };
 } // namespace eldr::vk::wr

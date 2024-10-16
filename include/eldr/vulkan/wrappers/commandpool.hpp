@@ -4,15 +4,15 @@
 namespace eldr::vk::wr {
 class CommandPool {
 public:
-  CommandPool();
-  CommandPool(Device&, Surface&);
+  CommandPool() = delete;
+  CommandPool(const Device&, Surface&);
   ~CommandPool();
 
   VkCommandPool get() const { return pool_; }
 
 private:
-  Device& device_;
+  const Device& device_;
 
-  VkCommandPool pool_;
+  VkCommandPool pool_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

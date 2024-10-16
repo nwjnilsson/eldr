@@ -1,12 +1,11 @@
 src = [
-  'wrappers/buffer.cpp',
+  'wrappers/physicalresource.cpp',
   'wrappers/commandbuffer.cpp',
   'wrappers/commandpool.cpp',
   'wrappers/descriptorpool.cpp',
   'wrappers/descriptorsetlayout.cpp',
   'wrappers/device.cpp',
   'wrappers/fence.cpp',
-  'wrappers/image.cpp',
   'wrappers/instance.cpp',
   'wrappers/pipeline.cpp',
   'wrappers/renderpass.cpp',

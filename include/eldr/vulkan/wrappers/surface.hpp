@@ -10,13 +10,13 @@ namespace eldr::vk::wr {
 
 class Surface {
 public:
-  Surface(Instance&, GLFWwindow*);
+  Surface(const Instance&, GLFWwindow*);
   ~Surface();
 
-  VkSurfaceKHR              get() const { return surface_; }
+  VkSurfaceKHR get() const { return surface_; }
 
 private:
-  Instance&          instance_;
-  VkSurfaceKHR       surface_{ VK_NULL_HANDLE };
+  const Instance& instance_;
+  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

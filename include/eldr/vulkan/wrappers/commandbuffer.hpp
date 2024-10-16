@@ -8,24 +8,25 @@ namespace eldr::vk::wr {
 class CommandBuffer {
 public:
   CommandBuffer();
-  CommandBuffer(Device& device_, CommandPool&);
+  CommandBuffer(const Device& device_, const CommandPool&);
   ~CommandBuffer();
 
-  CommandBuffer& operator=(CommandBuffer&&);
+  CommandBuffer& operator=(const CommandBuffer&) = delete;
+  CommandBuffer& operator=(CommandBuffer&&)      = delete;
 
-  VkCommandBuffer& get() { return command_buffer_; }
-  void             begin(VkCommandBufferUsageFlags usage = 0);
-  void             beginSingleCommand();
-  void             submit();
-  void             beginRenderPass(VkRenderPass, VkFramebuffer, VkExtent2D,
-                                   uint32_t clear_value_count, VkClearValue*);
-  void             endRenderPass();
-  void             end();
-  void             reset();
+  const VkCommandBuffer& get() const { return command_buffer_; }
+  void                   begin(VkCommandBufferUsageFlags usage = 0) const;
+  void                   beginSingleCommand() const;
+  void                   submit() const;
+  void beginRenderPass(VkRenderPass, VkFramebuffer, VkExtent2D,
+                       uint32_t clear_value_count, VkClearValue*) const;
+  void endRenderPass() const;
+  void end() const;
+  void reset() const;
 
 private:
-  Device&      device_;
-  CommandPool& command_pool_;
+  const Device&      device_;
+  const CommandPool& command_pool_;
 
   VkCommandBuffer command_buffer_{ VK_NULL_HANDLE };
 };

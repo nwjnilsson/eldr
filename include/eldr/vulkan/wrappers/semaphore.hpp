@@ -7,14 +7,14 @@ namespace eldr::vk::wr {
 
 class Semaphore {
 public:
-  Semaphore(Device& device_);
+  Semaphore(const Device& device_);
   Semaphore(Semaphore&&);
   ~Semaphore();
 
   VkSemaphore get() const { return semaphore_; }
 
 private:
-  Device& device_;
+  const Device& device_;
 
   VkSemaphore semaphore_{ VK_NULL_HANDLE };
 };

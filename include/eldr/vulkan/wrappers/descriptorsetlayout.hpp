@@ -8,15 +8,15 @@ namespace eldr::vk::wr {
 
 class DescriptorSetLayout {
 public:
-  DescriptorSetLayout(Device&,
+  DescriptorSetLayout(const Device&,
                       const std::vector<VkDescriptorSetLayoutBinding>&);
   ~DescriptorSetLayout();
 
   const VkDescriptorSetLayout& get() const { return layout_; }
 
 private:
-  Device& device_;
+  const Device& device_;
 
-  VkDescriptorSetLayout layout_;
+  VkDescriptorSetLayout layout_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr
