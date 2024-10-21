@@ -1,8 +1,8 @@
 #pragma once
 
-#include <eldr/vulkan/wrappers/makeinfo.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h> // includes vulkan.h
+#include <eldr/vulkan/exception.hpp>
 
 namespace eldr::vk {
 constexpr uint8_t max_frames_in_flight = 2;

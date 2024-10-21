@@ -1,7 +1,7 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
 #include <eldr/vulkan/vktools/format.hpp>
+#include <spdlog/spdlog.h>
 
 #include <filesystem>
 #include <stdexcept>
@@ -17,19 +17,11 @@
                   __LINE__, fmt::format(__VA_ARGS__)));                        \
   } while (0)
 
-#define ThrowSpecific(except, ...)                                             \
+#define ThrowVk(result, ...)                                                   \
   do {                                                                         \
-    throw except(                                                              \
+    throw eldr::vk::VulkanException(                                           \
       fmt::format("[File: {}, line: {}] {}",                                   \
                   std::filesystem::path(__FILE__).filename().string(),         \
-                  __LINE__, fmt::format(__VA_ARGS__)));                        \
-  } while (0)
-
-#define ThrowVk(...) Throw("[VULKAN]: {}", __VA_ARGS__);
-
-#define CheckVkResult(result)                                                  \
-  do {                                                                         \
-    if (result != VK_SUCCESS) {                                                \
-      ThrowVk(fmt::format("VkResult = {}", result));                           \
-    }                                                                          \
+                  __LINE__, fmt::format(__VA_ARGS__)),                         \
+      result);                                                                 \
   } while (0)

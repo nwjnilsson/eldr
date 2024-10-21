@@ -1,3 +1,8 @@
+// Ensure that vma implementation is included
+#include "eldr/vulkan/wrappers/commandpool.hpp"
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
@@ -15,8 +20,7 @@
 #include <memory>
 #include <string>
 
-namespace eldr {
-namespace vk {
+namespace eldr::vk {
 struct UniformBufferObject {
   ELDR_IMPORT_CORE_TYPES();
   alignas(16) Mat4f model;
@@ -37,10 +41,6 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height)
 #ifdef ELDR_VULKAN_DEBUG_REPORT
     debug_messenger_(setupDebugMessenger(instance_.get(), nullptr)),
 #endif
-    // render_pass_(&device_, swapchain_.format()),
-    pipeline_(&device_, swapchain_, swapchain_.render_pass_,
-              descriptor_set_layout_, swapchain_.msaaSamples()),
-    command_pool_(&device_, surface_),
     texture_sampler_(&device_, command_pool_), vertices_(), indices_(),
     vertex_buffer_(&device_, vertices_, command_pool_),
     index_buffer_(&device_, indices_, command_pool_),
@@ -97,18 +97,16 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height)
   // ---------------------------------------------------------------------------
   createResourceDescriptors();
 
+  queue_family_indices = wr::findQueueFamilies(device_, surface_);
   // ---------------------------------------------------------------------------
-  // Create pipeline
+  // Create render graph (?)
   // ---------------------------------------------------------------------------
-  // TODO: implement some kind of render graph, where the pipeline is a member
-  // of PhysicalStage and renderpass is a member of PhysicalGraphicsStage, where
-  // the latter inherits from the former.
-  //
-  // Start by making a very simple render graph and put the graphics pipeline
-  // constructor etc there
-  //
-  pipeline_ = std::make_unique<wr::Pipeline>(device_, swapchain_.get(),
-                                             descriptors_[0].getSetLayout();
+
+  // ---------------------------------------------------------------------------
+  // Create command pool
+  // ---------------------------------------------------------------------------
+  command_pool_(std::make_unique<wr::CommandPool>(*device_)),
+
   // Sync objects
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
     image_available_sem_.emplace_back(Semaphore(&device_));
@@ -511,5 +509,4 @@ void VulkanEngine::drawFrame()
   current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }
 
-} // namespace vk
-} // namespace eldr
+} // namespace eldr::vk

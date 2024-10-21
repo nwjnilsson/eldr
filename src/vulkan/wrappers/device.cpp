@@ -1,3 +1,4 @@
+#include "eldr/vulkan/common.hpp"
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/helpers.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -8,6 +9,33 @@
 
 namespace eldr::vk::wr {
 namespace {
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physical_device,
+                                     VkSurfaceKHR     surface)
+{
+  QueueFamilyIndices indices;
+  uint32_t           count = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, nullptr);
+  std::vector<VkQueueFamilyProperties> queue_families(count);
+  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count,
+                                           queue_families.data());
+
+  // For now, only the graphics queue is found and set. Perhaps there will
+  // be a need for other queues (memory or others) in the future?
+  // Note on queue families: it is "very" likely that the graphics queue
+  // family will be the same as the present queue family
+  for (uint32_t i = 0; i < count; i++) {
+    if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphics_family = i;
+    }
+    VkBool32 present_support = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface,
+                                         &present_support);
+    if (present_support)
+      indices.present_family = i;
+  }
+  return indices;
+}
+
 bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
                       std::vector<const char*> device_extensions)
 {
@@ -48,10 +76,10 @@ selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
   uint32_t gpu_count;
   VkResult err = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
   if (err != VK_SUCCESS)
-    ThrowVk("Failed to enumerate physical devices!");
+    ThrowVk(err, "Failed to enumerate physical devices!");
 
   if (gpu_count == 0)
-    ThrowVk("No compatible device found");
+    Throw("No compatible gpu found!");
 
   std::vector<VkPhysicalDevice> gpus;
   gpus.resize(gpu_count);
@@ -87,12 +115,11 @@ Device::Device(Instance& instance, Surface& surface,
   physical_device_ =
     selectPhysicalDevice(instance.get(), surface.get(), required_extensions);
 
-  QueueFamilyIndices queue_family_indices =
-    findQueueFamilies(physical_device_, surface.get());
+  queue_family_indices_ = findQueueFamilies(physical_device_, surface.get());
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::set<uint32_t>                   unique_queue_families = {
-    queue_family_indices.graphics_family.value(),
-    queue_family_indices.present_family.value()
+    queue_family_indices_.graphics_family.value(),
+    queue_family_indices_.present_family.value()
   };
 
   float queue_priority = 1.0f;
@@ -121,10 +148,32 @@ Device::Device(Instance& instance, Surface& surface,
   CheckVkResult(
     vkCreateDevice(physical_device_, &create_info, nullptr, &device_));
 
-  vkGetDeviceQueue(device_, queue_family_indices.present_family.value(), 0,
+  vkGetDeviceQueue(device_, queue_family_indices_.present_family.value(), 0,
                    &p_queue_);
-  vkGetDeviceQueue(device_, queue_family_indices.graphics_family.value(), 0,
+  vkGetDeviceQueue(device_, queue_family_indices_.graphics_family.value(), 0,
                    &g_queue_);
+
+  VmaVulkanFunctions vma_vulkan_functions{};
+  vma_vulkan_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+  vma_vulkan_functions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
+
+  const VmaAllocatorCreateInfo allocator_ci{
+    .flags                          = {},
+    .physicalDevice                 = physical_device_,
+    .device                         = device_,
+    .preferredLargeHeapBlockSize    = {},
+    .pAllocationCallbacks           = nullptr,
+    .pDeviceMemoryCallbacks         = nullptr,
+    .pHeapSizeLimit                 = nullptr,
+    .pVulkanFunctions               = &vma_vulkan_functions,
+    .instance                       = instance.get(),
+    .vulkanApiVersion               = required_vk_api_version,
+    .pTypeExternalMemoryHandleTypes = nullptr,
+  };
+
+  if (const VkResult result = vmaCreateAllocator(&allocator_ci, &allocator_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vmaCreateAllocator(): failed to create allocator!");
 }
 
 Device::~Device()
@@ -137,7 +186,7 @@ void Device::waitIdle() const { vkDeviceWaitIdle(device_); }
 
 // TODO: split this into one function that sets a sample count member variable
 // and a getter for that variable
-VkSampleCountFlagBits Device::getMaxMSAASampleCount() const
+VkSampleCountFlagBits Device::maxMSAASampleCount() const
 {
   VkPhysicalDeviceProperties physical_device_props{};
   vkGetPhysicalDeviceProperties(physical_device_, &physical_device_props);
@@ -203,33 +252,6 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
     }
   }
   ThrowVk("Failed to find suitable memory type!");
-}
-
-QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physical_device,
-                                     VkSurfaceKHR     surface)
-{
-  QueueFamilyIndices indices;
-  uint32_t           count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, nullptr);
-  std::vector<VkQueueFamilyProperties> queue_families(count);
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count,
-                                           queue_families.data());
-
-  // For now, only the graphics queue is found and set. Perhaps there will
-  // be a need for other queues (memory or others) in the future?
-  // Note on queue families: it is "very" likely that the graphics queue
-  // family will be the same as the present queue family
-  for (uint32_t i = 0; i < count; i++) {
-    if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphics_family = i;
-    }
-    VkBool32 present_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface,
-                                         &present_support);
-    if (present_support)
-      indices.present_family = i;
-  }
-  return indices;
 }
 
 SwapchainSupportDetails

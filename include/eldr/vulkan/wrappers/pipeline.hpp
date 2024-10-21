@@ -2,13 +2,17 @@
 
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <eldr/vulkan/wrappers/swapchain.hpp>
+
+#include <vector>
 
 namespace eldr::vk::wr {
 
 class Pipeline {
 public:
-  Pipeline(const Device&, const Swapchain&, VkDescriptorSetLayout);
+  Pipeline(const Device&, const Swapchain&, const GraphicsStage&,
+           const PhysicalGraphicsStage&,
+           const std::vector<VkVertexInputAttributeDescription>&,
+           const std::vector<VkVertexInputBindingDescription>&);
   ~Pipeline();
 
   VkPipeline       get() const { return pipeline_; }

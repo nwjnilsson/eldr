@@ -27,28 +27,35 @@ public:
 
   ~Device();
 
-  void                  waitIdle() const;
-  VkSampleCountFlagBits getMaxMSAASampleCount() const;
-  VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates,
-                               VkImageTiling                tiling,
-                               VkFormatFeatureFlags         features) const;
-  VkFormat findDepthFormat() const;
-  uint32_t findMemoryType(uint32_t              type_filter,
-                          VkMemoryPropertyFlags properties) const;
+  void waitIdle() const;
+
+  [[nodiscard]] VkSampleCountFlagBits maxMSAASampleCount() const;
+  [[nodiscard]] VkFormat
+  findSupportedFormat(const std::vector<VkFormat>& candidates,
+                      VkImageTiling                tiling,
+                      VkFormatFeatureFlags         features) const;
+
+  [[nodiscard]] VkFormat findDepthFormat() const;
+  [[nodiscard]] uint32_t findMemoryType(uint32_t              type_filter,
+                                        VkMemoryPropertyFlags properties) const;
 
   // Accessors
-  VkPhysicalDevice physical() const { return physical_device_; }
-  VkDevice         logical() const { return device_; }
-  VkQueue          graphicsQueue() const { return g_queue_; }
-  VkQueue          presentQueue() const { return p_queue_; }
+  [[nodiscard]] const QueueFamilyIndices& queueFamilyIndices() const;
+  [[nodiscard]] VkPhysicalDevice physical() const { return physical_device_; }
+  [[nodiscard]] VkDevice         logical() const { return device_; }
+  [[nodiscard]] VkQueue          graphicsQueue() const { return g_queue_; }
+  [[nodiscard]] VkQueue          presentQueue() const { return p_queue_; }
+  [[nodiscard]] VmaAllocator     allocator() const { return allocator_; }
 
 private:
-  VkPhysicalDevice physical_device_{ VK_NULL_HANDLE };
-  VkDevice         device_{ VK_NULL_HANDLE };
-  VkQueue          p_queue_{ VK_NULL_HANDLE }; // present
-  VkQueue          g_queue_{ VK_NULL_HANDLE }; // graphics
+  VkPhysicalDevice   physical_device_{ VK_NULL_HANDLE };
+  VkDevice           device_{ VK_NULL_HANDLE };
+  VmaAllocator       allocator_{ VK_NULL_HANDLE };
+  QueueFamilyIndices queue_family_indices_{};
+  VkQueue            p_queue_{ VK_NULL_HANDLE }; // present
+  VkQueue            g_queue_{ VK_NULL_HANDLE }; // graphics
 };
-QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice, VkSurfaceKHR);
+// QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice, VkSurfaceKHR);
 SwapchainSupportDetails getSwapchainSupportDetails(VkPhysicalDevice,
                                                    VkSurfaceKHR);
 } // namespace eldr::vk::wr

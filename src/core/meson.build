@@ -4,8 +4,9 @@ src = [ 'bitmap.cpp',
         'mstream.cpp',
         'dstream.cpp',
         'struct.cpp']
+
 eldr_core = library(
   'eldr-core',
   sources : src,
-  include_directories : [include],
-  dependencies : [libspdlog, libjpeg, libpng])
+  include_directories : [eldr_headers],
+  dependencies : [spdlog_dep, libjpeg_dep, libpng_dep])

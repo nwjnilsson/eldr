@@ -1,11 +1,11 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/wrappers/pipeline.hpp>
 
 #include <spdlog/spdlog.h>
 
 #include <functional>
 #include <memory>
+#include <span>
 #include <vector>
 
 namespace eldr::vk {
@@ -62,6 +62,7 @@ enum class BufferUsage {
 
 class BufferResource : public RenderResource {
   friend RenderGraph;
+  friend wr::Buffer;
 
 public:
   BufferResource(std::string&& name, BufferUsage usage)
@@ -88,14 +89,13 @@ public:
   /// @param count The number of elements (not bytes) to upload
   /// @param data A pointer to a contiguous block of memory that is at least
   /// `count * sizeof(T)` bytes long
-  // TODO: Use std::span when we switch to C++ 20.
-  template <typename T> void uploadData(const T* data, std::size_t count);
+  template <typename T> void uploadData(const std::span<T>&);
 
   /// @brief @copybrief upload_data(const T *, std::size_t)
   /// @note This is equivalent to doing `upload_data(data.data(), data.size() *
   /// sizeof(T))`
   /// @see upload_data(const T *data, std::size_t count)
-  template <typename T> void uploadData(const std::vector<T>& data);
+  // template <typename T> void uploadData(const std::vector<T>& data);
 
 private:
   const BufferUsage                              usage_;
@@ -153,6 +153,7 @@ private:
 /// @note Not to be confused with a vulkan render pass.
 class RenderStage : public RenderGraphObject {
   friend RenderGraph;
+  friend wr::Pipeline;
 
 public:
   RenderStage(const RenderStage&) = delete;
@@ -215,6 +216,7 @@ private:
 
 class GraphicsStage : public RenderStage {
   friend RenderGraph;
+  friend wr::Pipeline;
 
 public:
   explicit GraphicsStage(std::string&& name) : RenderStage(name) {}
@@ -266,12 +268,6 @@ private:
 class PhysicalResource : public RenderGraphObject {
   friend RenderGraph;
 
-protected:
-  const wr::Device& device_;
-  VkDeviceMemory    allocation_{ VK_NULL_HANDLE };
-
-  explicit PhysicalResource(const wr::Device& device) : device_(device) {}
-
 public:
   PhysicalResource(const PhysicalResource&) = delete;
   PhysicalResource(PhysicalResource&&)      = delete;
@@ -279,49 +275,55 @@ public:
 
   PhysicalResource& operator=(const PhysicalResource&) = delete;
   PhysicalResource& operator=(PhysicalResource&&)      = delete;
+
+protected:
+  const wr::Device& device_;
+  // TODO: use VulkanMemoryAllocator. This probably means moving out device
+  // memory from image class etc
+  VmaAllocation allocation_{};
+
+  explicit PhysicalResource(const wr::Device& device) : device_(device) {}
 };
 
-class PhysicalBuffer : public PhysicalResource {
-  friend RenderGraph;
+// class PhysicalBuffer : public PhysicalResource {
+//   friend RenderGraph;
+//
+// public:
+//   explicit PhysicalBuffer(const wr::Device& device) :
+//   PhysicalResource(device)
+//   {
+//   }
+//   PhysicalBuffer(const PhysicalBuffer&) = delete;
+//   PhysicalBuffer(PhysicalBuffer&&)      = delete;
+//   ~PhysicalBuffer()                     = default;
+//
+//   PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
+//   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
+//
+// private:
+//   VmaAllocationInfo alloc_info_{};
+//   std::unique_ptr<wr::Buffer> buffer_{};
+// };
 
-private:
-  VkMemoryAllocateInfo        alloc_info_{};
-  std::unique_ptr<wr::Buffer> buffer_{};
-
-public:
-  explicit PhysicalBuffer(const wr::Device& device) : PhysicalResource(device)
-  {
-  }
-  PhysicalBuffer(const PhysicalBuffer&) = delete;
-  PhysicalBuffer(PhysicalBuffer&&)      = delete;
-  ~PhysicalBuffer()                     = default;
-
-  PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
-  PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
-};
-
-class PhysicalImage : public PhysicalResource {
-  friend RenderGraph;
-
-private:
-  std::unique_ptr<wr::Image>     image_{};
-  std::unique_ptr<wr::ImageView> image_view_{};
-
-public:
-  explicit PhysicalImage(const wr::Device& device) : PhysicalResource(device) {}
-  PhysicalImage(const PhysicalImage&) = delete;
-  PhysicalImage(PhysicalImage&&)      = delete;
-  ~PhysicalImage() override           = default;
-
-  PhysicalImage& operator=(const PhysicalImage&) = delete;
-  PhysicalImage& operator=(PhysicalImage&&)      = delete;
-};
+// class PhysicalImage : public PhysicalResource {
+//   friend RenderGraph;
+//
+// private:
+//   std::unique_ptr<wr::Image>     image_{};
+//   std::unique_ptr<wr::ImageView> image_view_{};
+//
+// public:
+//   explicit PhysicalImage(const wr::Device& device) : PhysicalResource(device)
+//   {} PhysicalImage(const PhysicalImage&) = delete;
+//   PhysicalImage(PhysicalImage&&)      = delete;
+//   ~PhysicalImage() override           = default;
+//
+//   PhysicalImage& operator=(const PhysicalImage&) = delete;
+//   PhysicalImage& operator=(PhysicalImage&&)      = delete;
+// };
 
 class PhysicalBackBuffer : public PhysicalResource {
   friend RenderGraph;
-
-private:
-  const wr::Swapchain& m_swapchain;
 
 public:
   PhysicalBackBuffer(const wr::Device& device, const wr::Swapchain& swapchain)
@@ -334,6 +336,9 @@ public:
 
   PhysicalBackBuffer& operator=(const PhysicalBackBuffer&) = delete;
   PhysicalBackBuffer& operator=(PhysicalBackBuffer&&)      = delete;
+
+private:
+  const wr::Swapchain& m_swapchain;
 };
 
 class PhysicalStage : public RenderGraphObject {
@@ -351,10 +356,10 @@ public:
   /// @brief Retrieve the pipeline layout of this physical stage.
   // TODO: This can be removed once descriptors are properly implemented in the
   // render graph.
-  [[nodiscard]] VkPipelineLayout pipelineLayout() const
-  {
-    return pipeline_->layout();
-  }
+  //  [[nodiscard]] VkPipelineLayout pipelineLayout() const
+  //  {
+  //    return pipeline_->layout();
+  //  }
 
 protected:
   const wr::Device& device_;
@@ -365,6 +370,7 @@ private:
 
 class PhysicalGraphicsStage : public PhysicalStage {
   friend RenderGraph;
+  friend wr::Pipeline;
 
 public:
   explicit PhysicalGraphicsStage(const wr::Device& device)
@@ -412,9 +418,15 @@ public:
     }
   }
 
-  void buildRenderPass(const GraphicsStage*   stage,
-                       PhysicalGraphicsStage& physical) const;
-  void compile(const RenderResource* target);
+  void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
+  void buildGraphicsPipeline(const GraphicsStage*,
+                             PhysicalGraphicsStage&) const;
+  // void buildBuffer(const BufferResource&, wr::Buffer&) const;
+
+  void recordCommandBuffer(const RenderStage*       stage,
+                           const wr::CommandBuffer& cb,
+                           const std::uint32_t      image_index) const;
+  void compile(/*const RenderResource* target*/);
 
   void render(std::uint32_t image_index, const wr::CommandBuffer& cb);
 
@@ -442,17 +454,16 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-template <typename T>
-void BufferResource::uploadData(const T* data, std::size_t count)
+template <typename T> void BufferResource::uploadData(const std::span<T>& data)
 {
-  data_               = data;
-  data_size_          = count * (element_size_ = sizeof(T));
+  data_               = data.data();
+  data_size_          = data.size() * (element_size_ = sizeof(T));
   data_upload_needed_ = true;
 }
 
-template <typename T>
-void BufferResource::uploadData(const std::vector<T>& data)
-{
-  upload_data(data.data(), data.size());
-}
+// template <typename T>
+// void BufferResource::uploadData(const std::vector<T>& data)
+//{
+//   uploadData(std::span<T>(data));
+// }
 } // namespace eldr::vk

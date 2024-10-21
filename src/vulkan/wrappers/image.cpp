@@ -1,91 +1,116 @@
 #include <eldr/core/logger.hpp>
+#include <eldr/vulkan/exception.hpp>
 #include <eldr/vulkan/helpers.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
 namespace eldr::vk::wr {
 
-Image::Image(Device& device, const ImageInfo& image_info)
-  : device_(device), format_(image_info.format), size_(image_info.extent)
+Image::Image(const Device& device, const ImageInfo& image_info,
+             VmaAllocationCreateInfo& alloc_ci)
+  : vk::PhysicalResource(device), mip_levels_(image_info.mip_levels),
+    format_(image_info.format), size_(image_info.extent)
 {
-  // ---------------------------------------------------------------------------
-  // Create image
-  // ---------------------------------------------------------------------------
-  VkFormatProperties format_properties;
-  vkGetPhysicalDeviceFormatProperties(device_.physical(), image_info.format,
-                                      &format_properties);
+  // --------------------------------------------------------------------------- 
+  // Create image view
+  // --------------------------------------------------------------------------- 
+  VkImageCreateInfo image_ci{
+    .sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+    .pNext                 = nullptr,
+    .flags                 = 0,
+    .imageType             = VK_IMAGE_TYPE_2D,
+    .format                = image_info.format,
+    .extent                = { size_.width, size_.height, 1 },
+    .mipLevels             = image_info.mip_levels,
+    .arrayLayers           = 1,
+    .samples               = image_info.num_samples,
+    .tiling                = image_info.tiling,
+    .usage                 = image_info.usage_flags,
+    .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
+    .queueFamilyIndexCount = {},
+    .pQueueFamilyIndices   = nullptr,
+    .initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED,
+  };
 
-  auto image_ci          = makeInfo<VkImageCreateInfo>();
-  image_ci.imageType     = VK_IMAGE_TYPE_2D;
-  image_ci.extent.width  = size_.width;
-  image_ci.extent.height = size_.height;
-  image_ci.extent.depth  = 1;
-  image_ci.mipLevels     = image_info.mip_levels;
-  image_ci.arrayLayers   = 1;
-  image_ci.format        = image_info.format;
-  image_ci.tiling        = image_info.tiling;
-  image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  image_ci.usage         = image_info.usage_flags;
-  image_ci.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-  image_ci.samples       = image_info.num_samples;
-  image_ci.flags         = 0;
+  VmaAllocationInfo alloc_info;
+  if (const VkResult result =
+        vmaCreateImage(device_.allocator(), &image_ci, &alloc_ci, &image_,
+                       &allocation_, &alloc_info);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vmaCreateImage(): failed to create image!");
 
-  CheckVkResult(vkCreateImage(device_.logical(), &image_ci, nullptr, &image_));
-
-  // ---------------------------------------------------------------------------
-  // Allocate memory
-  // ---------------------------------------------------------------------------
-  VkMemoryRequirements mem_requirements;
-  vkGetImageMemoryRequirements(device_.logical(), image_, &mem_requirements);
-
-  auto alloc_info            = makeInfo<VkMemoryAllocateInfo>();
-  alloc_info.allocationSize  = mem_requirements.size;
-  alloc_info.memoryTypeIndex = device_.findMemoryType(
-    mem_requirements.memoryTypeBits, image_info.memory_flags);
-
-  CheckVkResult(
-    vkAllocateMemory(device_.logical(), &alloc_info, nullptr, &image_memory_));
-  vkBindImageMemory(device_.logical(), image_, image_memory_, 0);
+  // --------------------------------------------------------------------------- 
+  // Create image view
+  // --------------------------------------------------------------------------- 
+  const VkImageViewCreateInfo image_view_ci{
+    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = {},
+    .image    = image_,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+    .format   = format_,
+    // Standard color properties
+    .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY },
+    .subresourceRange = { 
+      .aspectMask     = image_info.aspect_flags,
+      .baseMipLevel   = 0,
+      .levelCount     = mip_levels_,
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+  };
+  if (const VkResult result = vkCreateImageView(
+        device_.logical(), &image_view_ci, nullptr, &image_view_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vkCreateImageView(): failed to create image view!");
 }
 
-ImageView::ImageView(const Device& device, const Image& image,
-                     const ImageInfo& image_info)
-  : device_(device)
-{
-  auto image_view_ci     = makeInfo<VkImageViewCreateInfo>();
-  image_view_ci.image    = image.get();
-  image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  image_view_ci.format   = image.format();
-  // Standard color properties
-  image_view_ci.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-  image_view_ci.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-  image_view_ci.subresourceRange.aspectMask     = image_info.aspect_flags;
-  image_view_ci.subresourceRange.baseMipLevel   = 0;
-  image_view_ci.subresourceRange.levelCount     = image_info.mip_levels;
-  image_view_ci.subresourceRange.baseArrayLayer = 0;
-  image_view_ci.subresourceRange.layerCount     = 1;
-
-  CheckVkResult(vkCreateImageView(device_.logical(), &image_view_ci, nullptr,
-                                  &image_view_));
-}
+//ImageView::ImageView(const Device& device, const Image& image,
+//                     VkImageAspectFlags aspect_flags)
+//  : device_(device)
+//{
+//  const VkImageViewCreateInfo image_view_ci{
+//    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+//    .pNext = nullptr,
+//    .flags = {},
+//    .image    = image.get(),
+//    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+//    .format   = image.format(),
+//    // Standard color properties
+//    .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
+//                    VK_COMPONENT_SWIZZLE_IDENTITY,
+//                    VK_COMPONENT_SWIZZLE_IDENTITY,
+//                    VK_COMPONENT_SWIZZLE_IDENTITY },
+//    .subresourceRange = { 
+//      .aspectMask     = aspect_flags,
+//      .baseMipLevel   = 0,
+//      .levelCount     = image.mipLevels(),
+//      .baseArrayLayer = 0,
+//      .layerCount     = 1,
+//    },
+//  };
+//  if (const VkResult result = vkCreateImageView(
+//        device_.logical(), &image_view_ci, nullptr, &image_view_);
+//      result != VK_SUCCESS)
+//    ThrowVk(result, "vkCreateImageView(): failed to create image view!");
+//}
 
 Image::~Image()
 {
-  if (image_ != VK_NULL_HANDLE)
-    vkDestroyImage(device_.logical(), image_, nullptr);
-  if (image_memory_ != VK_NULL_HANDLE)
-    vkFreeMemory(device_.logical(), image_memory_, nullptr);
+  vmaDestroyImage(device_.allocator(), image_, allocation_);
+  vkDestroyImageView(device_.logical(), image_view_, nullptr);
 }
 
-ImageView::~ImageView()
-{
-  if (image_view_ != VK_NULL_HANDLE)
-    vkDestroyImageView(device_.logical(), image_view_, nullptr);
-}
+//ImageView::~ImageView()
+//{
+//  if (image_view_ != VK_NULL_HANDLE)
+//    vkDestroyImageView(device_.logical(), image_view_, nullptr);
+//}
 
 void Image::transitionLayout(CommandPool&  command_pool,
                              VkImageLayout old_layout, VkImageLayout new_layout,
@@ -125,7 +150,7 @@ void Image::transitionLayout(CommandPool&  command_pool,
     destination_stage     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   }
   else {
-    ThrowSpecific(std::invalid_argument, "Unsupported layout transition!");
+    ThrowVk({}, "Unsupported layout transition!");
   }
 
   vkCmdPipelineBarrier(cb.get(), source_stage, destination_stage, 0, 0, nullptr,
@@ -137,7 +162,7 @@ void Image::transitionLayout(CommandPool&  command_pool,
 
 void Image::copyFromBuffer(const Buffer& buffer, CommandPool& command_pool)
 {
-  CommandBuffer cb(device_, &command_pool);
+  CommandBuffer cb(device_, command_pool);
   cb.beginSingleCommand();
 
   VkBufferImageCopy region{};
@@ -151,7 +176,7 @@ void Image::copyFromBuffer(const Buffer& buffer, CommandPool& command_pool)
   region.imageSubresource.layerCount     = 1;
 
   region.imageOffset = { 0, 0, 0 };
-  region.imageExtent = { size_.x, size_.y, 1 };
+  region.imageExtent = { size_.width, size_.height, 1 };
 
   vkCmdCopyBufferToImage(cb.get(), buffer.get(), image_,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);

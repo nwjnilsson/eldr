@@ -63,15 +63,20 @@ vulkan_conf_data.set('MESON_BUILD_TYPE', get_option('buildtype'))
 # ------------------------------------------------------------------------------
 # Dependencies
 # ------------------------------------------------------------------------------
-libglfw       = dependency('glfw3',   version: '>=3.3.2')
-libvulkan     = dependency('vulkan',  version: '>=1.2.131')
-libjpeg       = dependency('libjpeg', version: '>=2.0.3')
-libpng        = dependency('libpng',  version: '>=1.6.3')
-libspdlog     = dependency('spdlog',  version: '>=1.5.0')
+glfw_dep      = dependency('glfw3',   version: '>=3.3.2')
+vulkan_dep    = dependency('vulkan',  version: '>=1.2.131')
+libjpeg_dep   = dependency('libjpeg', version: '>=2.0.3')
+libpng_dep    = dependency('libpng',  version: '>=1.6.3')
+spdlog_dep    = dependency('spdlog',  version: '>=1.5.0')
+vma_proj      = subproject('vulkan-memory-allocator')
+vma_dep       = vma_proj.get_variable('vma_allocator_dep')
+cxxopts_proj  = subproject('cxxopts')
+cxxopts_dep   = cxxopts_proj.get_variable('cxxopts_dep')
 
 # ------------------------------------------------------------------------------
 # The rest
 # ------------------------------------------------------------------------------
-include = include_directories('include')
+eldr_headers = include_directories('include')
+
 subdir('external')
 subdir('src')

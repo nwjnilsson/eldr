@@ -2,11 +2,16 @@
 
 namespace eldr::vk {
 struct Vertex;
+
+class GraphicsStage;
+class PhysicalGraphicsStage;
+
 namespace wr {
 class Window;
 class Instance;
 class Surface;
 class Device;
+struct QueueFamilyIndices;
 class Swapchain;
 //class DescriptorSetLayout;
 //class DescriptorPool;
@@ -24,5 +29,6 @@ class Framebuffer;
 class CommandBuffer;
 class Semaphore;
 class Fence;
+class Shader;
 } // namespace wr
 } // namespace eldr::vk

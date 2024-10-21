@@ -3,7 +3,6 @@
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
 #include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk::wr {
 Framebuffer::Framebuffer(const Device& device, const RenderPass& render_pass,

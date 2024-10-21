@@ -5,7 +5,8 @@ namespace eldr::vk::wr {
 class CommandPool {
 public:
   CommandPool() = delete;
-  CommandPool(const Device&, Surface&);
+  CommandPool(const Device&, const VkCommandPoolCreateFlags flags =
+                               VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
   ~CommandPool();
 
   VkCommandPool get() const { return pool_; }

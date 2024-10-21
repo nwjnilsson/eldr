@@ -46,7 +46,7 @@ private:
   std::unique_ptr<wr::Device>         device_;
   std::unique_ptr<wr::Swapchain>      swapchain_;
   std::vector<wr::ResourceDescriptor> descriptors_;
-  std::unique_ptr<wr::Pipeline>       pipeline_;
+  //std::unique_ptr<wr::Pipeline>       pipeline_;
   std::unique_ptr<wr::CommandPool>    command_pool_;
   std::unique_ptr<wr::TextureSampler> texture_sampler_;
   std::unique_ptr<wr::Buffer>         vertex_buffer_;
@@ -55,7 +55,7 @@ private:
   std::vector<uint32_t>               indices_;
   std::vector<wr::Buffer>             uniform_buffers_;
   std::vector<void*>                  uniform_buffers_mapped_;
-  std::vector<wr::CommandBuffer>      command_buffers_;
+  //std::vector<wr::CommandBuffer>      command_buffers_;
   std::vector<wr::Semaphore>          image_available_sem_;
   std::vector<wr::Semaphore>          render_finished_sem_;
   std::vector<wr::Fence>              in_flight_fences_;
