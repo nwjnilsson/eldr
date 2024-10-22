@@ -8,9 +8,9 @@
 
 namespace eldr::vk::wr {
 
-Image::Image(const Device& device, const ImageInfo& image_info,
-             VmaAllocationCreateInfo& alloc_ci)
-  : vk::PhysicalResource(device), mip_levels_(image_info.mip_levels),
+GpuImage::GpuImage(const Device& device, const ImageInfo& image_info,
+             const VmaAllocationCreateInfo& alloc_ci, const std::string& name)
+  : GpuResource(device, name), mip_levels_(image_info.mip_levels),
     format_(image_info.format), size_(image_info.extent)
 {
   // --------------------------------------------------------------------------- 

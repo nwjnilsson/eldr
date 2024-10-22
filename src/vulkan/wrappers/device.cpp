@@ -1,10 +1,12 @@
-#include "eldr/vulkan/common.hpp"
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/helpers.hpp>
+#include <eldr/vulkan/wrappers/commandbuffer.hpp>
+#include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 
+#include <mutex>
 #include <set>
 
 namespace eldr::vk::wr {
@@ -238,6 +240,32 @@ VkFormat Device::findDepthFormat() const
     { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
       VK_FORMAT_D24_UNORM_S8_UINT },
     VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+CommandPool& Device::threadGraphicsPool() const
+{
+  // Thread local command pool is implicitly static!
+  thread_local CommandPool* thread_graphics_pool = nullptr;
+  if (thread_graphics_pool == nullptr) {
+    auto cmd_pool = std::make_unique<CommandPool>(*this, "graphics pool");
+    std::scoped_lock locker(mutex_);
+    thread_graphics_pool =
+      command_pools_.emplace_back(std::move(cmd_pool)).get();
+  }
+  return *thread_graphics_pool;
+}
+
+const CommandBuffer& Device::requestCommandBuffer(const std::string& name)
+{
+  return threadGraphicsPool().requestCommandBuffer();
+}
+
+void Device::execute(
+  const std::function<void(const CommandBuffer& cb)>& cmd_lambda) const
+{
+  const auto& cb = threadGraphicsPool().requestCommandBuffer();
+  cmd_lambda(cb);
+  cb.submit();
 }
 
 uint32_t Device::findMemoryType(uint32_t              type_filter,

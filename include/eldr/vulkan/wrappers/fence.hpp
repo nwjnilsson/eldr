@@ -12,8 +12,10 @@ public:
   ~Fence();
 
   VkFence get() const { return fence_; }
-  void    reset();
-  void    wait();
+
+  void                   reset() const;
+  void                   wait() const;
+  [[nodiscard]] VkResult status() const;
 
 private:
   const Device& device_;

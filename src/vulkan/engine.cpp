@@ -1,5 +1,6 @@
 // Ensure that vma implementation is included
 #include "eldr/vulkan/wrappers/commandpool.hpp"
+#include "eldr/vulkan/wrappers/gputexture.hpp"
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
@@ -107,7 +108,27 @@ VulkanEngine::VulkanEngine(uint32_t width, uint32_t height)
   // ---------------------------------------------------------------------------
   command_pool_(std::make_unique<wr::CommandPool>(*device_)),
 
-  // Sync objects
+  // ---------------------------------------------------------------------------
+  // Create texture, TODO: move
+  // ---------------------------------------------------------------------------
+  const char* env_p = std::getenv("ELDR_DIR");
+  if (env_p == nullptr) {
+    Throw("Environment not set up correctly");
+  }
+  // FIXME: set this some other way
+  const std::string     texture_path = "/textures/viking_room.png";
+  std::filesystem::path filepath     = std::string(env_p) + texture_path;
+
+  // use bitmap class somehow
+  auto bitmap = std::make_unique<Bitmap>(filepath);
+  if (bitmap->pixelFormat() != Bitmap::PixelFormat::RGBA)
+    bitmap->rgbToRgba();
+
+  texture_ = std::make_unique<wr::GpuTexture>(device_, bitmap);
+
+  // ---------------------------------------------------------------------------
+  // Create sync objects
+  // ---------------------------------------------------------------------------
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
     image_available_sem_.emplace_back(Semaphore(&device_));
     render_finished_sem_.emplace_back(Semaphore(&device_));

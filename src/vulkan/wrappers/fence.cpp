@@ -3,7 +3,7 @@
 
 namespace eldr::vk::wr {
 
-Fence::Fence(Device& device) : device_(device)
+Fence::Fence(const Device& device) : device_(device)
 {
   VkFenceCreateInfo fence_ci{};
   fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -23,10 +23,15 @@ Fence::~Fence()
     vkDestroyFence(device_.logical(), fence_, nullptr);
 }
 
-void Fence::reset() { vkResetFences(device_.logical(), 1, &fence_); }
+void Fence::reset() const { vkResetFences(device_.logical(), 1, &fence_); }
 
-void Fence::wait()
+void Fence::wait() const
 {
   vkWaitForFences(device_.logical(), 1, &fence_, VK_TRUE, UINT64_MAX);
+}
+
+VkResult Fence::status() const
+{
+  return vkGetFenceStatus(device_.logical(), fence_);
 }
 } // namespace eldr::vk::wr

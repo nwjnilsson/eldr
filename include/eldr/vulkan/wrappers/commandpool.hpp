@@ -1,19 +1,25 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 
+#include <vector>
+
 namespace eldr::vk::wr {
 class CommandPool {
 public:
   CommandPool() = delete;
-  CommandPool(const Device&, const VkCommandPoolCreateFlags flags =
-                               VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+  CommandPool(const Device&, const std::string& name,
+              const VkCommandPoolCreateFlags flags =
+                VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
   ~CommandPool();
 
   VkCommandPool get() const { return pool_; }
 
-private:
-  const Device& device_;
+  [[nodiscard]] const CommandBuffer& requestCommandBuffer() const;
 
-  VkCommandPool pool_{ VK_NULL_HANDLE };
+private:
+  const Device&                               device_;
+  std::string                                 name_;
+  VkCommandPool                               pool_{ VK_NULL_HANDLE };
+  std::vector<std::unique_ptr<CommandBuffer>> command_buffers_;
 };
 } // namespace eldr::vk::wr

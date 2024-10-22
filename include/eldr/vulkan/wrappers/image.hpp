@@ -4,7 +4,7 @@
 #include <eldr/core/math.hpp>
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <eldr/vulkan/rendergraph.hpp>
+#include <eldr/vulkan/wrappers/gpuresource.hpp>
 
 namespace eldr::vk::wr {
 // Minimum info required for image creation
@@ -18,27 +18,24 @@ struct ImageInfo {
   uint32_t              mip_levels;
 };
 
-class Image final : public vk::PhysicalResource {
+class GpuImage final : public GpuResource {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
-  Image(Image&) = delete;
-  Image(const Device&, const ImageInfo&, VmaAllocationCreateInfo&);
-  Image(const Device&, const Bitmap&, VmaAllocationCreateInfo&);
-  Image(const Image&) = delete;
-  Image(Image&&)      = delete;
-  ~Image();
+  GpuImage(GpuImage&) = delete;
+  GpuImage(const Device&, const ImageInfo&, const VmaAllocationCreateInfo&,
+           const std::string& name);
+  GpuImage(const Device&, const Bitmap&, const VmaAllocationCreateInfo&,
+           const std::string& name);
+  GpuImage(const GpuImage&) = delete;
+  GpuImage(GpuImage&&)      = delete;
+  ~GpuImage();
 
-  void transitionLayout(CommandPool&, VkImageLayout old_layout,
-                        VkImageLayout new_layout, uint32_t mip_levels);
-
-  void copyFromBuffer(const Buffer&, CommandPool&);
-
-  [[nodiscard]] VkImage get() const { return image_; }
+  [[nodiscard]] VkImage     get() const { return image_; }
   [[nodiscard]] VkImageView view() const { return image_view_; }
-  [[nodiscard]] VkFormat   format() const { return format_; }
-  [[nodiscard]] VkExtent2D size() const { return size_; }
-  [[nodiscard]] uint32_t   mipLevels() const { return mip_levels_; }
+  [[nodiscard]] VkFormat    format() const { return format_; }
+  [[nodiscard]] VkExtent2D  size() const { return size_; }
+  [[nodiscard]] uint32_t    mipLevels() const { return mip_levels_; }
 
 protected:
   VkImage     image_{ VK_NULL_HANDLE };
@@ -48,21 +45,21 @@ protected:
   VkExtent2D  size_;
 };
 
-//class ImageView {
-//  ELDR_IMPORT_CORE_TYPES();
+// class ImageView {
+//   ELDR_IMPORT_CORE_TYPES();
 //
-//public:
-//  ImageView() = delete;
-//  ImageView(const Device&, const Image&, VkImageAspectFlags);
-//  ImageView(const ImageView&) = delete;
-//  ImageView(ImageView&&)      = delete;
-//  ~ImageView();
+// public:
+//   ImageView() = delete;
+//   ImageView(const Device&, const GpuImage&, VkImageAspectFlags);
+//   ImageView(const ImageView&) = delete;
+//   ImageView(ImageView&&)      = delete;
+//   ~ImageView();
 //
-//  VkImageView get() const { return image_view_; }
+//   VkImageView get() const { return image_view_; }
 //
-//protected:
-//  const Device& device_;
+// protected:
+//   const Device& device_;
 //
-//  VkImageView image_view_{ VK_NULL_HANDLE };
-//};
+//   VkImageView image_view_{ VK_NULL_HANDLE };
+// };
 } // namespace eldr::vk::wr

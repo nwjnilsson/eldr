@@ -62,7 +62,6 @@ enum class BufferUsage {
 
 class BufferResource : public RenderResource {
   friend RenderGraph;
-  friend wr::Buffer;
 
 public:
   BufferResource(std::string&& name, BufferUsage usage)
@@ -285,42 +284,39 @@ protected:
   explicit PhysicalResource(const wr::Device& device) : device_(device) {}
 };
 
-// class PhysicalBuffer : public PhysicalResource {
-//   friend RenderGraph;
-//
-// public:
-//   explicit PhysicalBuffer(const wr::Device& device) :
-//   PhysicalResource(device)
-//   {
-//   }
-//   PhysicalBuffer(const PhysicalBuffer&) = delete;
-//   PhysicalBuffer(PhysicalBuffer&&)      = delete;
-//   ~PhysicalBuffer()                     = default;
-//
-//   PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
-//   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
-//
-// private:
-//   VmaAllocationInfo alloc_info_{};
-//   std::unique_ptr<wr::Buffer> buffer_{};
-// };
+class PhysicalBuffer : public PhysicalResource {
+  friend RenderGraph;
 
-// class PhysicalImage : public PhysicalResource {
-//   friend RenderGraph;
-//
-// private:
-//   std::unique_ptr<wr::Image>     image_{};
-//   std::unique_ptr<wr::ImageView> image_view_{};
-//
-// public:
-//   explicit PhysicalImage(const wr::Device& device) : PhysicalResource(device)
-//   {} PhysicalImage(const PhysicalImage&) = delete;
-//   PhysicalImage(PhysicalImage&&)      = delete;
-//   ~PhysicalImage() override           = default;
-//
-//   PhysicalImage& operator=(const PhysicalImage&) = delete;
-//   PhysicalImage& operator=(PhysicalImage&&)      = delete;
-// };
+public:
+  explicit PhysicalBuffer(const wr::Device& device) : PhysicalResource(device)
+  {
+  }
+  PhysicalBuffer(const PhysicalBuffer&) = delete;
+  PhysicalBuffer(PhysicalBuffer&&)      = delete;
+  ~PhysicalBuffer()                     = default;
+
+  PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
+  PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
+
+private:
+  std::unique_ptr<wr::GpuBuffer> buffer_{};
+};
+
+class PhysicalImage : public PhysicalResource {
+  friend RenderGraph;
+
+public:
+  explicit PhysicalImage(const wr::Device& device) : PhysicalResource(device) {}
+  PhysicalImage(const PhysicalImage&) = delete;
+  PhysicalImage(PhysicalImage&&)      = delete;
+  ~PhysicalImage() override           = default;
+
+  PhysicalImage& operator=(const PhysicalImage&) = delete;
+  PhysicalImage& operator=(PhysicalImage&&)      = delete;
+
+private:
+  std::unique_ptr<wr::GpuImage> image_{};
+};
 
 class PhysicalBackBuffer : public PhysicalResource {
   friend RenderGraph;
