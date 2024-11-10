@@ -1,5 +1,4 @@
 subdir('core')
 subdir('vulkan')
 subdir('render')
-subdir('gui')
-subdir('eldr')
+subdir('app')

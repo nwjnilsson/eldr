@@ -1,8 +1,8 @@
-src = ['scene.cpp', 'mesh.cpp', 'renderer.cpp']
+src = ['scene.cpp', 'mesh.cpp']
 eldr_render = library(
   'eldr-render',
   sources : src,
-  include_directories : [include, inc_tinyobjloader],
-  dependencies : [libglfw, libvulkan, libspdlog],
+  include_directories : [eldr_headers, tinyobjloader_headers],
+  dependencies : [glfw_dep, vulkan_dep, spdlog_dep],
   link_with : [eldr_core])
   

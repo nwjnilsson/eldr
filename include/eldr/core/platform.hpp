@@ -1,6 +1,5 @@
 #pragma once
 
-namespace eldr {
 // Reduce namespace pollution from windows.h
 #if defined(_WIN32)
 #  if !defined(WIN32_LEAN_AND_MEAN)
@@ -28,5 +27,3 @@ namespace eldr {
 #if defined(_MSC_VER) // warning C4127: conditional expression is constant
 #  pragma warning(disable : 4127)
 #endif
-
-} // namespace eldr

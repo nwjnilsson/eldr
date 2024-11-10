@@ -1,7 +1,7 @@
+#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
-#include <eldr/core/logger.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -58,7 +58,8 @@ std::vector<Shape*> Scene::loadGeometry(const SceneInfo& scene_info)
         1.f - attrib.texcoords[2 * index.texcoord_index + 1],
       });
     }
-    loaded_shapes.push_back(new Mesh(positions, normals, texcoords));
+    loaded_shapes.emplace_back(
+      new Mesh(std::move(positions), std::move(normals), std::move(texcoords)));
   }
   return loaded_shapes;
 }

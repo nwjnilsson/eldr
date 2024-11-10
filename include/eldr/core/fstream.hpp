@@ -3,7 +3,6 @@
  */
 #pragma once
 
-#include <eldr/core/logger.hpp>
 #include <eldr/core/stream.hpp>
 
 #include <filesystem>
@@ -119,8 +118,8 @@ public:
   virtual std::string toString() const override;
 
 private:
-    EMode mode_;
-    fs::path path_;
-    mutable std::unique_ptr<std::fstream> file_;
+  EMode                                 mode_;
+  fs::path                              path_;
+  mutable std::unique_ptr<std::fstream> file_;
 };
 } // namespace eldr

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 namespace eldr {
 template <typename T, typename U> T memcpy_cast(const U& u)
 {

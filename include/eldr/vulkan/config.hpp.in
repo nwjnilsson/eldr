@@ -1,0 +1,28 @@
+#pragma once
+
+#include <array>
+
+namespace eldr {
+
+/// The following data will be replaced by Meson setup.
+constexpr const char*                  app_name{ "@ELDR_APP_NAME@" };
+constexpr std::array<std::uint32_t, 3> app_version{
+  @ELDR_APP_VERSION_MAJOR@, @ELDR_APP_VERSION_MINOR@,
+  @ELDR_APP_VERSION_PATCH@
+};
+constexpr const char* app_version_str{
+  "@ELDR_APP_VERSION_MAJOR@.@ELDR_APP_VERSION_MINOR@.@ELDR_APP_VERSION_PATCH@"
+};
+constexpr const char*                  engine_name{"@ELDR_ENGINE_NAME@"};
+
+constexpr std::array<std::uint32_t, 4> engine_version{
+  @ELDR_ENGINE_VERSION_VARIANT@, @ELDR_ENGINE_VERSION_MAJOR@,
+  @ELDR_ENGINE_VERSION_MINOR@, @ELDR_ENGINE_VERSION_PATCH@
+};
+
+constexpr const char* engine_version_str{
+  "@ELDR_ENGINE_VERSION_VARIANT@.@ELDR_ENGINE_VERSION_MAJOR@.@ELDR_ENGINE_VERSION_MINOR@.@ELDR_ENGINE_VERSION_PATCH@"
+};
+
+constexpr const char* build_type = "@MESON_BUILD_TYPE@";
+} // namespace eldr

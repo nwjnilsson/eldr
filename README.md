@@ -2,14 +2,13 @@
 ## Introduction
 _Eldr_ ("fire" in Old Norse) is my new hobby project. After working with
 [_Mitsuba 2_](https://github.com/mitsuba-renderer/mitsuba2) in my master's
-thesis [project](https://github.com/gfx-jonte/PPG-quadtree-reconstruction),
+thesis [project](https://github.com/nwjnilsson/PPG-quadtree-reconstruction),
 I was inspired to create something similar on my own to learn more about
 computer graphics. In contrast to Mitsuba, I intend to make Eldr more GUI
 oriented, making it possible to set up scenes as you go, and provide more
 immediate visual feedback like most commercial renderers do. However, I want to
 keep the "research spirit" of Mitsuba, making it as modular as I can to allow
-swapping out components and trying new rendering techniques. This is essential
-for me as the purpose of this project is for me to learn about rendering.
+swapping out components and trying new rendering techniques.
 
 I will try to keep cross platform compatibility in mind while developing Eldr,
 but it is not a priority in the beginning. I will be developing on Linux and the
@@ -22,7 +21,7 @@ to build there as well. MSVC 2013 is not compatible with
 ```
 $ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
     python3-pip python3-setuptools python3-wheel libspdlog-dev libglfw3-dev \
-    libglm-dev libvulkan-dev libjpeg62-turbo-dev
+    libglm-dev libvulkan-dev libjpeg62-turbo-dev libpng-dev
 ```
 For debugging:
 ```
@@ -45,9 +44,8 @@ $ ninja
 ```
 ### Shaders
 I have been using [glslc](https://github.com/google/shaderc) to compile some
-basic shaders. Eldr will look for the compiled shaders `vert.spv` and `frag.spv`
-in `shaders`.
+basic shaders. Eldr will look for the in `assets/shaders/`.
 ```
-glslc src/shaders/shader.vert -o shaders/vert.spv
-glslc src/shaders/shader.frag -o shaders/frag.spv
+glslc src/shaders/main.vert -o assets/shaders/main.vert.spv
+glslc src/shaders/main.frag -o assets/shaders/main.frag.spv
 ```

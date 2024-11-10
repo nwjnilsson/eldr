@@ -3,6 +3,8 @@
  */
 #include <eldr/core/stream.hpp>
 
+#include <sstream>
+
 namespace eldr {
 namespace detail {
 static Stream::EByteOrder byte_order()
@@ -37,8 +39,7 @@ std::string Stream::toString() const
 {
   std::ostringstream oss;
 
-  oss << "Stream"
-      << "[" << std::endl;
+  oss << "Stream" << "[" << std::endl;
   if (isClosed()) {
     oss << "  closed" << std::endl;
   }

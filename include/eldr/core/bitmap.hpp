@@ -4,8 +4,8 @@
 #pragma once
 
 #include <eldr/core/fwd.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
-#include <eldr/core/stream.hpp>
 #include <eldr/core/struct.hpp>
 
 #include <filesystem>
@@ -30,7 +30,7 @@ public:
     MultiChannel
   };
 
-  //friend struct fmt::formatter<PixelFormat>;
+  // friend struct fmt::formatter<PixelFormat>;
 
   enum class FileFormat {
     PNG,
@@ -44,22 +44,26 @@ public:
     Unknown
   };
 
+  // Creates default checker tile texture
+  Bitmap();
   Bitmap(PixelFormat px_format, Struct::Type component_format,
          const Vec2u& size, size_t channel_count,
+         const std::string&              name          = "undefined",
          const std::vector<std::string>& channel_names = {},
          uint8_t*                        data          = nullptr);
 
   Bitmap(const std::filesystem::path& path, FileFormat = FileFormat::Auto);
 
-  /// Copy constructor (copies the image contents)
   Bitmap(const Bitmap& bitmap);
 
-  /// Move constructor
   Bitmap(Bitmap&& bitmap);
 
   Bitmap(Stream* stream, FileFormat format);
 
   virtual ~Bitmap();
+
+  /// Return the name of this bitmap
+  const std::string& name() const { return name_; }
 
   /// Return the pixel format of this bitmap
   PixelFormat pixelFormat() const { return pixel_format_; }
@@ -86,11 +90,12 @@ public:
   uint32_t width() const { return size_.x; }
 
   /// Return the bitmap's height in pixels
-  uint32_t          height() const { return size_.y; }
-  size_t            channelCount() const { return struct_->fieldCount(); }
-  size_t            pixelCount() const { return (size_t) size_.x * size_.y; }
-  size_t            bytesPerPixel() const;
-  size_t            bufferSize() const;
+  uint32_t height() const { return size_.y; }
+
+  size_t channelCount() const { return struct_->fieldCount(); }
+  size_t pixelCount() const { return static_cast<size_t>(size_.x * size_.y); }
+  size_t bytesPerPixel() const;
+  size_t bufferSize() const;
   static FileFormat detectFileFormat(Stream* stream);
 
   // Convert RGB to RGBA, adding an opaque alpha channel.
@@ -110,13 +115,13 @@ protected:
   // void write_exr(Stream* stream, int compression = -1) const;
 
   ///// Read a file encoded using the JPEG file format
-  void readJPEG(Stream* stream);
+  void readJpeg(Stream* stream);
 
   ///// Save a file using the JPEG file format
   // void write_jpeg(Stream* stream, int quality) const;
 
   // Read a file encoded using the PNG file format
-  void readPNG(Stream* stream);
+  void readPng(Stream* stream);
 
   ///// Save a file using the PNG file format
   // void write_png(Stream* stream, int quality) const;
@@ -146,14 +151,16 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  PixelFormat                pixel_format_;
-  Struct::Type               component_format_;
-  Vec2u                      size_;
-  std::unique_ptr<Struct>    struct_;
-  bool                       srgb_gamma_;
-  bool                       premultiplied_alpha_;
-  std::unique_ptr<uint8_t[]> data_;
-  bool                       owns_data_;
+  std::string                     name_{ "undefined" };
+  std::shared_ptr<spdlog::logger> log_{ detail::requestLogger("bitmap") };
+  PixelFormat                     pixel_format_;
+  Struct::Type                    component_format_;
+  Vec2u                           size_{};
+  std::unique_ptr<Struct>         struct_{};
+  bool                            srgb_gamma_{ false };
+  bool                            premultiplied_alpha_{ false };
+  std::unique_ptr<uint8_t[]>      data_{};
+  bool                            owns_data_{ false };
 };
 
 extern std::ostream& operator<<(std::ostream&              os,

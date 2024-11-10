@@ -2,7 +2,7 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/shape.hpp>
 
-#include <memory>
+#include <string>
 #include <vector>
 
 namespace eldr {
@@ -17,7 +17,7 @@ public:
   Scene(const SceneInfo&);
   ~Scene();
 
-  inline const std::vector<Shape*>& getShapes(){ return shapes_; }
+  [[nodiscard]] std::vector<Shape*> shapes() const { return shapes_; }
 
 private:
   std::vector<Shape*> loadGeometry(const SceneInfo&);

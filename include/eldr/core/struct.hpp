@@ -3,7 +3,6 @@
  */
 #pragma once
 
-#include <eldr/core/logger.hpp>
 #include <string>
 #include <vector>
 

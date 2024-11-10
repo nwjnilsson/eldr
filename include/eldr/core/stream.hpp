@@ -14,11 +14,13 @@
 
 #pragma once
 
-#include <eldr/core/logger.hpp>
 #include <eldr/core/arrayutils.hpp>
 #include <eldr/core/platform.hpp>
 
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace eldr {
 namespace detail {
@@ -177,10 +179,7 @@ public:
 
   /// Returns true if we need to perform endianness swapping before writing or
   /// reading.
-  bool needsEndianessSwap() const
-  {
-    return byte_order_ != host_byte_order_;
-  }
+  bool needsEndianessSwap() const { return byte_order_ != host_byte_order_; }
 
   /// Returns the byte order of the underlying machine.
   static EByteOrder host_byte_order() { return host_byte_order_; }
@@ -202,8 +201,8 @@ private:
 };
 
 namespace detail {
-extern std::ostream
-    &operator<<(std::ostream &os, const Stream::EByteOrder &value);
+extern std::ostream& operator<<(std::ostream&             os,
+                                const Stream::EByteOrder& value);
 
 /*
  * The remainder of this file provides template specializations to add support
@@ -211,31 +210,39 @@ extern std::ostream
  * in other headers by providing the appropriate template specializations.
  */
 
-template <typename T, std::enable_if_t<sizeof(T) == 1, int> = 0> T swap(const T &v) {
-    return v;
+template <typename T, std::enable_if_t<sizeof(T) == 1, int> = 0>
+T swap(const T& v)
+{
+  return v;
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T swap(const T &v) {
+template <typename T, std::enable_if_t<sizeof(T) == 2, int> = 0>
+T swap(const T& v)
+{
 #if !defined(_WIN32)
-    return memcpy_cast<T>(__builtin_bswap16(memcpy_cast<uint16_t>(v)));
+  return memcpy_cast<T>(__builtin_bswap16(memcpy_cast<uint16_t>(v)));
 #else
-    return memcpy_cast<T>(_byteswap_ushort(memcpy_cast<uint16_t>(v)));
+  return memcpy_cast<T>(_byteswap_ushort(memcpy_cast<uint16_t>(v)));
 #endif
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T swap(const T &v) {
+template <typename T, std::enable_if_t<sizeof(T) == 4, int> = 0>
+T swap(const T& v)
+{
 #if !defined(_WIN32)
-    return memcpy_cast<T>(__builtin_bswap32(memcpy_cast<uint32_t>(v)));
+  return memcpy_cast<T>(__builtin_bswap32(memcpy_cast<uint32_t>(v)));
 #else
-    return memcpy_cast<T>(_byteswap_ulong(memcpy_cast<uint32_t>(v)));
+  return memcpy_cast<T>(_byteswap_ulong(memcpy_cast<uint32_t>(v)));
 #endif
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T swap(const T &v) {
+template <typename T, std::enable_if_t<sizeof(T) == 8, int> = 0>
+T swap(const T& v)
+{
 #if !defined(_WIN32)
-    return memcpy_cast<T>(__builtin_bswap64(memcpy_cast<uint64_t>(v)));
+  return memcpy_cast<T>(__builtin_bswap64(memcpy_cast<uint64_t>(v)));
 #else
-    return memcpy_cast<T>(_byteswap_uint64(memcpy_cast<uint64_t>(v)));
+  return memcpy_cast<T>(_byteswap_uint64(memcpy_cast<uint64_t>(v)));
 #endif
 }
 
@@ -245,159 +252,178 @@ template <typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T swap(const T 
  * This way, endianness swapping needs only be handled at the lowest level.
  */
 template <typename T, typename SFINAE> struct serialization_helper {
-    static std::string type_id() {
-        std::string descr(2, '\0');
-        descr[0] = std::is_floating_point_v<T> ? 'f' : (std::is_signed_v<T> ? 's' : 'u');
-        descr[1] = '0' + sizeof(T);
-        return descr;
-    }
+  static std::string type_id()
+  {
+    std::string descr(2, '\0');
+    descr[0] =
+      std::is_floating_point_v<T> ? 'f' : (std::is_signed_v<T> ? 's' : 'u');
+    descr[1] = '0' + sizeof(T);
+    return descr;
+  }
 
-    /** \brief Writes <tt>count</tt> values of type T into stream <tt>s</tt>
-     * starting at its current position.
-     * Note: <tt>count</tt> is the number of values, <b>not</b> a size in bytes.
-     *
-     * Support for additional types can be added in any header file by
-     * declaring a template specialization for your type.
-     */
-    static void write(Stream &s, const T *value, size_t count, bool swap) {
-        if (likely(!swap)) {
-            s.write(value, sizeof(T) * count);
-        } else {
-            std::unique_ptr<T[]> v(new T[count]);
-            for (size_t i = 0; i < count; ++i)
-                v[i] = detail::swap(value[i]);
-            s.write(v.get(), sizeof(T) * count);
-        }
+  /** \brief Writes <tt>count</tt> values of type T into stream <tt>s</tt>
+   * starting at its current position.
+   * Note: <tt>count</tt> is the number of values, <b>not</b> a size in bytes.
+   *
+   * Support for additional types can be added in any header file by
+   * declaring a template specialization for your type.
+   */
+  static void write(Stream& s, const T* value, size_t count, bool swap)
+  {
+    if (likely(!swap)) {
+      s.write(value, sizeof(T) * count);
     }
+    else {
+      std::unique_ptr<T[]> v(new T[count]);
+      for (size_t i = 0; i < count; ++i)
+        v[i] = detail::swap(value[i]);
+      s.write(v.get(), sizeof(T) * count);
+    }
+  }
 
-    /** \brief Reads <tt>count</tt> values of type T from stream <tt>s</tt>,
-     * starting at its current position.
-     * Note: <tt>count</tt> is the number of values, <b>not</b> a size in bytes.
-     *
-     * Support for additional types can be added in any header file by
-     * declaring a template specialization for your type.
-     */
-    static void read(Stream &s, T *value, size_t count, bool swap) {
-        s.read(value, sizeof(T) * count);
-        if (unlikely(swap)) {
-            for (size_t i = 0; i < count; ++i)
-                value[i] = detail::swap(value[i]);
-        }
+  /** \brief Reads <tt>count</tt> values of type T from stream <tt>s</tt>,
+   * starting at its current position.
+   * Note: <tt>count</tt> is the number of values, <b>not</b> a size in bytes.
+   *
+   * Support for additional types can be added in any header file by
+   * declaring a template specialization for your type.
+   */
+  static void read(Stream& s, T* value, size_t count, bool swap)
+  {
+    s.read(value, sizeof(T) * count);
+    if (unlikely(swap)) {
+      for (size_t i = 0; i < count; ++i)
+        value[i] = detail::swap(value[i]);
     }
+  }
 };
 
 template <> struct serialization_helper<std::string> {
-    static std::string type_id() { return "S"; }
+  static std::string type_id() { return "S"; }
 
-    static void write(Stream &s, const std::string *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            uint32_t length = (uint32_t) value->length();
-            serialization_helper<uint32_t>::write(s, &length, 1, swap);
-            serialization_helper<char>::write(s, value->data(),
-                                              value->length(), swap);
-            value++;
-        }
+  static void write(Stream& s, const std::string* value, size_t count,
+                    bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      uint32_t length = (uint32_t) value->length();
+      serialization_helper<uint32_t>::write(s, &length, 1, swap);
+      serialization_helper<char>::write(s, value->data(), value->length(),
+                                        swap);
+      value++;
     }
+  }
 
-    static void read(Stream &s, std::string *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            uint32_t length = 0;
-            serialization_helper<uint32_t>::read(s, &length, 1, swap);
-            value->resize(length);
-            serialization_helper<char>::read(s, const_cast<char *>(value->data()),
-                                             length, swap);
-            value++;
-        }
+  static void read(Stream& s, std::string* value, size_t count, bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      uint32_t length = 0;
+      serialization_helper<uint32_t>::read(s, &length, 1, swap);
+      value->resize(length);
+      serialization_helper<char>::read(s, const_cast<char*>(value->data()),
+                                       length, swap);
+      value++;
     }
+  }
 };
 
-template <typename T1, typename T2> struct serialization_helper<std::pair<T1, T2>> {
-    static std::string type_id() {
-        return "P" +
-               serialization_helper<T1>::type_id() +
-               serialization_helper<T2>::type_id();
+template <typename T1, typename T2>
+struct serialization_helper<std::pair<T1, T2>> {
+  static std::string type_id()
+  {
+    return "P" + serialization_helper<T1>::type_id() +
+           serialization_helper<T2>::type_id();
+  }
+
+  static void write(Stream& s, const std::pair<T1, T1>* value, size_t count,
+                    bool swap)
+  {
+    std::unique_ptr<T1> first(new T1[count]);
+    std::unique_ptr<T2> second(new T2[count]);
+
+    for (size_t i = 0; i < count; ++i) {
+      first.get()[i]  = value[i].first;
+      second.get()[i] = value[i].second;
     }
 
-    static void write(Stream &s, const std::pair<T1, T1> *value, size_t count, bool swap) {
-        std::unique_ptr<T1> first (new T1[count]);
-        std::unique_ptr<T2> second(new T2[count]);
+    serialization_helper<T1>::write(s, first.get(), count, swap);
+    serialization_helper<T2>::write(s, second.get(), count, swap);
+  }
 
-        for (size_t i = 0; i < count; ++i) {
-            first.get()[i]  = value[i].first;
-            second.get()[i] = value[i].second;
-        }
+  static void read(Stream& s, std::pair<T1, T1>* value, size_t count, bool swap)
+  {
+    std::unique_ptr<T1> first(new T1[count]);
+    std::unique_ptr<T2> second(new T2[count]);
 
-        serialization_helper<T1>::write(s, first.get(), count, swap);
-        serialization_helper<T2>::write(s, second.get(), count, swap);
+    serialization_helper<T1>::read(s, first.get(), count, swap);
+    serialization_helper<T2>::read(s, second.get(), count, swap);
+
+    for (size_t i = 0; i < count; ++i) {
+      value[i].first  = first.get()[i];
+      value[i].second = second.get()[i];
     }
-
-    static void read(Stream &s, std::pair<T1, T1> *value, size_t count, bool swap) {
-        std::unique_ptr<T1> first (new T1[count]);
-        std::unique_ptr<T2> second(new T2[count]);
-
-        serialization_helper<T1>::read(s, first.get(), count, swap);
-        serialization_helper<T2>::read(s, second.get(), count, swap);
-
-        for (size_t i = 0; i < count; ++i) {
-            value[i].first = first.get()[i];
-            value[i].second = second.get()[i];
-        }
-    }
+  }
 };
 
 template <typename T> struct serialization_helper<std::vector<T>> {
-    static std::string type_id() {
-        return "V" + serialization_helper<T>::type_id();
-    }
+  static std::string type_id()
+  {
+    return "V" + serialization_helper<T>::type_id();
+  }
 
-    static void write(Stream &s, const std::vector<T> *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            size_t size = value->size();
-            serialization_helper<size_t>::write(s, &size, 1, swap);
-            serialization_helper<T>::write(s, value->data(), size, swap);
-            value++;
-        }
+  static void write(Stream& s, const std::vector<T>* value, size_t count,
+                    bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      size_t size = value->size();
+      serialization_helper<size_t>::write(s, &size, 1, swap);
+      serialization_helper<T>::write(s, value->data(), size, swap);
+      value++;
     }
+  }
 
-    static void read(Stream &s, std::vector<T> *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            size_t size = 0;
-            serialization_helper<size_t>::read(s, &size, 1, swap);
-            value->resize(size);
-            serialization_helper<T>::read(s, value->data(), size, swap);
-            value++;
-        }
+  static void read(Stream& s, std::vector<T>* value, size_t count, bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      size_t size = 0;
+      serialization_helper<size_t>::read(s, &size, 1, swap);
+      value->resize(size);
+      serialization_helper<T>::read(s, value->data(), size, swap);
+      value++;
     }
+  }
 };
 
 template <typename T> struct serialization_helper<std::set<T>> {
-    static std::string type_id() {
-        return "S" + serialization_helper<T>::type_id();
-    }
+  static std::string type_id()
+  {
+    return "S" + serialization_helper<T>::type_id();
+  }
 
-    static void write(Stream &s, const std::set<T> *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            std::vector<T> temp(value->size());
-            size_t idx = 0;
-            for (auto it = value->begin(); it != value->end(); ++it)
-                temp[idx++] = *it;
-            serialization_helper<std::vector<T>>::write(s, &temp, 1, swap);
-            value++;
-        }
+  static void write(Stream& s, const std::set<T>* value, size_t count,
+                    bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      std::vector<T> temp(value->size());
+      size_t         idx = 0;
+      for (auto it = value->begin(); it != value->end(); ++it)
+        temp[idx++] = *it;
+      serialization_helper<std::vector<T>>::write(s, &temp, 1, swap);
+      value++;
     }
+  }
 
-    static void read(Stream &s, std::set<T> *value, size_t count, bool swap) {
-        for (size_t i = 0; i < count; ++i) {
-            std::vector<T> temp;
-            serialization_helper<std::vector<T>>::read(s, &temp, 1, swap);
-            value->clear();
-            for (auto k : temp)
-                value->insert(k);
-            value++;
-        }
+  static void read(Stream& s, std::set<T>* value, size_t count, bool swap)
+  {
+    for (size_t i = 0; i < count; ++i) {
+      std::vector<T> temp;
+      serialization_helper<std::vector<T>>::read(s, &temp, 1, swap);
+      value->clear();
+      for (auto k : temp)
+        value->insert(k);
+      value++;
     }
+  }
 };
 
 } // namespace detail
 } // namespace eldr
-

@@ -2,6 +2,7 @@
  * FileStream implementation adapted from Mitsuba3
  */
 #include <eldr/core/fstream.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <fstream>
@@ -134,8 +135,9 @@ std::string FileStream::readLine()
 {
   std::string result;
   if (!std::getline(*file_, result))
-    spdlog::error("\"%s\": I/O error while attempting to read a line of text: %s",
-        path_.string(), strerror(errno));
+    detail::requestLogger("core")->error(
+      "\"%s\": I/O error while attempting to read a line of text: %s",
+      path_.string(), strerror(errno));
   return result;
 }
 
@@ -154,8 +156,7 @@ std::string FileStream::toString() const
     }
     catch (...) {
     }
-    oss << "  path_ = \"" << path_.string() << "\""
-        << "," << std::endl
+    oss << "  path_ = \"" << path_.string() << "\"" << "," << std::endl
         << "  host_byte_order = " << host_byte_order() << "," << std::endl
         << "  byte_order = " << byteOrder() << "," << std::endl
         << "  can_read = " << canRead() << "," << std::endl

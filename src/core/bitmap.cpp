@@ -1,6 +1,8 @@
 /**
- * Bitmap implementation adapted from the Mitsuba project
+ * Bitmap implementation adapted from the Mitsuba3
  */
+#include <eldr/core/logger.hpp>
+
 #include <eldr/core/bitmap.hpp>
 #include <eldr/core/fstream.hpp>
 
@@ -11,17 +13,55 @@ extern "C" {
 
 #include <png.h>
 
+#include <array>
 #include <memory>
 #include <stdexcept>
 #include <string>
 
 namespace eldr {
 
+Bitmap::Bitmap()
+  : pixel_format_(PixelFormat::RGBA), component_format_(Struct::Type::UInt8),
+    size_({ 512, 512 }), srgb_gamma_(true)
+{
+  rebuildStruct();
+
+  assert(!data_);
+  data_ = std::make_unique<uint8_t[]>(bufferSize());
+  // data_      = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
+  owns_data_ = true;
+
+  constexpr uint32_t n_channels = 4;
+  // Create an 8x8 checkerboard pattern of squares.
+  constexpr uint32_t square_dimension{ 64 };
+  // pink, purple
+  constexpr std::array<std::array<unsigned char, 4>, 2> colors{
+    { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
+  };
+
+  const auto getColor = [](uint32_t x, uint32_t y, uint32_t square_dimension,
+                           size_t colors) -> int {
+    return static_cast<int>((static_cast<std::size_t>(x / square_dimension) +
+                             static_cast<std::size_t>(y / square_dimension)) %
+                            colors);
+  };
+
+  // Performance could be improved by copying complete rows after one or two
+  // rows are created with the loops.
+  for (uint32_t y = 0; y < height(); y++) {
+    for (uint32_t x = 0; x < width(); x++) {
+      const int color_id = getColor(x, y, square_dimension, colors.size());
+      std::memcpy(data_.get(), &colors[color_id][0],
+                  n_channels * sizeof(colors[color_id][0]));
+    }
+  }
+}
+
 Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
-               const Vec2u& size, size_t channel_count,
+               const Vec2u& size, size_t channel_count, const std::string& name,
                const std::vector<std::string>& channel_names, uint8_t* data)
-  : pixel_format_(px_format), component_format_(component_format), size_(size),
-    data_(data)
+  : name_(name), pixel_format_(px_format), component_format_(component_format),
+    size_(size), data_(data)
 
 {
   if (component_format_ == Struct::Type::UInt8)
@@ -31,13 +71,13 @@ Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
 
   if (!data_) {
     data_ = std::make_unique<uint8_t[]>(bufferSize());
-
+    // data_      = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
     owns_data_ = true;
   }
 }
 
 Bitmap::Bitmap(const Bitmap& bitmap)
-  : pixel_format_(bitmap.pixel_format_),
+  : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
     component_format_(bitmap.component_format_), size_(bitmap.size_),
     struct_(std::make_unique<Struct>(*bitmap.struct_.get())),
     srgb_gamma_(bitmap.srgb_gamma_),
@@ -48,13 +88,15 @@ Bitmap::Bitmap(const Bitmap& bitmap)
   memcpy(data_.get(), bitmap.data_.get(), size);
 }
 
+// TODO: fix
 Bitmap::Bitmap(Bitmap&& bitmap)
-  : pixel_format_(bitmap.pixel_format_),
+  : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
     component_format_(bitmap.component_format_), size_(bitmap.size_),
     struct_(std::move(bitmap.struct_)), srgb_gamma_(bitmap.srgb_gamma_),
     premultiplied_alpha_(bitmap.premultiplied_alpha_),
     data_(std::move(bitmap.data_)), owns_data_(bitmap.owns_data_)
 {
+  // use std::exchange....
 }
 
 Bitmap::Bitmap(Stream* stream, FileFormat format) { read(stream, format); }
@@ -183,7 +225,7 @@ void Bitmap::read(Stream* stream, FileFormat format)
     //   read_bmp(stream);
     //   break;
     case FileFormat::JPEG:
-      readJPEG(stream);
+      readJpeg(stream);
       break;
     // case FileFormat::OpenEXR:
     //   read_exr(stream);
@@ -201,7 +243,7 @@ void Bitmap::read(Stream* stream, FileFormat format)
     //   read_tga(stream);
     //   break;
     case FileFormat::PNG:
-      readPNG(stream);
+      readPng(stream);
       break;
     default:
       Throw("Bitmap: Unknown file format!");
@@ -269,13 +311,13 @@ typedef struct {
   Stream*                     stream;
 } jbuf_out_t;
 
-METHODDEF(void) jpeg_init_source(j_decompress_ptr cinfo)
+METHODDEF(void) jpegInitSource(j_decompress_ptr cinfo)
 {
   jbuf_in_t* p = (jbuf_in_t*) cinfo->src;
   p->buffer    = new JOCTET[jpeg_buffer_size];
 }
 
-METHODDEF(boolean) jpeg_fill_input_buffer(j_decompress_ptr cinfo)
+METHODDEF(boolean) jpegFillInputBuffer(j_decompress_ptr cinfo)
 {
   jbuf_in_t* p          = (jbuf_in_t*) cinfo->src;
   size_t     bytes_read = 0;
@@ -299,25 +341,25 @@ METHODDEF(boolean) jpeg_fill_input_buffer(j_decompress_ptr cinfo)
   return TRUE;
 }
 
-METHODDEF(void) jpeg_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+METHODDEF(void) jpegSkipInputData(j_decompress_ptr cinfo, long num_bytes)
 {
   if (num_bytes > 0) {
     while (num_bytes > (long) cinfo->src->bytes_in_buffer) {
       num_bytes -= (long) cinfo->src->bytes_in_buffer;
-      jpeg_fill_input_buffer(cinfo);
+      jpegFillInputBuffer(cinfo);
     }
     cinfo->src->next_input_byte += (size_t) num_bytes;
     cinfo->src->bytes_in_buffer -= (size_t) num_bytes;
   }
 }
 
-METHODDEF(void) jpeg_term_source(j_decompress_ptr cinfo)
+METHODDEF(void) jpegTermSource(j_decompress_ptr cinfo)
 {
   jbuf_in_t* p = (jbuf_in_t*) cinfo->src;
   delete[] p->buffer;
 }
 
-METHODDEF(void) jpeg_init_destination(j_compress_ptr cinfo)
+METHODDEF(void) jpegInitDestination(j_compress_ptr cinfo)
 {
   jbuf_out_t* p = (jbuf_out_t*) cinfo->dest;
 
@@ -326,7 +368,7 @@ METHODDEF(void) jpeg_init_destination(j_compress_ptr cinfo)
   p->mgr.free_in_buffer   = jpeg_buffer_size;
 }
 
-METHODDEF(boolean) jpeg_empty_output_buffer(j_compress_ptr cinfo)
+METHODDEF(boolean) jpegEmptyOutputBuffer(j_compress_ptr cinfo)
 {
   jbuf_out_t* p = (jbuf_out_t*) cinfo->dest;
   p->stream->write(p->buffer, jpeg_buffer_size);
@@ -335,7 +377,7 @@ METHODDEF(boolean) jpeg_empty_output_buffer(j_compress_ptr cinfo)
   return TRUE;
 }
 
-METHODDEF(void) jpeg_term_destination(j_compress_ptr cinfo)
+METHODDEF(void) jpegTermDestination(j_compress_ptr cinfo)
 {
   jbuf_out_t* p = (jbuf_out_t*) cinfo->dest;
   p->stream->write(p->buffer, jpeg_buffer_size - p->mgr.free_in_buffer);
@@ -343,7 +385,7 @@ METHODDEF(void) jpeg_term_destination(j_compress_ptr cinfo)
   p->mgr.free_in_buffer = 0;
 }
 
-METHODDEF(void) jpeg_error_exit(j_common_ptr cinfo)
+METHODDEF(void) jpegErrorExit(j_common_ptr cinfo)
 {
   char msg[JMSG_LENGTH_MAX];
   (*cinfo->err->format_message)(cinfo, msg);
@@ -351,7 +393,7 @@ METHODDEF(void) jpeg_error_exit(j_common_ptr cinfo)
 }
 };
 
-void Bitmap::readJPEG(Stream* stream)
+void Bitmap::readJpeg(Stream* stream)
 {
   // ScopedPhase                   phase(ProfilerPhase::BitmapRead);
   struct jpeg_decompress_struct cinfo;
@@ -361,13 +403,13 @@ void Bitmap::readJPEG(Stream* stream)
   memset(&jbuf, 0, sizeof(jbuf_in_t));
 
   cinfo.err       = jpeg_std_error(&jerr);
-  jerr.error_exit = jpeg_error_exit;
+  jerr.error_exit = jpegErrorExit;
   jpeg_create_decompress(&cinfo);
   cinfo.src                  = (struct jpeg_source_mgr*) &jbuf;
-  jbuf.mgr.init_source       = jpeg_init_source;
-  jbuf.mgr.fill_input_buffer = jpeg_fill_input_buffer;
-  jbuf.mgr.skip_input_data   = jpeg_skip_input_data;
-  jbuf.mgr.term_source       = jpeg_term_source;
+  jbuf.mgr.init_source       = jpegInitSource;
+  jbuf.mgr.fill_input_buffer = jpegFillInputBuffer;
+  jbuf.mgr.skip_input_data   = jpegSkipInputData;
+  jbuf.mgr.term_source       = jpegTermSource;
   jbuf.mgr.resync_to_restart = jpeg_resync_to_restart;
   jbuf.stream                = stream;
 
@@ -390,15 +432,15 @@ void Bitmap::readJPEG(Stream* stream)
       pixel_format_ = PixelFormat::RGBA;
       break;
     default:
-      Throw("readJPEG(): Unexpected number of components!");
+      Throw("readJpeg(): Unexpected number of components!");
   }
 
   rebuildStruct();
 
   auto fs = dynamic_cast<FileStream*>(stream);
-  spdlog::debug("Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
-                fs ? fs->path().string() : "<stream>", size_.x, size_.y,
-                pixel_format_, component_format_);
+  log_->debug("Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
+              fs ? fs->path().string() : "<stream>", size_.x, size_.y,
+              pixel_format_, component_format_);
 
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
@@ -446,13 +488,13 @@ void Bitmap::write_jpeg(Stream* stream, int quality) const
 
   memset(&jbuf, 0, sizeof(jbuf_out_t));
   cinfo.err       = jpeg_std_error(&jerr);
-  jerr.error_exit = jpeg_error_exit;
+  jerr.error_exit = jpegErrorExit;
   jpeg_create_compress(&cinfo);
 
   cinfo.dest                   = (struct jpeg_destination_mgr*) &jbuf;
-  jbuf.mgr.init_destination    = jpeg_init_destination;
-  jbuf.mgr.empty_output_buffer = jpeg_empty_output_buffer;
-  jbuf.mgr.term_destination    = jpeg_term_destination;
+  jbuf.mgr.init_destination    = jpegInitDestination;
+  jbuf.mgr.empty_output_buffer = jpegEmptyOutputBuffer;
+  jbuf.mgr.term_destination    = jpegTermDestination;
   jbuf.stream                  = stream;
 
   cinfo.image_width      = (JDIMENSION) m_size.x();
@@ -487,63 +529,61 @@ void Bitmap::write_jpeg(Stream* stream, int quality) const
 // Bitmap PNG I/O
 // -----------------------------------------------------------------------------
 
-static void png_flush_data(png_structp png_ptr)
+static void pngFlushData(png_structp png_ptr)
 {
   png_voidp flush_io_ptr = png_get_io_ptr(png_ptr);
   ((Stream*) flush_io_ptr)->flush();
 }
 
-static void png_read_data(png_structp png_ptr, png_bytep data,
-                          png_size_t length)
+static void pngReadData(png_structp png_ptr, png_bytep data, png_size_t length)
 {
   png_voidp read_io_ptr = png_get_io_ptr(png_ptr);
   ((Stream*) read_io_ptr)->read(data, length);
 }
 
-static void png_write_data(png_structp png_ptr, png_bytep data,
-                           png_size_t length)
+static void pngWriteData(png_structp png_ptr, png_bytep data, png_size_t length)
 {
   png_voidp write_io_ptr = png_get_io_ptr(png_ptr);
   ((Stream*) write_io_ptr)->write(data, length);
 }
 
-static void png_error_func(png_structp, png_const_charp msg)
+static void pngErrorFunc(png_structp, png_const_charp msg)
 {
   Throw("Fatal libpng error: %s\n", msg);
 }
 
-static void png_warn_func(png_structp, png_const_charp msg)
+static void pngWarnFunc(png_structp, png_const_charp msg)
 {
   if (strstr(msg, "iCCP: known incorrect sRGB profile") != nullptr)
     return;
   spdlog::warn("libpng warning: {}", msg);
 }
 
-void Bitmap::readPNG(Stream* stream)
+void Bitmap::readPng(Stream* stream)
 {
   png_bytepp rows = nullptr;
 
   // Create buffers
   png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
-                                               &png_error_func, &png_warn_func);
+                                               &pngErrorFunc, &pngWarnFunc);
   if (png_ptr == nullptr)
-    Throw("readPNG(): Unable to create PNG data structure");
+    Throw("readPng(): Unable to create PNG data structure");
 
   png_infop info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == nullptr) {
     png_destroy_read_struct(&png_ptr, nullptr, nullptr);
-    Throw("readPNG(): Unable to create PNG information structure");
+    Throw("readPng(): Unable to create PNG information structure");
   }
 
   // Error handling
   if (setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
     delete[] rows;
-    Throw("readPNG(): Error reading the PNG file!");
+    Throw("readPng(): Error reading the PNG file!");
   }
 
   // Set read helper function
-  png_set_read_fn(png_ptr, stream, (png_rw_ptr) png_read_data);
+  png_set_read_fn(png_ptr, stream, (png_rw_ptr) pngReadData);
 
   int bit_depth, color_type, interlace_type, compression_type, filter_type;
   png_read_info(png_ptr, info_ptr);
@@ -590,7 +630,7 @@ void Bitmap::readPNG(Stream* stream)
       pixel_format_ = PixelFormat::RGBA;
       break;
     default:
-      Throw("readPNG(): Unknown color type %i", color_type);
+      Throw("readPng(): Unknown color type %i", color_type);
       break;
   }
 
@@ -602,7 +642,7 @@ void Bitmap::readPNG(Stream* stream)
       component_format_ = Struct::Type::UInt16;
       break;
     default:
-      Throw("readPNG(): Unsupported bit depth: %i", bit_depth);
+      Throw("readPng(): Unsupported bit depth: %i", bit_depth);
   }
 
   srgb_gamma_          = true;
@@ -620,9 +660,9 @@ void Bitmap::readPNG(Stream* stream)
   //  metadata_.set_string(text_ptr->key, text_ptr->text);
 
   auto fs = dynamic_cast<FileStream*>(stream);
-  spdlog::debug("Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
-                fs ? fs->path().string() : "<stream>", size_.x, size_.y,
-                pixel_format_, component_format_);
+  log_->debug("Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
+              fs ? fs->path().string() : "<stream>", size_.x, size_.y,
+              pixel_format_, component_format_);
 
   size_t size = bufferSize();
   data_       = std::make_unique<uint8_t[]>(size);

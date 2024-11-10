@@ -1,37 +1,27 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
 #include <eldr/vulkan/common.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include <array>
+namespace eldr::vk {
 
-namespace eldr {
-namespace vk {
-
-struct Vertex {
+struct GpuVertex {
   ELDR_IMPORT_CORE_TYPES();
-  Vec3f   position;
+  Vec3f   pos;
   Color3f color;
-  Vec2f   tex_coord;
+  Vec2f   uv; // texture coord
 
-  static VkVertexInputBindingDescription getBindingDescription();
-  static std::array<VkVertexInputAttributeDescription, 3>
-  getAttributeDescriptions();
-
-  bool operator==(const Vertex& other) const
+  bool operator==(const GpuVertex& other) const
   {
-    return position == other.position && color == other.color &&
-           tex_coord == other.tex_coord;
+    return pos == other.pos && color == other.color && uv == other.uv;
   }
 };
-} // namespace vk
-} // namespace eldr
+} // namespace eldr::vk
 namespace std {
-template <> struct hash<eldr::vk::Vertex> {
+template <> struct hash<eldr::vk::GpuVertex> {
   ELDR_IMPORT_CORE_TYPES();
-  size_t operator()(eldr::vk::Vertex const& vertex) const;
+  size_t operator()(eldr::vk::GpuVertex const& vertex) const;
 };
 } // namespace std
