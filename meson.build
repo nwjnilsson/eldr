@@ -63,17 +63,35 @@ vulkan_conf_data.set('MESON_BUILD_TYPE', get_option('buildtype'))
 # ------------------------------------------------------------------------------
 # Dependencies
 # ------------------------------------------------------------------------------
-glfw_dep      = dependency('glfw3',   version: '>=3.3.2')
-vulkan_dep    = dependency('vulkan',  version: '>=1.2.131')
-libjpeg_dep   = dependency('libjpeg', version: '>=2.0.3')
-libpng_dep    = dependency('libpng',  version: '>=1.6.3')
-spdlog_dep    = dependency('spdlog',  version: '>=1.5.0')
-vma_proj      = subproject('vulkan-memory-allocator')
-vma_dep       = vma_proj.get_variable('vma_allocator_dep')
-imgui_proj    = subproject('imgui')
-imgui_dep     = imgui_proj.get_variable('imgui_dep')
-cxxopts_proj  = subproject('cxxopts')
-cxxopts_dep   = cxxopts_proj.get_variable('cxxopts_dep')
+# Dependencies
+vma_proj         = subproject('vulkan-memory-allocator',
+  default_options: 'warning_level=0')
+vma_dep          = vma_proj.get_variable('vma_allocator_dep')
+vulkan_dep       = dependency('vulkan',  version: '>=1.2.131')
+libjpeg_dep      = dependency('libturbojpeg',
+  fallback: ['libjpeg-turbo', 'libjpeg'],
+  default_options: 'warning_level=0')
+libpng_dep       = dependency('libpng',
+  fallback: ['libpng', 'libpng_dep'],
+  default_options: 'warning_level=0')
+glfw_dep         = dependency('glfw',
+  fallback: ['glfw', 'glfw_dep'],
+  default_options: 'warning_level=0')
+imgui_dep        = dependency('imgui',
+  fallback: ['imgui', 'imgui_dep'],
+  default_options: 'warning_level=0')
+glm_dep          = dependency('glm',
+  fallback: ['glm', 'glm_dep'],
+  default_options: 'warning_level=0')
+cxxopts_dep      = dependency('cxxopts',
+  fallback: ['cxxopts', 'cxxopts_dep'],
+  default_options: 'warning_level=0')
+spdlog_dep       = dependency('spdlog',
+  fallback: ['spdlog', 'spdlog_dep'],
+  default_options: 'warning_level=0')
+libxkbcommon_dep = dependency('libxkbcommon',
+  fallback: ['libxkbcommon', 'dep_libxkbcommon'],
+  default_options: 'warning_level=0')
 
 # ------------------------------------------------------------------------------
 # The rest

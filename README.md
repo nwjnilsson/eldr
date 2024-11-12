@@ -14,26 +14,32 @@ I will try to keep cross platform compatibility in mind while developing Eldr,
 but it is not a priority in the beginning. I will be developing on Linux and the
 build instructions etc. will therefore be Linux(debian)-oriented to begin with.
 
+## Current status
+Eldr is in early stage development and I am still working on the Vulkan backend.
+I knew Vulkan would be overkill for a project like this but I want to learn it
+so it will take the time it takes. I am nearly done refactoring the Vulkan code
+and integrating ImGui. After that I need to write some shaders and work on the
+scene representation and then I can start path tracing (probably).
+
 ## Requirements
-The following software is available on Windows as well, so it should be possible
-to build there as well. MSVC 2013 is not compatible with
-[cxxopts](https://github.com/jarro2783/cxxopts#requirements), however.
+A possibly out-of-date list of required software:
 ```
 $ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
-    python3-pip python3-setuptools python3-wheel libspdlog-dev libglfw3-dev \
-    libglm-dev libvulkan-dev libjpeg62-turbo-dev libpng-dev
+    python3-pip python3-setuptools python3-wheel libvulkan-dev xcb libxcb-xkb-dev \
+    wayland-protocols
 ```
+Meson provides additional dependencies such as libpng, glfw, spdlog etc.
+
 For debugging:
 ```
 sudo apt-get install vulkan-validationlayers-dev spirv-tools
 ```
 
 Some other notes:
-- [spdlog](https://github.com/gabime/spdlog/tree/v1.13.0) is a header only
-library but I have been using a compiled library for faster compilation of Eldr.
 - For initial testing, I've been using the [Viking room](https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
 model by [nigelgoh](https://sketchfab.com/nigelgoh)[CC BY 4.0](https://web.archive.org/web/20200428202538/https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
-
+At the moment of writing, there are still hardcoded references to these files,
+and they will probably stay until I'm more finished with the vulkan backend.
 
 ## Build
 ### App
