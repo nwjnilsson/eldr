@@ -1,12 +1,12 @@
 /**
  * MemoryStream class adapted from Mitsuba3
  */
-#include <eldr/core/logger.hpp>
+#include <eldr/core/common.hpp>
 #include <eldr/core/mstream.hpp>
 
 #include <sstream>
 
-namespace eldr {
+namespace eldr::core {
 
 MemoryStream::MemoryStream(size_t capacity)
   : Stream(), capacity_(0), size_(0), pos_(0), owns_buffer_(true),
@@ -116,4 +116,4 @@ std::string MemoryStream::toString() const
   return oss.str();
 }
 
-} // namespace eldr
+} // namespace eldr::core

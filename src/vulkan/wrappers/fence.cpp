@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/fence.hpp>
 
 namespace eldr::vk::wr {
@@ -27,9 +26,17 @@ Fence::~Fence()
 
 void Fence::reset() const { vkResetFences(device_.logical(), 1, &fence_); }
 
-void Fence::wait() const
+VkResult Fence::wait(uint64_t timeout) const
 {
-  vkWaitForFences(device_.logical(), 1, &fence_, VK_TRUE, UINT64_MAX);
+  const VkResult result =
+    vkWaitForFences(device_.logical(), 1, &fence_, VK_TRUE, timeout);
+  switch (result) {
+    case VK_SUCCESS:
+    case VK_TIMEOUT:
+      return result;
+    default:
+      ThrowVk(result, "vkWaitForFences(): ");
+  }
 }
 
 VkResult Fence::status() const

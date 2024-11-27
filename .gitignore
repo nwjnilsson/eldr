@@ -36,3 +36,7 @@ build/
 
 # Clang stuff
 .cache/
+
+# Subproject files (excluding .wrap files)
+subprojects/*
+!subprojects/*.wrap

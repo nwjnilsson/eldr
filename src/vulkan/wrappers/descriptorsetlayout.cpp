@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 

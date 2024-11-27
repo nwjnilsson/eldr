@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -8,13 +7,13 @@ namespace eldr::vk::wr {
 GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
                      VkBufferUsageFlags buffer_usage,
                      VmaMemoryUsage memory_usage, const std::string& name)
-  : GpuResource(device, name)
+  : GpuResource(device, name), size_(buffer_size)
 {
   const VkBufferCreateInfo buffer_ci{
     .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .pNext                 = {},
     .flags                 = {},
-    .size                  = buffer_size,
+    .size                  = size_,
     .usage                 = buffer_usage,
     .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
     .queueFamilyIndexCount = {},
@@ -41,16 +40,13 @@ GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
   vmaSetAllocationName(device_.allocator(), allocation_, name.c_str());
 }
 
-GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
-                     const void* data, VkDeviceSize data_size,
-                     VkBufferUsageFlags buffer_usage,
+GpuBuffer::GpuBuffer(const Device& device, const void* data,
+                     VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
                      VmaMemoryUsage memory_usage, const std::string& name)
-  : GpuBuffer(device, buffer_size, buffer_usage, memory_usage, name)
+  : GpuBuffer(device, data_size, buffer_usage, memory_usage, name)
 {
-  assert(buffer_size > 0);
-  assert(buffer_size >= data_size);
+  assert(data_size > 0);
   assert(data);
-
   uploadData(data, data_size);
 }
 
@@ -69,10 +65,11 @@ GpuBuffer::~GpuBuffer()
     vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
 }
 
-void GpuBuffer::uploadData(const void* data, size_t size)
+void GpuBuffer::uploadData(const void* data, size_t data_size)
 {
+  assert(static_cast<VkDeviceSize>(data_size) <= size_);
   assert(alloc_info_.pMappedData != nullptr);
-  std::memcpy(alloc_info_.pMappedData, data, size);
+  std::memcpy(alloc_info_.pMappedData, data, data_size);
 }
 
 } // namespace eldr::vk::wr

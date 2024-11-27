@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 

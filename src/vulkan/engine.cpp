@@ -1,12 +1,13 @@
 // Ensure that vma implementation is included
 #define VMA_IMPLEMENTATION
 #include <eldr/app/window.hpp>
-#include <eldr/core/fwd.hpp>
-#include <eldr/core/logger.hpp>
+#include <eldr/core/exceptions.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/platform.hpp>
+#include <eldr/core/stopwatch.hpp>
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/engine.hpp>
+#include <eldr/vulkan/imgui.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/vertex.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
@@ -23,7 +24,6 @@
 #include <engine_config.hpp>
 
 #include <GLFW/glfw3.h>
-#include <backends/imgui_impl_glfw.h>
 #include <imgui.h>
 
 #include <memory>
@@ -32,14 +32,13 @@
 namespace eldr::vk {
 struct UniformBufferObject {
   ELDR_IMPORT_CORE_TYPES();
-  alignas(16) Mat4f model;
-  alignas(16) Mat4f view;
-  alignas(16) Mat4f proj;
+  alignas(16) Mat4f mvp_mat;
 };
 
 VulkanEngine::VulkanEngine(const Window& window)
-  : window_(window), in_flight_cmd_bufs_(std::vector<const wr::CommandBuffer*>(
-                       max_frames_in_flight, nullptr))
+  : window_(window), log_(core::requestLogger("vulkan-engine")),
+    in_flight_cmd_bufs_(
+      std::vector<const wr::CommandBuffer*>(max_frames_in_flight, nullptr))
 {
   // ---------------------------------------------------------------------------
   // Create instance
@@ -77,15 +76,11 @@ VulkanEngine::VulkanEngine(const Window& window)
 #ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
   device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
-  device_ =
-    std::make_unique<wr::Device>(*instance_, *surface_, device_extensions);
+  // Pass log_ pointer to device so that all wrapper objects that have a
+  // reference to the device can access the same logger
+  device_ = std::make_unique<wr::Device>(*instance_, *surface_,
+                                         device_extensions, log_);
 
-  // ---------------------------------------------------------------------------
-  // Set MSAA sample count
-  // TODO: maybe this should be configurable rather than using max possible
-  // samples
-  // ---------------------------------------------------------------------------
-  msaa_sample_count_ = device_->maxMsaaSampleCount();
   // ---------------------------------------------------------------------------
   // Create swapchain
   // ---------------------------------------------------------------------------
@@ -108,7 +103,7 @@ VulkanEngine::VulkanEngine(const Window& window)
   recreateSwapchain();
 }
 
-VulkanEngine::~VulkanEngine() { vkDeviceWaitIdle(device_->logical()); }
+VulkanEngine::~VulkanEngine() { device_->waitIdle(); }
 
 void VulkanEngine::loadTextures()
 {
@@ -122,8 +117,8 @@ void VulkanEngine::loadTextures()
   const std::string     texture_path = "/assets/textures/viking_room.png";
   std::filesystem::path filepath(std::string(env_p) + texture_path);
 
-  Bitmap bitmap(filepath);
-  if (bitmap.pixelFormat() != Bitmap::PixelFormat::RGBA)
+  core::Bitmap bitmap(filepath);
+  if (bitmap.pixelFormat() != core::Bitmap::PixelFormat::RGBA)
     bitmap.rgbToRgba();
   textures_.emplace_back(*device_, bitmap);
 }
@@ -141,97 +136,48 @@ void VulkanEngine::loadShaders()
 void VulkanEngine::createUniformBuffers()
 {
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
-    uniform_buffers_.emplace_back(*device_, sizeof(UniformBufferObject),
-                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                  VMA_MEMORY_USAGE_GPU_ONLY, "Uniform buffer");
+    uniform_buffers_.emplace_back(
+      *device_, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VMA_MEMORY_USAGE_CPU_TO_GPU, "Uniform buffer");
   }
 }
 
 void VulkanEngine::createResourceDescriptors()
 {
+  wr::DescriptorBuilder descriptor_builder(*device_);
   for (size_t i = 0; i < max_frames_in_flight; ++i) {
-    wr::DescriptorBuilder descriptor_builder(*device_);
-    descriptors_.emplace_back(
-      descriptor_builder
-        .addUniformBuffer<UniformBufferObject>(uniform_buffers_[i].get(), 0)
-        .addCombinedImageSampler(textures_[0].sampler(),
-                                 textures_[0].imageView(), 1)
-        .build(textures_[0].name())); // TODO: textures created with bitmaps are
-                                      // named "undefined" by default. Get name
-                                      // some other way.
+    descriptor_builder
+      .addUniformBuffer<UniformBufferObject>(uniform_buffers_[i].get(), 0)
+      .addCombinedImageSampler(textures_[0].sampler(), textures_[0].imageView(),
+                               1);
+    descriptors_.emplace_back(descriptor_builder.build(fmt::format(
+      "{} (frame {})", textures_[0].name(), i))); // TODO: textures created with
+                                                  // bitmaps are named
+                                                  // "undefined" by default. Get
+                                                  // name some other way.
   }
-
-  // ===========================================================================
-  // VkDescriptorSetLayoutBinding ubo_layout_binding{};
-  // ubo_layout_binding.binding            = 0;
-  // ubo_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  // ubo_layout_binding.descriptorCount    = 1;
-  // ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
-  // ubo_layout_binding.pImmutableSamplers = nullptr; // optional
-
-  // VkDescriptorSetLayoutBinding sampler_layout_binding{};
-  // sampler_layout_binding.binding         = 1;
-  // sampler_layout_binding.descriptorCount = 1;
-  // sampler_layout_binding.descriptorType =
-  //   VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  // sampler_layout_binding.pImmutableSamplers = nullptr;
-  // sampler_layout_binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-  // const std::vector<VkDescriptorSetLayoutBinding> bindings{
-  //   ubo_layout_binding, sampler_layout_binding
-  // };
-
-  // for (size_t i = 0; i < max_frames_in_flight; ++i) {
-  //   VkDescriptorBufferInfo buffer_info{};
-  //   buffer_info.buffer = uniform_buffers_[i].get();
-  //   buffer_info.offset = 0;
-  //   buffer_info.range  = sizeof(UniformBufferObject);
-
-  //   VkDescriptorImageInfo image_info{};
-  //   image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  //   image_info.imageView   = texture_sampler_.texture.view().get();
-  //   image_info.sampler     = texture_sampler_.sampler.get();
-
-  //   std::vector<VkWriteDescriptorSet> descriptor_writes{};
-  //   descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  //   descriptor_writes[0].dstArrayElement = 0;
-  //   descriptor_writes[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  //   descriptor_writes[0].descriptorCount = 1;
-  //   // Either pBufferInfo or pImageInfo or pTexelBufferView is set
-  //   descriptor_writes[0].pBufferInfo      = &buffer_info;
-  //   descriptor_writes[0].pImageInfo       = nullptr;
-  //   descriptor_writes[0].pTexelBufferView = nullptr;
-
-  //   descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  //   descriptor_writes[1].dstArrayElement = 0;
-  //   descriptor_writes[1].descriptorType =
-  //     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  //   descriptor_writes[1].descriptorCount = 1;
-  //   // Either pBufferInfo or pImageInfo or pTexelBufferView is set
-  //   descriptor_writes[1].pBufferInfo      = nullptr;
-  //   descriptor_writes[1].pImageInfo       = &image_info;
-  //   descriptor_writes[1].pTexelBufferView = nullptr;
-
-  //   descriptors_.emplace_back(*device_, bindings, descriptor_writes);
-  // }
 }
 
 void VulkanEngine::setupRenderGraph()
 {
   // 1 sample for back buffer, max possible sample count for color images and
-  // depth buffer. TODO: may want to be more flexible when setting sample count.
-  const VkSampleCountFlagBits sample_count = device_->maxMsaaSampleCount();
+  // depth buffer.
+  // TODO: may want to be more flexible when setting sample count.
+  // Note that the sample count used for the depth and color buffer must match
+  // `.rasterizationSamples` in VkPipelineMultisampleStateCreateInfo.
+  const VkSampleCountFlagBits sample_count = device_->findMaxMsaaSampleCount();
 
-  back_buffer_ = render_graph_->add<TextureResource>(
-    "back buffer", TextureUsage::back_buffer, swapchain_->imageFormat());
-
-  auto* msaa_buffer = render_graph_->add<TextureResource>(
-    "MSAA color buffer", TextureUsage::offscreen_buffer,
-    swapchain_->imageFormat(), sample_count);
+  msaa_buffer_ = render_graph_->add<TextureResource>(
+    "MSAA color buffer", TextureUsage::color_buffer, swapchain_->imageFormat(),
+    sample_count);
 
   auto* depth_buffer = render_graph_->add<TextureResource>(
     "depth buffer", TextureUsage::depth_stencil_buffer,
     device_->findDepthFormat(), sample_count);
+
+  // TODO: handle resolve buffers implicitly in render graph
+  back_buffer_ = render_graph_->add<TextureResource>(
+    "back buffer", TextureUsage::back_buffer, swapchain_->imageFormat());
 
   index_buffer_ = render_graph_->add<BufferResource>("index buffer",
                                                      BufferUsage::index_buffer);
@@ -241,16 +187,18 @@ void VulkanEngine::setupRenderGraph()
     "vertex buffer", BufferUsage::vertex_buffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
-                                     offsetof(GpuVertex, color));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(GpuVertex, uv));
+  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
+                                     offsetof(GpuVertex, color));
+  vertex_buffer_->setElementSize(sizeof(GpuVertex));
   vertex_buffer_->uploadData<GpuVertex>(vertices_);
 
   auto* main_stage = render_graph_->add<GraphicsStage>("main stage");
+  // Write order matters here (for now)
+  main_stage->writesTo(msaa_buffer_); // clear value index 0 is clear color
+  main_stage->writesTo(depth_buffer); // clear value index 1 is depth stencil
   main_stage->writesTo(back_buffer_);
-  main_stage->writesTo(msaa_buffer);
-  main_stage->writesTo(depth_buffer);
   main_stage->readsFrom(index_buffer_);
   main_stage->readsFrom(vertex_buffer_);
   main_stage->bindBuffer(vertex_buffer_, 0);
@@ -258,16 +206,36 @@ void VulkanEngine::setupRenderGraph()
   main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
-      cb.bindDescriptorSets(descriptors_[0].descriptorSets(),
+      cb.bindDescriptorSets(descriptors_[current_frame_].descriptorSets(),
                             physical.pipelineLayout());
-      cb.drawIndexed(static_cast<std::uint32_t>(indices_.size()));
+      const VkViewport viewports[] = { {
+        .x        = 0.0f,
+        .y        = 0.0f,
+        .width    = static_cast<float>(swapchain_->extent().width),
+        .height   = static_cast<float>(swapchain_->extent().height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+      } };
+      cb.setViewport(viewports, 0);
+
+      const VkRect2D scissors[] = { {
+        .offset = { 0, 0 },
+        .extent = swapchain_->extent(),
+      } };
+      cb.setScissor(scissors, 0);
+      cb.drawIndexed(static_cast<uint32_t>(indices_.size()));
     });
 
   for (const auto& shader : shaders_) {
     main_stage->usesShader(shader);
   }
 
-  // TODO: blend attachment of main stage?
+  // TODO: Only one descriptor set is currently allocated for any given
+  // ResourceDescriptor. Additionally, for each frame in flight, the
+  // descriptor set bound is identical to the previous frame.This means that it
+  // is (for now) okay to only add a single layout for each resource descriptor
+  // that applies to all frames.
+  // for (const auto& descriptor : descriptors_)
   main_stage->addDescriptorLayout(descriptors_[0].descriptorSetLayout());
 }
 
@@ -290,23 +258,33 @@ void VulkanEngine::recreateSwapchain()
 
 void VulkanEngine::updateUniformBuffer(uint32_t current_image)
 {
-  static auto start_time   = std::chrono::high_resolution_clock::now();
-  auto        current_time = std::chrono::high_resolution_clock::now();
-  float       time = std::chrono::duration<float, std::chrono::seconds::period>(
-                 current_time - start_time)
-                 .count();
+  static core::StopWatch stop_watch;
+  float                  time{ stop_watch.seconds(false) };
 
-  UniformBufferObject ubo{};
-  ubo.model = glm::rotate(Mat4f(1.0f), time * glm::radians(90.0f),
-                          Vec3f(0.0f, 0.0f, 1.0f));
-  ubo.view  = glm::lookAt(Vec3f(2.0f, 2.0f, 2.0f), Vec3f(0.0f, 0.0f, 0.0f),
-                          Vec3f(0.0f, 0.0f, 1.0f));
-  ubo.proj  = glm::perspective(glm::radians(45.0f),
+  Mat4f model{ glm::rotate(Mat4f(1.0f), time * glm::radians(20.0f),
+                           Vec3f(0.0f, 0.0f, 1.0f)) };
+  Mat4f view{ glm::lookAt(Vec3f(2.0f, 2.0f, 2.0f), Vec3f(0.0f, 0.0f, 0.0f),
+                          Vec3f(0.0f, 0.0f, 1.0f)) };
+  Mat4f proj{ glm::perspective(glm::radians(45.0f),
                                swapchain_->extent().width /
                                  (float) swapchain_->extent().height,
-                               0.1f, 10.0f);
-  ubo.proj[1][1] *= -1;
-  memcpy(uniform_buffers_mapped_[current_image], &ubo, sizeof(ubo));
+                               0.1f, 10.0f) };
+  proj[1][1] *= -1;
+  UniformBufferObject ubo{ .mvp_mat = proj * view * model };
+  uniform_buffers_[current_image].uploadData(&ubo, sizeof(ubo));
+}
+
+void VulkanEngine::updateImGui(std::function<void()> const& lambda)
+{
+  ImGuiIO& io    = ImGui::GetIO();
+  io.DisplaySize = ImVec2(static_cast<float>(swapchain_->extent().width),
+                          static_cast<float>(swapchain_->extent().height));
+  io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+  ImGui::NewFrame();
+  lambda();
+  ImGui::EndFrame();
+  ImGui::Render();
+  imgui_overlay_->update(current_frame_);
 }
 
 // TODO: move this to where it is relevant
@@ -318,7 +296,7 @@ void VulkanEngine::submitGeometry(const std::vector<Vec3f>& positions,
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   for (uint32_t i = 0; i < positions.size(); ++i) {
-    GpuVertex v{ positions[i], { 1.0f, 1.0f, 1.0f }, texcoords[i] };
+    GpuVertex v{ positions[i], texcoords[i], { 1.0f, 1.0f, 1.0f } };
     if (unique_vertices.count(v) == 0) {
       unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
       vertices_.push_back(v);
@@ -332,9 +310,9 @@ void VulkanEngine::submitGeometry(const std::vector<Vec3f>& positions,
 
 void VulkanEngine::drawFrame()
 {
-  if (framebuffer_resized_) {
+  if (swapchain_invalidated_) {
     recreateSwapchain();
-    framebuffer_resized_ = false;
+    swapchain_invalidated_ = false;
     return;
   }
 
@@ -343,15 +321,20 @@ void VulkanEngine::drawFrame()
   if (likely(in_flight_cmd_bufs_[current_frame_] != nullptr))
     in_flight_cmd_bufs_[current_frame_]->waitFence();
 
-  const uint32_t image_index = swapchain_->acquireNextImage(current_frame_);
+  const uint32_t image_index{ swapchain_->acquireNextImage(
+    current_frame_, swapchain_invalidated_) };
+  if (swapchain_invalidated_) {
+    // Skip rendering, swapchain is recreated on next call
+    return;
+  }
 
-  const auto& cb                      = device_->requestCommandBuffer();
+  const auto& cb{ device_->requestCommandBuffer() };
   in_flight_cmd_bufs_[current_frame_] = &cb;
   render_graph_->render(image_index, cb);
 
-  updateUniformBuffer(current_frame_);
+  updateUniformBuffer(current_frame_); // move
 
-  VkPipelineStageFlags wait_stages[] = {
+  VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
   };
 
@@ -370,7 +353,7 @@ void VulkanEngine::drawFrame()
   // Submit without waiting (we wait at the beginning of this function)
   cb.submit(submit_info);
 
-  VkSwapchainKHR         swapchains[] = { swapchain_->get() };
+  VkSwapchainKHR         swapchains[]{ swapchain_->get() };
   const VkPresentInfoKHR present_info{
     .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
     .pNext              = {},
@@ -382,9 +365,11 @@ void VulkanEngine::drawFrame()
     .pResults           = {},
   };
 
-  swapchain_->present(present_info);
+  swapchain_->present(present_info, swapchain_invalidated_);
 
   current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }
+
+std::string VulkanEngine::deviceName() const { return device_->name(); }
 
 } // namespace eldr::vk

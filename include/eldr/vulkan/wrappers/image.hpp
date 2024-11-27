@@ -25,7 +25,7 @@ public:
   GpuImage(GpuImage&) = delete;
   GpuImage(const Device&, const ImageInfo&, const VmaAllocationCreateInfo&,
            const std::string& name);
-  GpuImage(const Device&, const Bitmap&, const VmaAllocationCreateInfo&,
+  GpuImage(const Device&, const core::Bitmap&, const VmaAllocationCreateInfo&,
            const std::string& name);
   GpuImage(const GpuImage&) = delete;
   GpuImage(GpuImage&&)      = delete;

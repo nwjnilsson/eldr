@@ -54,7 +54,7 @@ private:
   const Device& device_;
 
   std::vector<VkDescriptorSetLayoutBinding> layout_bindings_;
-  std::vector<VkWriteDescriptorSet>         write_sets_;
+  std::vector<VkWriteDescriptorSet>         descriptor_write_sets_;
   std::vector<VkDescriptorBufferInfo>       descriptor_buffer_infos_;
   std::vector<VkDescriptorImageInfo>        descriptor_image_infos_;
 };
@@ -80,7 +80,7 @@ DescriptorBuilder::addUniformBuffer(VkBuffer uniform_buffer, uint32_t binding,
     .range  = sizeof(T),
   });
 
-  write_sets_.push_back(VkWriteDescriptorSet{
+  descriptor_write_sets_.push_back(VkWriteDescriptorSet{
     .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     .pNext            = {},
     .dstSet           = nullptr,

@@ -5,13 +5,12 @@
 /// including glm.h (eldr/core/math.h)
 
 #include <glm/fwd.hpp>
-#include <memory>
-#include <spdlog/fwd.h>
 
-namespace eldr {
+namespace eldr::core {
 class Bitmap;
 class Struct;
 class Stream;
+class StopWatch;
 
 template <size_t size, typename T> using Color = glm::vec<size, T>;
 template <size_t size, typename T> using Point = glm::vec<size, T>;
@@ -67,9 +66,10 @@ struct CoreAliases {
   using Color1d = Color<1, glm::float64_t>;
   using Color3d = Color<3, glm::float64_t>;
 };
+} // namespace eldr::core
 
 #define ELDR_IMPORT_CORE_TYPES()                                               \
-  using CoreAliases = eldr::CoreAliases;                                       \
+  using CoreAliases = eldr::core::CoreAliases;                                 \
   using Vec2i       = typename CoreAliases::Vec2i;                             \
   using Vec3i       = typename CoreAliases::Vec3i;                             \
   using Vec4i       = typename CoreAliases::Vec4i;                             \
@@ -106,8 +106,3 @@ struct CoreAliases {
   using Color3f     = typename CoreAliases::Color3f;                           \
   using Color1d     = typename CoreAliases::Color1d;                           \
   using Color3d     = typename CoreAliases::Color3d;
-
-namespace detail {
-std::shared_ptr<spdlog::logger> requestLogger(const std::string& name);
-} // namespace detail
-} // namespace eldr

@@ -10,8 +10,8 @@ namespace eldr::vk {
 struct GpuVertex {
   ELDR_IMPORT_CORE_TYPES();
   Vec3f   pos;
-  Color3f color;
   Vec2f   uv; // texture coord
+  Color3f color;
 
   bool operator==(const GpuVertex& other) const
   {

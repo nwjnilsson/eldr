@@ -1,5 +1,4 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 
@@ -24,11 +23,11 @@ public:
   const CommandBuffer&   begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer&   beginRenderPass(const VkRenderPassBeginInfo&) const;
   // const CommandBuffer&   beginSingleCommand() const;
-  const CommandBuffer& drawIndexed(std::uint32_t index_count,
-                                   std::uint32_t instance_count = 1,
-                                   std::uint32_t first_index    = 0,
-                                   std::int32_t  vertex_offset  = 0,
-                                   std::uint32_t first_instance = 0) const;
+  const CommandBuffer& drawIndexed(uint32_t index_count,
+                                   uint32_t instance_count = 1,
+                                   uint32_t first_index    = 0,
+                                   int32_t  vertex_offset  = 0,
+                                   uint32_t first_instance = 0) const;
   const CommandBuffer& endRenderPass() const;
   const CommandBuffer& end() const;
   const CommandBuffer& submit(const VkSubmitInfo& submit_info) const;
@@ -47,9 +46,8 @@ public:
 
   const CommandBuffer& bindDescriptorSets(
     std::span<const VkDescriptorSet> desc_sets, VkPipelineLayout layout,
-    VkPipelineBindPoint            bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS,
-    std::uint32_t                  first_set  = 0,
-    std::span<const std::uint32_t> dyn_offsets = {}) const;
+    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS,
+    uint32_t first_set = 0, std::span<const uint32_t> dyn_offsets = {}) const;
 
   const CommandBuffer& bindPipeline(
     VkPipeline          pipeline,
@@ -96,8 +94,8 @@ public:
                                          const std::string& name) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
-                                     VkShaderStageFlags stage,
-                                     std::uint32_t size, const void* data,
+                                     VkShaderStageFlags stage, uint32_t size,
+                                     const void*  data,
                                      VkDeviceSize offset = 0) const;
   template <typename T>
   const CommandBuffer& pushConstant(const VkPipelineLayout   layout,
@@ -112,9 +110,10 @@ public:
                                              VkDeviceSize       buffer_size,
                                              const std::string& name) const;
 
-  [[nodiscard]] VkResult fenceStatus() const;
-  void                   resetFence() const;
-  void                   waitFence() const;
+  [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] VkResult           fenceStatus() const;
+  void                             resetFence() const;
+  void                             waitFence() const;
 
 private:
   const Device&      device_;

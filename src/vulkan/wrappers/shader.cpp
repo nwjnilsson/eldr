@@ -1,7 +1,7 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
+#include <fstream>
 #include <vector>
 namespace eldr::vk::wr {
 
@@ -12,18 +12,6 @@ Shader::Shader(const Device& device, VkShaderStageFlagBits stage,
                const std::string& entry_point)
   : device_(device), name_(name), entry_point_(entry_point), stage_(stage)
 {
-  // TODO: move
-  // const char* env_p = std::getenv("ELDR_DIR");
-  // if (env_p == nullptr) {
-  //   Throw("loadShader(): Environment not set up correctly");
-  // }
-
-  // std::string filename{};
-  // if (type == "vertex")
-  //   filename = std::string(env_p) + "/shaders/vert.spv";
-  // else if (type == "fragment")
-  //   filename = std::string(env_p) + "/shaders/frag.spv";
-
   auto                           bytecode = loadShader(file_name);
   const VkShaderModuleCreateInfo shader_ci{
     .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,

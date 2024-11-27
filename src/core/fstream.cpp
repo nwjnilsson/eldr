@@ -1,13 +1,13 @@
 /**
  * FileStream implementation adapted from Mitsuba3
  */
+#include <eldr/core/common.hpp>
 #include <eldr/core/fstream.hpp>
-#include <eldr/core/logger.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <fstream>
 
-namespace eldr {
+namespace eldr::core {
 
 namespace detail {
 inline std::ios::openmode ios_flag(FileStream::EMode mode)
@@ -135,7 +135,7 @@ std::string FileStream::readLine()
 {
   std::string result;
   if (!std::getline(*file_, result))
-    detail::requestLogger("core")->error(
+    core::requestLogger("core")->error(
       "\"%s\": I/O error while attempting to read a line of text: %s",
       path_.string(), strerror(errno));
   return result;
@@ -144,7 +144,6 @@ std::string FileStream::readLine()
 std::string FileStream::toString() const
 {
   std::ostringstream oss;
-
   oss << "FileStream" << "[" << std::endl;
   if (isClosed()) {
     oss << "  closed" << std::endl;
@@ -169,4 +168,4 @@ std::string FileStream::toString() const
 
   return oss.str();
 }
-} // namespace eldr
+} // namespace eldr::core

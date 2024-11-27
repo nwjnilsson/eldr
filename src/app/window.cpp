@@ -1,5 +1,5 @@
 #include <eldr/app/window.hpp>
-#include <eldr/core/logger.hpp>
+#include <eldr/core/common.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -7,7 +7,7 @@ namespace eldr {
 namespace {
 static void glfwErrorCallback(int error, const char* description)
 {
-  detail::requestLogger("app")->error("GLFW Error {}: {}", error, description);
+  core::requestLogger("app")->error("GLFW Error {}: {}", error, description);
 }
 } // namespace
 
@@ -45,6 +45,35 @@ void Window::setResizeCallback(GLFWframebuffersizefun func)
   glfwSetFramebufferSizeCallback(glfw_window_, func);
 }
 
+void Window::setTitle(const std::string& title)
+{
+  assert(!title.empty());
+  glfwSetWindowTitle(glfw_window_, title.c_str());
+}
+
+void Window::setKeyboardButtonCallback(GLFWkeyfun keyboard_button_callback)
+{
+  glfwSetKeyCallback(glfw_window_, keyboard_button_callback);
+}
+
+void Window::setCursorPositionCallback(GLFWcursorposfun cursor_pos_callback)
+{
+  glfwSetCursorPosCallback(glfw_window_, cursor_pos_callback);
+}
+
+void Window::setMouseButtonCallback(GLFWmousebuttonfun mouse_button_callback)
+{
+  glfwSetMouseButtonCallback(glfw_window_, mouse_button_callback);
+}
+
+void Window::setMouseScrollCallback(GLFWscrollfun mouse_scroll_callback)
+{
+  glfwSetScrollCallback(glfw_window_, mouse_scroll_callback);
+}
+
+void Window::show() { glfwShowWindow(glfw_window_); }
+
+void                     Window::poll() { glfwPollEvents(); }
 std::vector<const char*> Window::getExtensions()
 {
   std::vector<const char*> extensions{};

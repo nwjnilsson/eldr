@@ -1,7 +1,6 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/wrappers/pipeline.hpp>
 
 #include <functional>
 #include <memory>
@@ -100,52 +99,53 @@ private:
   const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
 
+  enum class OnNextRender {
+    upload_only, // indicates that data can be uploaded without resizing
+    create_new,  // indicates that a new buffer is needed, e.g upon resize
+    skip,        // nothing needs to be done for this buffer
+  } on_render_;
+
   // Data to upload during render graph compilation.
   const void* data_{ nullptr };
-  std::size_t data_size_{ 0 };
-  bool        data_upload_needed_{ false };
-  std::size_t element_size_{ 0 };
+  size_t      data_size_{ 0 };
+  size_t      element_size_{ 0 };
 };
 
 enum class TextureUsage {
   /// @brief Specifies that this texture is the output of the render graph.
-  // TODO: Refactor back buffer system more (remove need for back_buffer texture
-  // usage)
   back_buffer,
-
-  /// @brief Specifies that this texture is an offscreen buffer. Can be used as
-  /// MSAA render target.
-  offscreen_buffer,
 
   /// @brief Specifies that this texture is a combined depth/stencil buffer.
   /// @note This may mean that this texture is completely GPU-sided and cannot
   /// be accessed by the CPU in any way.
   depth_stencil_buffer,
+
+  /// @brief Specifies that this texture is an offscreen buffer, for example an
+  /// MSAA target.
+  color_buffer,
 };
 
 class TextureResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  TextureResource(
-    std::string&& name, TextureUsage usage, VkFormat format,
-    VkSampleCountFlagBits msaa_sample_count = VK_SAMPLE_COUNT_1_BIT)
+  TextureResource(std::string&& name, TextureUsage usage, VkFormat format,
+                  VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT)
     : RenderResource(name), usage_(usage), format_(format),
-      msaa_sample_count_(msaa_sample_count)
+      sample_count_(sample_count)
   {
   }
 
 private:
   const TextureUsage          usage_;
   const VkFormat              format_{ VK_FORMAT_UNDEFINED };
-  const VkSampleCountFlagBits msaa_sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  const VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
 };
 
 /// @brief A single render stage in the render graph.
 /// @note Not to be confused with a vulkan render pass.
 class RenderStage : public RenderGraphObject {
   friend RenderGraph;
-  friend wr::Pipeline;
 
 public:
   RenderStage(const RenderStage&) = delete;
@@ -217,7 +217,6 @@ private:
 
 class GraphicsStage : public RenderStage {
   friend RenderGraph;
-  friend wr::Pipeline;
 
 public:
   explicit GraphicsStage(std::string&& name) : RenderStage(name) {}
@@ -247,6 +246,8 @@ public:
     blend_attachment_ = blend_attachment;
   }
 
+  void setCullMode(VkCullModeFlagBits cull_mode) { cull_mode_ = cull_mode; }
+
   /// @brief Specifies that `buffer` should map to `binding` in the shaders of
   /// this stage.
   void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
@@ -261,7 +262,9 @@ private:
   bool                                clears_screen_{ false };
   bool                                depth_test_{ false };
   bool                                depth_write_{ false };
+  VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
   VkPipelineColorBlendAttachmentState blend_attachment_{};
+  VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
   std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
   std::vector<VkPipelineShaderStageCreateInfo>             shaders_;
 };
@@ -319,19 +322,13 @@ class PhysicalBackBuffer : public PhysicalResource {
   friend RenderGraph;
 
 public:
-  PhysicalBackBuffer(const wr::Device& device, const wr::Swapchain& swapchain)
-    : PhysicalResource(device), m_swapchain(swapchain)
-  {
-  }
+  PhysicalBackBuffer(const wr::Device& device) : PhysicalResource(device) {}
   PhysicalBackBuffer(const PhysicalBackBuffer&) = delete;
   PhysicalBackBuffer(PhysicalBackBuffer&&)      = delete;
   ~PhysicalBackBuffer() override                = default;
 
   PhysicalBackBuffer& operator=(const PhysicalBackBuffer&) = delete;
   PhysicalBackBuffer& operator=(PhysicalBackBuffer&&)      = delete;
-
-private:
-  const wr::Swapchain& m_swapchain;
 };
 
 class PhysicalStage : public RenderGraphObject {
@@ -341,7 +338,7 @@ public:
   explicit PhysicalStage(const wr::Device& device) : device_(device) {}
   PhysicalStage(const PhysicalStage&) = delete;
   PhysicalStage(PhysicalStage&&)      = delete;
-  ~PhysicalStage() override           = default;
+  ~PhysicalStage() override;
 
   PhysicalStage& operator=(const PhysicalStage&) = delete;
   PhysicalStage& operator=(PhysicalStage&&)      = delete;
@@ -349,34 +346,31 @@ public:
   /// @brief Retrieve the pipeline layout of this physical stage.
   // TODO: This can be removed once descriptors are properly implemented in the
   // render graph.
-  [[nodiscard]] VkPipelineLayout pipelineLayout() const
-  {
-    return pipeline_->layout();
-  }
+  [[nodiscard]] VkPipelineLayout pipelineLayout() const { return layout_; }
 
 protected:
   const wr::Device& device_;
 
 private:
-  std::unique_ptr<wr::Pipeline> pipeline_;
+  VkPipelineLayout layout_{ VK_NULL_HANDLE };
+  VkPipeline       pipeline_{ VK_NULL_HANDLE };
 };
 
 class PhysicalGraphicsStage : public PhysicalStage {
   friend RenderGraph;
-  friend wr::Pipeline;
 
 public:
   explicit PhysicalGraphicsStage(const wr::Device& device);
   PhysicalGraphicsStage(const PhysicalGraphicsStage&) = delete;
   PhysicalGraphicsStage(PhysicalGraphicsStage&&)      = delete;
-  ~PhysicalGraphicsStage() override                   = default;
+  ~PhysicalGraphicsStage() override;
 
   PhysicalGraphicsStage& operator=(const PhysicalGraphicsStage&) = delete;
   PhysicalGraphicsStage& operator=(PhysicalGraphicsStage&&)      = delete;
 
 private:
-  std::unique_ptr<wr::RenderPass> render_pass_;
-  std::vector<wr::Framebuffer>    framebuffers_;
+  VkRenderPass                 render_pass_{ VK_NULL_HANDLE };
+  std::vector<wr::Framebuffer> framebuffers_;
 };
 
 // class ComputePass {};
@@ -409,21 +403,21 @@ public:
   }
 
   void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
+  void buildPipelineLayout(const RenderStage*, PhysicalStage&) const;
   void buildGraphicsPipeline(const GraphicsStage*,
                              PhysicalGraphicsStage&) const;
-  // void buildBuffer(const BufferResource&, wr::Buffer&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
                            const wr::CommandBuffer& cb,
                            const std::uint32_t      image_index) const;
-  void compile(/*const RenderResource* target*/);
+  void compile();
 
-  void render(std::uint32_t image_index, const wr::CommandBuffer& cb);
+  void render(uint32_t image_index, const wr::CommandBuffer& cb);
 
 private:
-  const wr::Device&               device_;
-  const wr::Swapchain&            swapchain_;
-  std::shared_ptr<spdlog::logger> log_{ detail::requestLogger("render-graph") };
+  const wr::Device&    device_;
+  const wr::Swapchain& swapchain_;
+  core::Logger         log_{ core::requestLogger("render-graph") };
 
   std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;
@@ -445,14 +439,13 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
 
 template <typename T> void BufferResource::uploadData(const std::span<T>& data)
 {
-  data_               = data.data();
-  data_size_          = data.size() * (element_size_ = sizeof(T));
-  data_upload_needed_ = true;
+  size_t new_size = data.size() * (element_size_ = sizeof(T));
+  if (data_size_ == new_size)
+    on_render_ = OnNextRender::upload_only;
+  else {
+    on_render_ = OnNextRender::create_new;
+    data_size_ = new_size;
+  }
+  data_ = data.data();
 }
-
-// template <typename T>
-// void BufferResource::uploadData(const std::vector<T>& data)
-//{
-//   uploadData(std::span<T>(data));
-// }
 } // namespace eldr::vk

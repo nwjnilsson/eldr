@@ -13,12 +13,12 @@ public:
   /// on the width and height of the texture.
   GpuTexture(const Device&, const uint8_t* data, VkDeviceSize data_size,
              uint32_t texture_width, uint32_t texture_height,
-             uint32_t n_channels, uint32_t n_mip_levels,
+             uint32_t n_channels, VkFormat format, uint32_t n_mip_levels,
              const std::string& name);
 
   /// Create a GpuTexture given a Bitmap. Will generate mipmaps based on
   /// dimensions of the Bitmap.
-  GpuTexture(const Device&, const Bitmap&);
+  GpuTexture(const Device&, const core::Bitmap&);
   /// Move constructor
   GpuTexture(GpuTexture&&) noexcept;
   ~GpuTexture() = default;

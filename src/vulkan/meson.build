@@ -13,8 +13,6 @@ src = [
   'wrappers/gputexture.cpp',
   'wrappers/image.cpp',
   'wrappers/instance.cpp',
-  'wrappers/pipeline.cpp',
-  'wrappers/renderpass.cpp',
   'wrappers/sampler.cpp',
   'wrappers/semaphore.cpp',
   'wrappers/shader.cpp',

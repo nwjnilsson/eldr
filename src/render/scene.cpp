@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>

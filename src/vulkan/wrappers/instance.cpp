@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/vktools/format.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <engine_config.hpp>
@@ -9,24 +8,23 @@ namespace eldr::vk::wr {
 Instance::Instance(const VkApplicationInfo&   app_info,
                    std::vector<const char*>&& extensions)
 {
-  std::shared_ptr<spdlog::logger> log{ detail::requestLogger("vulkan-engine") };
-  log->trace("Initializing Vulkan instance");
-  log->trace("Application name: {}", app_info.pApplicationName);
-  log->trace("Application version: {}.{}.{}",
-             VK_API_VERSION_MAJOR(app_info.applicationVersion),
-             VK_API_VERSION_MINOR(app_info.applicationVersion),
-             VK_API_VERSION_PATCH(app_info.applicationVersion));
-  log->trace("Engine name: {}", app_info.pEngineName);
-  log->trace("Engine version: {}.{}.{}.{}",
-             VK_API_VERSION_VARIANT(app_info.engineVersion),
-             VK_API_VERSION_MAJOR(app_info.engineVersion),
-             VK_API_VERSION_MINOR(app_info.engineVersion),
-             VK_API_VERSION_PATCH(app_info.engineVersion));
-  log->trace("Requested Vulkan API version: {}.{}.{}.{}",
-             VK_API_VERSION_VARIANT(required_vk_api_version),
-             VK_API_VERSION_MAJOR(required_vk_api_version),
-             VK_API_VERSION_MINOR(required_vk_api_version),
-             VK_API_VERSION_PATCH(required_vk_api_version));
+  log_->trace("Initializing Vulkan instance");
+  log_->trace("Application name: {}", app_info.pApplicationName);
+  log_->trace("Application version: {}.{}.{}",
+              VK_API_VERSION_MAJOR(app_info.applicationVersion),
+              VK_API_VERSION_MINOR(app_info.applicationVersion),
+              VK_API_VERSION_PATCH(app_info.applicationVersion));
+  log_->trace("Engine name: {}", app_info.pEngineName);
+  log_->trace("Engine version: {}.{}.{}.{}",
+              VK_API_VERSION_VARIANT(app_info.engineVersion),
+              VK_API_VERSION_MAJOR(app_info.engineVersion),
+              VK_API_VERSION_MINOR(app_info.engineVersion),
+              VK_API_VERSION_PATCH(app_info.engineVersion));
+  log_->trace("Requested Vulkan API version: {}.{}.{}.{}",
+              VK_API_VERSION_VARIANT(required_vk_api_version),
+              VK_API_VERSION_MAJOR(required_vk_api_version),
+              VK_API_VERSION_MINOR(required_vk_api_version),
+              VK_API_VERSION_PATCH(required_vk_api_version));
 
   std::uint32_t available_api_version = 0;
   if (const auto result = vkEnumerateInstanceVersion(&available_api_version);
@@ -55,7 +53,7 @@ Instance::Instance(const VkApplicationInfo&   app_info,
       std::to_string(VK_API_VERSION_MAJOR(available_api_version)),
       std::to_string(VK_API_VERSION_MINOR(available_api_version)),
       std::to_string(VK_API_VERSION_PATCH(available_api_version)));
-    ThrowVk({}, "{}", exception_message);
+    ThrowVk(VkResult{}, "{}", exception_message);
   }
 
   VkInstanceCreateInfo create_info{};
@@ -81,7 +79,8 @@ Instance::Instance(const VkApplicationInfo&   app_info,
   };
   for (auto& layer : validation_layers) {
     if (!isLayerSupported(layer)) {
-      ThrowVk({}, "Validation layer {} requested, but is not supported", layer);
+      ThrowVk(VkResult{}, "Validation layer {} requested, but is not supported",
+              layer);
     }
   }
   create_info.enabledLayerCount =

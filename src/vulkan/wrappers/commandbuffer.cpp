@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
@@ -55,11 +54,9 @@ const CommandBuffer& CommandBuffer::pipelineBarrier(
 
   vkCmdPipelineBarrier(
     command_buffer_, src_stage_flags, dst_stage_flags, dep_flags,
-    static_cast<std::uint32_t>(mem_barriers.size()), mem_barriers.data(),
-    static_cast<std::uint32_t>(buf_mem_barriers.size()),
-    buf_mem_barriers.data(),
-    static_cast<std::uint32_t>(img_mem_barriers.size()),
-    img_mem_barriers.data());
+    static_cast<uint32_t>(mem_barriers.size()), mem_barriers.data(),
+    static_cast<uint32_t>(buf_mem_barriers.size()), buf_mem_barriers.data(),
+    static_cast<uint32_t>(img_mem_barriers.size()), img_mem_barriers.data());
   return *this;
 }
 
@@ -128,11 +125,11 @@ const CommandBuffer& CommandBuffer::beginRenderPass(
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::drawIndexed(uint32_t      index_count,
-                                                std::uint32_t inst_count,
-                                                uint32_t      first_index,
-                                                std::int32_t  vert_offset,
-                                                uint32_t      first_inst) const
+const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
+                                                uint32_t inst_count,
+                                                uint32_t first_index,
+                                                int32_t  vert_offset,
+                                                uint32_t first_inst) const
 {
   vkCmdDrawIndexed(command_buffer_, index_count, inst_count, first_index,
                    vert_offset, first_inst);
@@ -168,7 +165,7 @@ const CommandBuffer&
 CommandBuffer::submitAndWait(const VkSubmitInfo& submit_info) const
 {
   submit(submit_info);
-  wait_fence_->wait();
+  waitFence();
   return *this;
 }
 
@@ -220,32 +217,30 @@ CommandBuffer::bindVertexBuffers(std::span<const VkBuffer>     buffers,
                                  uint32_t                      first_binding,
                                  std::span<const VkDeviceSize> offsets) const
 {
-  const VkDeviceSize* p_offsets{};
+  std::vector<VkDeviceSize> zero_offsets(buffers.size(), 0);
+  const VkDeviceSize*       p_offsets{ zero_offsets.data() };
   assert(!buffers.empty());
-  if (offsets.empty()) {
-    p_offsets = std::vector<VkDeviceSize>(buffers.size(), 0).data();
-  }
-  else {
+  if (!offsets.empty()) {
     assert(buffers.size() == offsets.size());
     p_offsets = offsets.data();
   }
   vkCmdBindVertexBuffers(command_buffer_, first_binding,
-                         static_cast<std::uint32_t>(buffers.size()),
-                         buffers.data(), p_offsets);
+                         static_cast<uint32_t>(buffers.size()), buffers.data(),
+                         p_offsets);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::bindDescriptorSets(
   std::span<const VkDescriptorSet> desc_sets, VkPipelineLayout layout,
-  VkPipelineBindPoint bind_point, std::uint32_t first_set,
-  std::span<const std::uint32_t> dyn_offsets) const
+  VkPipelineBindPoint bind_point, uint32_t first_set,
+  std::span<const uint32_t> dyn_offsets) const
 {
   assert(layout);
   assert(!desc_sets.empty());
   vkCmdBindDescriptorSets(
     command_buffer_, bind_point, layout, first_set,
-    static_cast<std::uint32_t>(desc_sets.size()), desc_sets.data(),
-    static_cast<std::uint32_t>(dyn_offsets.size()), dyn_offsets.data());
+    static_cast<uint32_t>(desc_sets.size()), desc_sets.data(),
+    static_cast<uint32_t>(dyn_offsets.size()), dyn_offsets.data());
   return *this;
 }
 
@@ -267,7 +262,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const GpuImage& image,
   // Support for linear blitting is currently required
   if (!(format_props.optimalTilingFeatures &
         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-    ThrowVk({},
+    ThrowVk(VkResult{},
             "generateMipmaps(): texture image format does not support linear "
             "blitting!");
   }
@@ -370,7 +365,7 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
     destination_stage     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   }
   else {
-    ThrowVk({}, "Unsupported layout transition!");
+    ThrowVk(VkResult{}, "Unsupported layout transition!");
   }
 
   return pipelineImageMemoryBarrier(source_stage, destination_stage, barrier);
@@ -396,7 +391,7 @@ const CommandBuffer& CommandBuffer::copyBufferToImage(
 
 const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
                                                   VkShaderStageFlags stage,
-                                                  std::uint32_t      size,
+                                                  uint32_t           size,
                                                   const void*        data,
                                                   VkDeviceSize offset) const
 {
@@ -404,7 +399,7 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   assert(size > 0);
   assert(data);
   vkCmdPushConstants(command_buffer_, layout, stage,
-                     static_cast<std::uint32_t>(offset), size, data);
+                     static_cast<uint32_t>(offset), size, data);
   return *this;
 }
 
@@ -412,14 +407,22 @@ VkBuffer CommandBuffer::createStagingBuffer(const void*        data,
                                             VkDeviceSize       buffer_size,
                                             const std::string& name) const
 {
-  staging_buffers_.emplace_back(device_, buffer_size, data, buffer_size,
+  staging_buffers_.emplace_back(device_, data, buffer_size,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                 VMA_MEMORY_USAGE_CPU_ONLY, name);
   return staging_buffers_.back().get();
 }
 
 VkResult CommandBuffer::fenceStatus() const { return wait_fence_->status(); }
-void     CommandBuffer::waitFence() const { wait_fence_->wait(); }
-void     CommandBuffer::resetFence() const { wait_fence_->reset(); }
+void     CommandBuffer::waitFence() const
+{
+  // 5 seconds, vulkan timeout is in nanoseconds
+  constexpr const uint64_t timeout = 5e9;
+  if (wait_fence_->wait(timeout) == VK_TIMEOUT)
+    device_.logger()->debug("{} timed out waiting for its internal fence!",
+                            name_);
+}
+
+void CommandBuffer::resetFence() const { wait_fence_->reset(); }
 
 } // namespace eldr::vk::wr

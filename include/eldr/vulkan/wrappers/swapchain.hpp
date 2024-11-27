@@ -27,9 +27,11 @@ public:
   /// @param extent The swapchain extent
   void setupSwapchain(VkExtent2D extent);
 
-  [[nodiscard]] uint32_t acquireNextImage(uint32_t frame_index);
+  [[nodiscard]] uint32_t acquireNextImage(uint32_t frame_index,
+                                          bool&    invalidate_swapchain);
 
-  void present(const VkPresentInfoKHR& present_info);
+  void present(const VkPresentInfoKHR& present_info,
+               bool&                   invalidate_swapchain);
 
 private:
   const Device&  device_;

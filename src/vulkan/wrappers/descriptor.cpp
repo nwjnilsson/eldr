@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/descriptor.hpp>
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -26,19 +25,21 @@ ResourceDescriptor::ResourceDescriptor(
    * VK_ERROR_POOL_OUT_OF_MEMORY. This can be particularly frustrating if the
    * allocation succeeds on some machines, but fails on others.
    */
-  std::vector<VkDescriptorPoolSize> pool_sizes{
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      static_cast<uint32_t>(max_frames_in_flight) },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      static_cast<uint32_t>(max_frames_in_flight) },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
-  }; // ImGui
+
+  // Note that pool sizes and layout info etc is the same regardless of what
+  // frame in flight it is. I'm therefore just using bindings_[0] below
+
+  std::vector<VkDescriptorPoolSize> pool_sizes;
+  pool_sizes.reserve(bindings_.size());
+
+  for (const auto& binding : bindings_)
+    pool_sizes.emplace_back(VkDescriptorPoolSize{ binding.descriptorType, 1 });
 
   const VkDescriptorPoolCreateInfo pool_ci{
     .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
     .pNext         = {},
     .flags         = {},
-    .maxSets       = static_cast<uint32_t>(max_frames_in_flight) + 1,
+    .maxSets       = 1,
     .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
     .pPoolSizes    = pool_sizes.data(),
   };
@@ -62,17 +63,15 @@ ResourceDescriptor::ResourceDescriptor(
       result != VK_SUCCESS)
     ThrowVk(result, "vkCreateDescriptorSetLayout(): ");
 
-  std::vector<VkDescriptorSetLayout> layouts(max_frames_in_flight,
-                                             descriptor_set_layout_);
-
   // Create descriptor sets
   const VkDescriptorSetAllocateInfo alloc_info{
     .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .pNext              = {},
     .descriptorPool     = descriptor_pool_,
     .descriptorSetCount = 1,
-    .pSetLayouts        = layouts.data(),
+    .pSetLayouts        = &descriptor_set_layout_,
   };
+
   descriptor_sets_.resize(1);
   if (const auto result = vkAllocateDescriptorSets(
         device_.logical(), &alloc_info, descriptor_sets_.data());
@@ -80,8 +79,8 @@ ResourceDescriptor::ResourceDescriptor(
     ThrowVk(result, "vkAllocateDescriptorSets(): ");
 
   for (size_t i = 0; i < descriptor_writes_.size(); ++i) {
-    descriptor_writes_[i].dstSet     = descriptor_sets_[0];
-    descriptor_writes_[i].dstBinding = static_cast<uint32_t>(i);
+    descriptor_writes_[i].dstSet = descriptor_sets_[0];
+    // descriptor_writes_[i].dstBinding = static_cast<uint32_t>(i);
   }
   vkUpdateDescriptorSets(device_.logical(),
                          static_cast<uint32_t>(descriptor_writes_.size()),

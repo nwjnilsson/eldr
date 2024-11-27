@@ -13,18 +13,12 @@ struct BufferCreateInfo {
 
 class GpuBuffer final : public GpuResource {
 public:
-  // GpuBuffer(const Device&, const BufferResource&,
-  //           const VmaAllocationCreateInfo&, const std::string& name);
   GpuBuffer(const Device&, VkDeviceSize buffer_size,
             VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
             const std::string& name);
-  GpuBuffer(const Device&, VkDeviceSize buffer_size, const void* data,
-            size_t data_size, VkBufferUsageFlags buffer_usage,
-            VmaMemoryUsage memory_usage, const std::string& name);
-  // GpuBuffer(const Device&, const std::vector<Vertex>&,
-  //        const CommandPool&); // Vertex buffer
-  // GpuBuffer(const Device&, const std::vector<uint32_t>&,
-  //        const CommandPool&); // Index buffer
+  GpuBuffer(const Device&, const void* data, VkDeviceSize data_size,
+            VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
+            const std::string& name);
   GpuBuffer(GpuBuffer&&) noexcept;
   ~GpuBuffer();
 
@@ -32,9 +26,10 @@ public:
   GpuBuffer& operator=(GpuBuffer&&)      = delete;
 
   // VkDeviceSize    size() const { return size_; }
-  const VkBuffer& get() const { return buffer_; }
-  // const VkDeviceMemory& memory() const { return buffer_memory_; }
-  void uploadData(const void* data, size_t size);
+  [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] VkBuffer           get() const { return buffer_; }
+
+  void uploadData(const void* data, size_t data_size);
   void copyFromBuffer(const GpuBuffer&, const CommandPool&);
 
 private:

@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 
@@ -30,7 +29,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
       break;
   }
 
-  auto logger = detail::requestLogger("vulkan-debug");
+  auto logger = core::requestLogger("vulkan-debug");
   switch (messageSeverity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
       logger->debug("(type = {}): {}", type, pCallbackData->pMessage);

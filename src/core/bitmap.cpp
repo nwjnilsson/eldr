@@ -1,9 +1,8 @@
 /**
  * Bitmap implementation adapted from the Mitsuba3
  */
-#include <eldr/core/logger.hpp>
-
 #include <eldr/core/bitmap.hpp>
+#include <eldr/core/common.hpp>
 #include <eldr/core/fstream.hpp>
 
 extern "C" {
@@ -18,7 +17,7 @@ extern "C" {
 #include <stdexcept>
 #include <string>
 
-namespace eldr {
+namespace eldr::core {
 
 Bitmap::Bitmap()
   : pixel_format_(PixelFormat::RGBA), component_format_(Struct::Type::UInt8),
@@ -77,7 +76,8 @@ Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
 }
 
 Bitmap::Bitmap(const Bitmap& bitmap)
-  : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
+  : name_(bitmap.name_), log_(core::requestLogger("bitmap")),
+    pixel_format_(bitmap.pixel_format_),
     component_format_(bitmap.component_format_), size_(bitmap.size_),
     struct_(std::make_unique<Struct>(*bitmap.struct_.get())),
     srgb_gamma_(bitmap.srgb_gamma_),
@@ -88,20 +88,25 @@ Bitmap::Bitmap(const Bitmap& bitmap)
   memcpy(data_.get(), bitmap.data_.get(), size);
 }
 
-// TODO: fix
-Bitmap::Bitmap(Bitmap&& bitmap)
-  : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
-    component_format_(bitmap.component_format_), size_(bitmap.size_),
-    struct_(std::move(bitmap.struct_)), srgb_gamma_(bitmap.srgb_gamma_),
-    premultiplied_alpha_(bitmap.premultiplied_alpha_),
-    data_(std::move(bitmap.data_)), owns_data_(bitmap.owns_data_)
+Bitmap::Bitmap(Bitmap&& other) noexcept
+  : name_(std::move(other.name_)), log_(std::move(other.log_)),
+    pixel_format_(other.pixel_format_),
+    component_format_(other.component_format_),
+    size_(std::exchange(other.size_, { 0, 0 })),
+    struct_(std::move(other.struct_)), srgb_gamma_(other.srgb_gamma_),
+    premultiplied_alpha_(other.premultiplied_alpha_),
+    data_(std::move(other.data_)), owns_data_(other.owns_data_)
 {
-  // use std::exchange....
 }
 
-Bitmap::Bitmap(Stream* stream, FileFormat format) { read(stream, format); }
+Bitmap::Bitmap(Stream* stream, FileFormat format)
+  : log_(core::requestLogger("bitmap"))
+{
+  read(stream, format);
+}
 
 Bitmap::Bitmap(const std::filesystem::path& path, FileFormat format)
+  : log_(core::requestLogger("bitmap"))
 {
   auto fs = std::make_unique<FileStream>(path);
   read(fs.get(), format);
@@ -780,4 +785,4 @@ std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
   }
   return os;
 }
-}; // namespace eldr
+}; // namespace eldr::core

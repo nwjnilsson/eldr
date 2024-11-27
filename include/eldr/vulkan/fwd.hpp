@@ -2,14 +2,14 @@
 
 namespace eldr::vk {
 struct GpuVertex;
-
-class GraphicsStage;
-class PhysicalGraphicsStage;
+class ImGuiOverlay;
 
 // RenderGraph types
 class RenderGraph;
 class BufferResource;
 class TextureResource;
+class GraphicsStage;
+class PhysicalGraphicsStage;
 enum class TextureUsage;
 
 namespace wr {
@@ -19,13 +19,9 @@ class Surface;
 class Device;
 struct QueueFamilyIndices;
 class Swapchain;
-// class DescriptorSetLayout;
-// class DescriptorPool;
 class ResourceDescriptor;
-class Pipeline;
 class CommandPool;
 class Sampler;
-class RenderPass;
 class GpuTexture;
 class GpuResource;
 class GpuBuffer;

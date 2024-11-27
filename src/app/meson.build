@@ -1,4 +1,9 @@
-src = ['main.cpp', 'app.cpp', 'window.cpp']
+src = [
+  'main.cpp',
+  'app.cpp',
+  'window.cpp',
+  'keyboardmouseinput.cpp'
+  ]
 
 executable('eldr',
   sources : src,

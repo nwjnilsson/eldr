@@ -1,7 +1,7 @@
 #include <eldr/app/app.hpp>
-#include <eldr/core/logger.hpp>
 
 #include <cxxopts.hpp>
+#include <spdlog/spdlog.h>
 
 #include <cstdlib>
 #include <iostream>

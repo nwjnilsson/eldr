@@ -9,13 +9,14 @@ DescriptorBuilder::DescriptorBuilder(const Device& device) : device_(device) {}
 ResourceDescriptor DescriptorBuilder::build(const std::string& name)
 {
   assert(!layout_bindings_.empty());
-  assert(!write_sets_.empty());
-  assert(write_sets_.size() == layout_bindings_.size());
 
   // Generate a new resource descriptor.
   ResourceDescriptor generated_descriptor(device_, std::move(layout_bindings_),
-                                          std::move(write_sets_), name);
+                                          std::move(descriptor_write_sets_),
+                                          name);
 
+  layout_bindings_.clear();
+  descriptor_write_sets_.clear();
   descriptor_buffer_infos_.clear();
   descriptor_image_infos_.clear();
 
@@ -23,8 +24,8 @@ ResourceDescriptor DescriptorBuilder::build(const std::string& name)
 }
 
 DescriptorBuilder& DescriptorBuilder::addCombinedImageSampler(
-  const VkSampler image_sampler, const VkImageView image_view,
-  const std::uint32_t binding, const VkShaderStageFlagBits shader_stage)
+  VkSampler image_sampler, VkImageView image_view, std::uint32_t binding,
+  const VkShaderStageFlagBits shader_stage)
 {
   assert(image_sampler);
   assert(image_view);
@@ -43,7 +44,7 @@ DescriptorBuilder& DescriptorBuilder::addCombinedImageSampler(
     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
   });
 
-  write_sets_.push_back(VkWriteDescriptorSet{
+  descriptor_write_sets_.push_back(VkWriteDescriptorSet{
     .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     .pNext            = {},
     .dstSet           = nullptr,

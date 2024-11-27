@@ -8,7 +8,7 @@
 
 #include <spdlog/fmt/ostr.h>
 
-namespace eldr {
+namespace eldr::core {
 class Struct {
 public:
   enum class Type : uint32_t {
@@ -263,6 +263,6 @@ protected:
 
 extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
 
-} // namespace eldr
+} // namespace eldr::core
 template <>
-struct fmt::formatter<eldr::Struct::Type> : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::core::Struct::Type> : fmt::ostream_formatter {};

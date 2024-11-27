@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::core {
 
 class Bitmap {
   ELDR_IMPORT_CORE_TYPES();
@@ -56,7 +56,7 @@ public:
 
   Bitmap(const Bitmap& bitmap);
 
-  Bitmap(Bitmap&& bitmap);
+  Bitmap(Bitmap&& bitmap) noexcept;
 
   Bitmap(Stream* stream, FileFormat format);
 
@@ -151,24 +151,26 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  std::string                     name_{ "undefined" };
-  std::shared_ptr<spdlog::logger> log_{ detail::requestLogger("bitmap") };
-  PixelFormat                     pixel_format_;
-  Struct::Type                    component_format_;
-  Vec2u                           size_{};
-  std::unique_ptr<Struct>         struct_{};
-  bool                            srgb_gamma_{ false };
-  bool                            premultiplied_alpha_{ false };
-  std::unique_ptr<uint8_t[]>      data_{};
-  bool                            owns_data_{ false };
+  std::string                name_{ "undefined" };
+  core::Logger               log_{ core::requestLogger("core") };
+  PixelFormat                pixel_format_;
+  Struct::Type               component_format_;
+  Vec2u                      size_{};
+  std::unique_ptr<Struct>    struct_{};
+  bool                       srgb_gamma_{ false };
+  bool                       premultiplied_alpha_{ false };
+  std::unique_ptr<uint8_t[]> data_{};
+  bool                       owns_data_{ false };
 };
 
 extern std::ostream& operator<<(std::ostream&              os,
                                 const Bitmap::PixelFormat& value);
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Bitmap::FileFormat& value);
-} // namespace eldr
+} // namespace eldr::core
 template <>
-struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::core::Bitmap::PixelFormat>
+  : fmt::ostream_formatter {};
 template <>
-struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::core::Bitmap::FileFormat> : fmt::ostream_formatter {
+};

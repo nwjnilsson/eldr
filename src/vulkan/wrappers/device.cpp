@@ -1,4 +1,3 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -112,7 +111,7 @@ selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
     ThrowVk(err, "vkEnumeratePhysicalDevices(): ");
 
   if (gpu_count == 0)
-    ThrowVk({}, "No compatible gpu found!");
+    ThrowVk(VkResult{}, "No compatible gpu found!");
 
   std::vector<VkPhysicalDevice> gpus;
   gpus.resize(gpu_count);
@@ -144,12 +143,14 @@ selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
 // -----------------------------------------------------------------------------
 
 Device::Device(const Instance& instance, const Surface& surface,
-               std::vector<const char*>& required_extensions)
+               std::vector<const char*>& required_extensions,
+               core::Logger              logger)
+  : log_(logger)
 {
   physical_device_ =
     selectPhysicalDevice(instance.get(), surface.get(), required_extensions);
-  swapchain_support_ =
-    getSwapchainSupportDetails(physical_device_, surface.get());
+
+  vkGetPhysicalDeviceProperties(physical_device_, &physical_device_props_);
 
   queue_family_indices_ = findQueueFamilies(physical_device_, surface.get());
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
@@ -224,22 +225,20 @@ Device::Device(const Instance& instance, const Surface& surface,
 
 Device::~Device()
 {
-  if (device_ != VK_NULL_HANDLE)
-    vkDestroyDevice(device_, nullptr);
+  // Ensure that command pools can be cleared properly
+  std::lock_guard<std::mutex> guard(mutex_);
+  command_pools_.clear();
+  vmaDestroyAllocator(allocator_);
+  vkDestroyDevice(device_, nullptr);
 }
 
 void Device::waitIdle() const { vkDeviceWaitIdle(device_); }
 
-// TODO: split this into one function that sets a sample count member variable
-// and a getter for that variable
-VkSampleCountFlagBits Device::maxMsaaSampleCount() const
+VkSampleCountFlagBits Device::findMaxMsaaSampleCount() const
 {
-  VkPhysicalDeviceProperties physical_device_props{};
-  vkGetPhysicalDeviceProperties(physical_device_, &physical_device_props);
-
   VkSampleCountFlags counts =
-    physical_device_props.limits.framebufferColorSampleCounts &
-    physical_device_props.limits.framebufferDepthSampleCounts;
+    physical_device_props_.limits.framebufferColorSampleCounts &
+    physical_device_props_.limits.framebufferDepthSampleCounts;
   if (counts & VK_SAMPLE_COUNT_64_BIT) {
     return VK_SAMPLE_COUNT_64_BIT;
   }
@@ -261,6 +260,12 @@ VkSampleCountFlagBits Device::maxMsaaSampleCount() const
   return VK_SAMPLE_COUNT_1_BIT;
 }
 
+SwapchainSupportDetails
+Device::swapchainSupportDetails(VkSurfaceKHR surface) const
+{
+  return getSwapchainSupportDetails(physical_device_, surface);
+}
+
 VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
                                      VkImageTiling                tiling,
                                      VkFormatFeatureFlags features) const
@@ -275,7 +280,7 @@ VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
              (props.optimalTilingFeatures & features) == features)
       return format;
   }
-  ThrowVk({}, "Failed to find supported format!");
+  ThrowVk(VkResult{}, "Failed to find supported format!");
 }
 
 VkFormat Device::findDepthFormat() const
@@ -288,7 +293,6 @@ VkFormat Device::findDepthFormat() const
 
 CommandPool& Device::threadGraphicsPool() const
 {
-  // Thread local command pool is implicitly static!
   thread_local CommandPool* thread_graphics_pool = nullptr;
   if (thread_graphics_pool == nullptr) {
     auto             cmd_pool = std::make_unique<CommandPool>(*this);
@@ -323,7 +327,7 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
       return i;
     }
   }
-  ThrowVk({}, "Failed to find suitable device memory type!");
+  ThrowVk(VkResult{}, "Failed to find suitable device memory type!");
 }
 
 void Device::createImageView(const VkImageViewCreateInfo& image_view_ci,

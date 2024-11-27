@@ -4,6 +4,8 @@ src = [ 'bitmap.cpp',
         'mstream.cpp',
         'dstream.cpp',
         'logger.cpp',
+        'stopwatch.cpp',
+        'exceptions.cpp',
         'struct.cpp']
 
 eldr_core = library(

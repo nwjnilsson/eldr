@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-namespace eldr {
+namespace eldr::core {
 class EOFException : public std::runtime_error {
 public:
   EOFException(const std::string& what, size_t gcount)
@@ -122,4 +122,4 @@ private:
   fs::path                              path_;
   mutable std::unique_ptr<std::fstream> file_;
 };
-} // namespace eldr
+} // namespace eldr::core

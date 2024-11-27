@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+class GLFWwindow;
 namespace eldr::vk {
 
 class ImGuiOverlay {
@@ -22,24 +23,24 @@ public:
   ImGuiOverlay(const ImGuiOverlay&) = delete;
   ~ImGuiOverlay();
 
-  void update();
+  void update(uint32_t frame_index);
 
 private:
-  const wr::Device&               device_;
-  const wr::Swapchain&            swapchain_;
-  std::shared_ptr<spdlog::logger> log_{};
-  float                           scale_{ 1.0f };
+  const wr::Device&    device_;
+  const wr::Swapchain& swapchain_;
+  core::Logger         log_{};
+  float                scale_{ 1.0f };
 
   BufferResource* index_buffer_{ nullptr };
   BufferResource* vertex_buffer_{ nullptr };
   GraphicsStage*  stage_{ nullptr };
 
-  std::unique_ptr<wr::GpuTexture>         imgui_texture_;
-  std::unique_ptr<wr::Shader>             vertex_shader_;
-  std::unique_ptr<wr::Shader>             fragment_shader_;
-  std::unique_ptr<wr::ResourceDescriptor> descriptor_;
-  std::vector<std::uint32_t>              index_data_;
-  std::vector<ImDrawVert>                 vertex_data_;
+  std::unique_ptr<wr::GpuTexture>     imgui_texture_;
+  std::unique_ptr<wr::Shader>         vertex_shader_;
+  std::unique_ptr<wr::Shader>         fragment_shader_;
+  std::vector<wr::ResourceDescriptor> descriptors_;
+  std::vector<std::uint32_t>          index_data_;
+  std::vector<ImDrawVert>             vertex_data_;
 
   struct PushConstantBlock {
     Vec2f scale;

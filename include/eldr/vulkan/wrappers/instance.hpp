@@ -1,6 +1,5 @@
 #pragma once
 
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/common.hpp>
 
 #include <string>
@@ -20,6 +19,7 @@ public:
   VkInstance get() const { return instance_; }
 
 private:
-  VkInstance                      instance_{ VK_NULL_HANDLE };
+  core::Logger log_{ core::requestLogger("vulkan-engine") };
+  VkInstance   instance_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

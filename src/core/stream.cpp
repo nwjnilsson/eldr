@@ -5,9 +5,9 @@
 
 #include <sstream>
 
-namespace eldr {
+namespace eldr::core {
 namespace detail {
-static Stream::EByteOrder byte_order()
+static Stream::EByteOrder byteOrder()
 {
   union {
     uint8_t  char_value[2];
@@ -23,7 +23,7 @@ static Stream::EByteOrder byte_order()
 }
 } // namespace detail
 
-const Stream::EByteOrder Stream::host_byte_order_ = detail::byte_order();
+const Stream::EByteOrder Stream::host_byte_order_ = detail::byteOrder();
 
 // -----------------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ Stream::Stream() : byte_order_(host_byte_order_) {}
 
 Stream::~Stream() {}
 
-void Stream::set_byte_order(EByteOrder value) { byte_order_ = value; }
+void Stream::setByteOrder(EByteOrder value) { byte_order_ = value; }
 
 // -----------------------------------------------------------------------------
 
@@ -130,4 +130,4 @@ std::string Stream::readToken()
 }
 
 void Stream::skip(size_t amount) { seek(tell() + amount); }
-} // namespace eldr
+} // namespace eldr::core

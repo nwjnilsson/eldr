@@ -1,5 +1,3 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/vulkan/exception.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>

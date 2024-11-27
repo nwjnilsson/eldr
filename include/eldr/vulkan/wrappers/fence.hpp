@@ -1,6 +1,4 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
 namespace eldr::vk::wr {
@@ -13,8 +11,9 @@ public:
 
   VkFence get() const { return fence_; }
 
-  void                   reset() const;
-  void                   wait() const;
+  void reset() const;
+  [[nodiscard]] VkResult
+  wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
 
 private:

@@ -1,5 +1,4 @@
 #include <eldr/core/fstream.hpp>
-#include <eldr/core/logger.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
@@ -13,7 +12,8 @@ namespace eldr::vk::wr {
 GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
                        VkDeviceSize data_size, uint32_t texture_width,
                        uint32_t texture_height, uint32_t n_channels,
-                       uint32_t n_mip_levels, const std::string& name)
+                       VkFormat format, uint32_t n_mip_levels,
+                       const std::string& name)
   : name_(name), channels_(n_channels)
 {
   // ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
                   : n_mip_levels;
 
   ImageInfo image_info{ .extent      = { texture_width, texture_height },
-                        .format      = VK_FORMAT_R8G8B8A8_SRGB,
+                        .format      = format,
                         .tiling      = VK_IMAGE_TILING_OPTIMAL,
                         .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                                        VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -84,10 +84,11 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
   sampler_ = std::make_unique<Sampler>(device, mip_levels_);
 }
 
-GpuTexture::GpuTexture(const Device& device, const Bitmap& bitmap)
+GpuTexture::GpuTexture(const Device& device, const core::Bitmap& bitmap)
   : GpuTexture(device, bitmap.uint8Data(),
                static_cast<VkDeviceSize>(bitmap.bufferSize()), bitmap.width(),
-               bitmap.height(), bitmap.channelCount(), 0, bitmap.name())
+               bitmap.height(), bitmap.channelCount(), VK_FORMAT_R8G8B8A8_SRGB,
+               0, bitmap.name())
 {
 }
 

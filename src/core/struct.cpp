@@ -1,8 +1,8 @@
 /**
  * Struct implementation adapted from the Mitsuba project
  */
+#include <eldr/core/common.hpp>
 #include <eldr/core/hash.hpp>
-#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-namespace eldr {
+namespace eldr::core {
 constexpr bool hasFlag(uint32_t flags, Struct::Flags f)
 {
   return (flags & static_cast<uint32_t>(f)) != 0;
@@ -273,4 +273,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-} // namespace eldr
+} // namespace eldr::core

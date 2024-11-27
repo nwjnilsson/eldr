@@ -37,9 +37,10 @@ sudo apt-get install vulkan-validationlayers-dev spirv-tools
 
 Some other notes:
 - For initial testing, I've been using the [Viking room](https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
-model by [nigelgoh](https://sketchfab.com/nigelgoh)[CC BY 4.0](https://web.archive.org/web/20200428202538/https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
+model by [nigelgoh](https://sketchfab.com/nigelgoh) ([CC BY 4.0](https://web.archive.org/web/20200428202538/https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38))
 At the moment of writing, there are still hardcoded references to these files,
 and they will probably stay until I'm more finished with the vulkan backend.
+The files can also be downloaded from the the [Vulkan Tutorial](https://vulkan-tutorial.com/Loading_models).
 
 ## Build
 ### App

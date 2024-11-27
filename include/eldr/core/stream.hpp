@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::core {
 namespace detail {
 template <typename T, typename SFINAE = void> struct serialization_helper;
 } // namespace detail
@@ -138,7 +138,7 @@ public:
    *
    * Endianness swapping is handled automatically if needed.
    */
-  template <typename T> void write_array(const T* value, size_t count)
+  template <typename T> void writeArray(const T* value, size_t count)
   {
     using helper = detail::serialization_helper<T>;
     helper::write(*this, value, count, needsEndianessSwap());
@@ -172,7 +172,7 @@ public:
    * performing some read and write operations on the system using a
    * different endianness.
    */
-  void set_byte_order(EByteOrder byte_order);
+  void setByteOrder(EByteOrder byte_order);
 
   /// Returns the byte order of this stream.
   EByteOrder byteOrder() const { return byte_order_; }
@@ -426,4 +426,4 @@ template <typename T> struct serialization_helper<std::set<T>> {
 };
 
 } // namespace detail
-} // namespace eldr
+} // namespace eldr::core

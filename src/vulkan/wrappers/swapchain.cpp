@@ -1,7 +1,5 @@
-#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
@@ -87,22 +85,23 @@ Swapchain::~Swapchain()
 
 void Swapchain::setupSwapchain(VkExtent2D requested_extent)
 {
-  const SwapchainSupportDetails& support_details =
-    device_.swapchainSupportDetails();
+  const SwapchainSupportDetails& support_details{
+    device_.swapchainSupportDetails(surface_.get())
+  };
   extent_ = selectSwapExtent(requested_extent, support_details.capabilities);
   surface_format_ = selectSwapSurfaceFormat(support_details.formats);
   present_mode_   = selectSwapPresentMode(support_details.present_modes);
   //----------------------------------------------------------------------------
   // Create swapchain
   //----------------------------------------------------------------------------
-  uint32_t min_image_count = support_details.capabilities.minImageCount + 1;
+  uint32_t min_image_count{ support_details.capabilities.minImageCount + 1 };
   // If there is an upper limit, make sure we don't exceed it
   if (support_details.capabilities.maxImageCount > 0) {
     min_image_count =
       std::min(min_image_count, support_details.capabilities.maxImageCount);
   }
 
-  const VkSwapchainKHR     old_swapchain = swapchain_;
+  const VkSwapchainKHR     old_swapchain{ swapchain_ };
   VkSwapchainCreateInfoKHR swapchain_ci{
     .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .pNext                 = {},
@@ -124,9 +123,9 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
     .oldSwapchain = old_swapchain,
   };
 
-  const QueueFamilyIndices& indices = device_.queueFamilyIndices();
-  uint32_t queueFamilyIndices[]     = { indices.graphics_family.value(),
-                                        indices.present_family.value() };
+  const QueueFamilyIndices& indices{ device_.queueFamilyIndices() };
+  uint32_t queueFamilyIndices[]{ indices.graphics_family.value(),
+                                 indices.present_family.value() };
 
   if (indices.graphics_family != indices.present_family) {
     swapchain_ci.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
@@ -139,7 +138,7 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
     swapchain_ci.pQueueFamilyIndices   = nullptr; // Optional
   }
 
-  detail::requestLogger("vulkan-engine")->trace("Creating swapchain...");
+  core::requestLogger("vulkan-engine")->trace("Creating swapchain...");
   if (const VkResult result = vkCreateSwapchainKHR(
         device_.logical(), &swapchain_ci, nullptr, &swapchain_);
       result != VK_SUCCESS) {
@@ -208,26 +207,29 @@ const VkSemaphore* Swapchain::renderFinishedSemaphore(uint32_t index) const
   return render_finished_sem_[index].ptr();
 }
 
-uint32_t Swapchain::acquireNextImage(uint32_t frame_index)
+uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
+                                     bool&    invalidate_swapchain)
 {
-  uint32_t   image_index = 0;
-  const auto result      = vkAcquireNextImageKHR(
+  uint32_t   image_index{ 0 };
+  const auto result{ vkAcquireNextImageKHR(
     device_.logical(), swapchain_, UINT64_MAX,
-    image_available_sem_[frame_index].get(), VK_NULL_HANDLE, &image_index);
+    image_available_sem_[frame_index].get(), VK_NULL_HANDLE, &image_index) };
+
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    // recreate swapchain
-    setupSwapchain(extent_);
+    invalidate_swapchain = true;
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     ThrowVk(result, "vkAcquireNextImageKHR(): ");
+
   return image_index;
 }
 
-void Swapchain::present(const VkPresentInfoKHR& present_info)
+void Swapchain::present(const VkPresentInfoKHR& present_info,
+                        bool&                   invalidate_swapchain)
 {
   const auto result = vkQueuePresentKHR(device_.presentQueue(), &present_info);
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-    setupSwapchain(extent_);
+    invalidate_swapchain = true;
   }
   else if (result != VK_SUCCESS) {
     ThrowVk(result, "vkQueuePresentKHR(): ");
