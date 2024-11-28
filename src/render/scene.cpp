@@ -19,6 +19,7 @@ Scene::~Scene()
 
 std::vector<Shape*> Scene::loadGeometry(const SceneInfo& scene_info)
 {
+  // TODO: use rapidobj instead and remove tinyobjloader submodule
   tinyobj::attrib_t                attrib;
   std::vector<tinyobj::shape_t>    shapes;
   std::vector<tinyobj::material_t> materials;

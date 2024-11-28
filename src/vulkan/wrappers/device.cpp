@@ -292,9 +292,9 @@ VkFormat Device::findDepthFormat() const
 
 CommandPool& Device::threadGraphicsPool() const
 {
-  thread_local CommandPool* thread_graphics_pool = nullptr;
+  thread_local CommandPool* thread_graphics_pool{ nullptr };
   if (thread_graphics_pool == nullptr) {
-    auto             cmd_pool = std::make_unique<CommandPool>(*this);
+    auto             cmd_pool{ std::make_unique<CommandPool>(*this) };
     std::scoped_lock locker(mutex_);
     thread_graphics_pool =
       command_pools_.emplace_back(std::move(cmd_pool)).get();

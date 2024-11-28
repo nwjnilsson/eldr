@@ -1,6 +1,7 @@
 #pragma once
 
 namespace eldr::vk {
+class VulkanEngine;
 struct GpuVertex;
 class ImGuiOverlay;
 // EXPERIMENTAL

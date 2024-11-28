@@ -27,13 +27,8 @@ struct SceneNode : public IRenderable {
   virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
 };
 
-struct ShapeNode : public SceneNode {
+struct ShapeNode final : public SceneNode {
   std::shared_ptr<Shape> shape;
-  virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
-};
-
-struct MeshNode : public SceneNode {
-  std::shared_ptr<Mesh> mesh;
   virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
 };
 
@@ -49,15 +44,15 @@ public:
   ~Scene();
 
   //[[nodiscard]] std::vector<Shape*> shapes() const { return shapes_; }
-  [[nodiscard]] const std::vector<SceneNode>& nodes() const { return scene_; }
+  [[nodiscard]] const std::vector<Shape*>& shapes() const { return shapes_; }
 
 private:
   std::vector<Shape*> loadGeometry(const SceneInfo&);
 
 private:
   // std::vector<Emitter> emitters_;
-  // std::vector<Shape*> shapes_;
-  std::vector<SceneNode> scene_;
-  // std::vector<Sensor> sensors_;
+  std::vector<Shape*> shapes_;
+  // std::vector<SceneNode> scene_;
+  //  std::vector<Sensor> sensors_;
 };
 } // namespace eldr

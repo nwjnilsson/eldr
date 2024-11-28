@@ -52,11 +52,11 @@ private:
 
 enum class BufferUsage {
   /// @brief Specifies that the buffer will be used to input index data.
-  index_buffer,
+  IndexBuffer,
 
   /// @brief Specifies that the buffer will be used to input per vertex data to
   /// a vertex shader.
-  vertex_buffer,
+  VertexBuffer,
 };
 
 class BufferResource : public RenderResource {
@@ -100,9 +100,9 @@ private:
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
 
   enum class OnNextRender {
-    upload_only, // indicates that data can be uploaded without resizing
-    create_new,  // indicates that a new buffer is needed, e.g upon resize
-    skip,        // nothing needs to be done for this buffer
+    UploadOnly, // indicates that data can be uploaded without resizing
+    CreateNew,  // indicates that a new buffer is needed, e.g upon resize
+    Skip,       // nothing needs to be done for this buffer
   } on_render_;
 
   // Data to upload during render graph compilation.
@@ -113,16 +113,16 @@ private:
 
 enum class TextureUsage {
   /// @brief Specifies that this texture is the output of the render graph.
-  back_buffer,
+  BackBuffer,
 
   /// @brief Specifies that this texture is a combined depth/stencil buffer.
   /// @note This may mean that this texture is completely GPU-sided and cannot
   /// be accessed by the CPU in any way.
-  depth_stencil_buffer,
+  DepthStencilBuffer,
 
   /// @brief Specifies that this texture is an offscreen buffer, for example an
   /// MSAA target.
-  color_buffer,
+  ColorBuffer,
 };
 
 class TextureResource : public RenderResource {
@@ -441,9 +441,9 @@ template <typename T> void BufferResource::uploadData(const std::span<T>& data)
 {
   size_t new_size = data.size() * (element_size_ = sizeof(T));
   if (data_size_ == new_size)
-    on_render_ = OnNextRender::upload_only;
+    on_render_ = OnNextRender::UploadOnly;
   else {
-    on_render_ = OnNextRender::create_new;
+    on_render_ = OnNextRender::CreateNew;
     data_size_ = new_size;
   }
   data_ = data.data();

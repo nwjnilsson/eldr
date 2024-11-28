@@ -47,8 +47,7 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   std::string name =
     fmt::format("command buffer #{}", command_buffers_.size() + 1);
   device_.logger()->trace("Creating {}", name);
-  command_buffers_.emplace_back(
-    std::make_unique<CommandBuffer>(device_, *this, name));
+  command_buffers_.emplace_back(new CommandBuffer{ device_, *this, name });
 
   command_buffers_.back()->begin();
   return *command_buffers_.back();

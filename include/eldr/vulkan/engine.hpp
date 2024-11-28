@@ -27,9 +27,10 @@ public:
 
   void updateImGui(std::function<void()> const& lambda);
 
-  void submitGeometry(const std::vector<Point3f>& positions,
-                      const std::vector<Vec2f>&   texcoords,
-                      const std::vector<Vec3f>&   normals);
+  void uploadMesh(const std::vector<Point3f>& positions,
+                  const std::vector<Vec2f>&   texcoords,
+                  const std::vector<Color4f>& colors,
+                  const std::vector<Vec3f>&   normals);
   void drawFrame();
 
   [[nodiscard]] std::string deviceName() const;

@@ -63,8 +63,8 @@ bool RenderStage::hasBlockingRead() const
   for (auto* resource : reads_) {
     if (const auto* buffer = resource->as<BufferResource>())
       switch (buffer->usage()) {
-        case BufferUsage::index_buffer:
-        case BufferUsage::vertex_buffer:
+        case BufferUsage::IndexBuffer:
+        case BufferUsage::VertexBuffer:
           break;
         default:
           return true;
@@ -160,11 +160,11 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     if (physical_buffer->buffer_ == nullptr) {
       continue;
     }
-    if (buffer_resource->usage_ == BufferUsage::index_buffer) {
+    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
       assert(physical_buffer->buffer_);
       cb.bindIndexBuffer(*physical_buffer->buffer_);
     }
-    else if (buffer_resource->usage_ == BufferUsage::vertex_buffer) {
+    else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
       vertex_buffers.push_back(physical_buffer->buffer_->get());
     }
   }
@@ -216,7 +216,7 @@ void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
     bool msaa_enabled{ stage->sample_count_ != VK_SAMPLE_COUNT_1_BIT };
 
     switch (texture->usage_) {
-      case TextureUsage::back_buffer: {
+      case TextureUsage::BackBuffer: {
         if (!stage->clears_screen_ && !msaa_enabled) {
           attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
           attachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -233,7 +233,7 @@ void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
         else
           color_refs.push_back(bb_ref);
       } break;
-      case TextureUsage::color_buffer:
+      case TextureUsage::ColorBuffer:
         assert(msaa_enabled);
         if (!stage->clears_screen_) {
           attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -243,7 +243,7 @@ void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
         color_refs.push_back(
           { static_cast<uint32_t>(i), attachment.finalLayout });
         break;
-      case TextureUsage::depth_stencil_buffer:
+      case TextureUsage::DepthStencilBuffer:
         attachment.finalLayout =
           VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         depth_refs.push_back(
@@ -338,7 +338,7 @@ void RenderGraph::buildGraphicsPipeline(const GraphicsStage*   stage,
     }
 
     // Don't mess with index buffers here.
-    if (buffer_resource->usage_ == BufferUsage::index_buffer) {
+    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
       continue;
     }
 
@@ -574,7 +574,7 @@ void RenderGraph::compile()
   for (auto& texture_resource : texture_resources_) {
     log_->trace("   - {}", texture_resource->name());
 
-    if (texture_resource->usage_ == TextureUsage::back_buffer) {
+    if (texture_resource->usage_ == TextureUsage::BackBuffer) {
       texture_resource->physical_ =
         std::make_shared<PhysicalBackBuffer>(device_);
       continue;
@@ -585,12 +585,12 @@ void RenderGraph::compile()
       .format = texture_resource->format_,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
       .usage_flags =
-        texture_resource->usage_ == TextureUsage::depth_stencil_buffer
+        texture_resource->usage_ == TextureUsage::DepthStencilBuffer
           ? static_cast<VkImageUsageFlags>(
               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
           : static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
       .aspect_flags =
-        texture_resource->usage_ == TextureUsage::depth_stencil_buffer
+        texture_resource->usage_ == TextureUsage::DepthStencilBuffer
           ? VK_IMAGE_ASPECT_DEPTH_BIT
           : VK_IMAGE_ASPECT_COLOR_BIT,
       .sample_count = texture_resource->sample_count_,
@@ -648,9 +648,9 @@ void RenderGraph::compile()
           for (const auto* resource : stage->writes_) {
             if (const auto* texture = resource->as<TextureResource>()) {
               const auto& physical_texture = *texture->physical_;
-              if (const auto* back_buffer =
+              if (const auto* BackBuffer =
                     physical_texture.as<PhysicalBackBuffer>()) {
-                back_buffers.push_back(back_buffer);
+                back_buffers.push_back(BackBuffer);
               }
               else if (const auto* image =
                          physical_texture.as<PhysicalImage>()) {
@@ -686,14 +686,14 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
   for (auto& buffer_resource : buffer_resources_) {
     auto& physical = *buffer_resource->physical_->as<PhysicalBuffer>();
     switch (buffer_resource->on_render_) {
-      case BufferResource::OnNextRender::create_new: {
+      case BufferResource::OnNextRender::CreateNew: {
         // Build buffer
         VkBufferUsageFlags buffer_usage{};
         switch (buffer_resource->usage_) {
-          case BufferUsage::index_buffer:
+          case BufferUsage::IndexBuffer:
             buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
             break;
-          case BufferUsage::vertex_buffer:
+          case BufferUsage::VertexBuffer:
             buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
             break;
           default:
@@ -706,7 +706,7 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
                                      buffer_resource->data_size_);
         break;
       }
-      case BufferResource::OnNextRender::upload_only: {
+      case BufferResource::OnNextRender::UploadOnly: {
         if (physical.buffer_ != nullptr) {
           physical.buffer_->uploadData(buffer_resource->data_,
                                        buffer_resource->data_size_);
@@ -716,7 +716,7 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
       default:
         break;
     }
-    buffer_resource->on_render_ = BufferResource::OnNextRender::skip;
+    buffer_resource->on_render_ = BufferResource::OnNextRender::Skip;
   }
 
   // TODO: full memory barrier is not needed between nodes in same subset

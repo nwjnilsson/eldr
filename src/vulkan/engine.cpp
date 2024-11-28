@@ -174,23 +174,23 @@ void VulkanEngine::setupRenderGraph()
   const VkSampleCountFlagBits sample_count = device_->findMaxMsaaSampleCount();
 
   msaa_buffer_ = render_graph_->add<TextureResource>(
-    "MSAA color buffer", TextureUsage::color_buffer, swapchain_->imageFormat(),
+    "MSAA color buffer", TextureUsage::ColorBuffer, swapchain_->imageFormat(),
     sample_count);
 
   auto* depth_buffer = render_graph_->add<TextureResource>(
-    "depth buffer", TextureUsage::depth_stencil_buffer,
+    "depth buffer", TextureUsage::DepthStencilBuffer,
     device_->findDepthFormat(), sample_count);
 
   // TODO: handle resolve buffers implicitly in render graph
   back_buffer_ = render_graph_->add<TextureResource>(
-    "back buffer", TextureUsage::back_buffer, swapchain_->imageFormat());
+    "back buffer", TextureUsage::BackBuffer, swapchain_->imageFormat());
 
   index_buffer_ = render_graph_->add<BufferResource>("index buffer",
-                                                     BufferUsage::index_buffer);
+                                                     BufferUsage::IndexBuffer);
   index_buffer_->uploadData<uint32_t>(indices_);
 
   vertex_buffer_ = render_graph_->add<BufferResource>(
-    "vertex buffer", BufferUsage::vertex_buffer);
+    "vertex buffer", BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
@@ -294,18 +294,24 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 }
 
 // TODO: move this to where it is relevant
-void VulkanEngine::submitGeometry(const std::vector<Point3f>& positions,
-                                  const std::vector<Vec2f>&   texcoords,
-                                  const std::vector<Vec3f>&   normals)
+void VulkanEngine::uploadMesh(const std::vector<Point3f>& positions,
+                              const std::vector<Vec2f>&   texcoords,
+                              const std::vector<Color4f>& colors,
+                              const std::vector<Vec3f>&   normals)
 {
   vertices_.clear();
   indices_.clear();
+
+  // TODO:
+  // De-duplication should be taken care of earlier, e.g when loading mesh
+  // uploadMesh should look up the mesh's vertex/index buffer resource and do
+  // resource->uploadData<GpuVertex>(vertices) (though this requires a vector of
+  // GpuVertex...)
+
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   for (uint32_t i = 0; i < positions.size(); ++i) {
-    GpuVertex v{
-      positions[i], texcoords[i], { 1.0f, 1.0f, 1.0f, 1.0f }, normals[i]
-    };
+    GpuVertex v{ positions[i], texcoords[i], colors[i], normals[i] };
     if (unique_vertices.count(v) == 0) {
       unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
       vertices_.push_back(v);

@@ -10,9 +10,12 @@ project('Eldr', 'cpp',
     ]
   )
 
-
 add_global_arguments(
-    #'-fmodules-ts',       # Needed to get module support in GCC (didn't work, try in future)
+  # I experimented with modules in GCC but it seems like the tools I use are
+  # still not mature enough to properly deal with modules. And I don't want to
+  # switch to MSVC, which seems like the only option right now if you want to
+  # use modules, so I'm just going to stick with regular hpp/cpp files
+  #'-fmodules-ts',
     language : 'cpp'
     )
 
@@ -63,7 +66,7 @@ vulkan_conf_data.set('MESON_BUILD_TYPE', get_option('buildtype'))
 # ------------------------------------------------------------------------------
 # Dependencies
 # ------------------------------------------------------------------------------
-# Dependencies
+cmake = import('cmake')
 vma_proj         = subproject('vulkan-memory-allocator',
   default_options: 'warning_level=0')
 vma_dep          = vma_proj.get_variable('vma_allocator_dep')
@@ -92,6 +95,10 @@ spdlog_dep       = dependency('spdlog',
 libxkbcommon_dep = dependency('libxkbcommon',
   fallback: ['libxkbcommon', 'dep_libxkbcommon'],
   default_options: 'warning_level=0')
+fastgltf_opts = cmake.subproject_options()
+fastgltf_opts.add_cmake_defines({'FASTGLTF_COMPILE_AS_CPP20': true})
+fastgltf_dep = cmake.subproject('fastgltf', options: fastgltf_opts).dependency('fastgltf')
+rapidobj_dep= cmake.subproject('rapidobj').dependency('rapidobj')
 
 # ------------------------------------------------------------------------------
 # The rest

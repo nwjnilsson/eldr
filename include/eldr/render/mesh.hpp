@@ -3,6 +3,8 @@
 #include <eldr/core/math.hpp>
 #include <eldr/render/shape.hpp>
 
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,36 +19,45 @@ class Mesh : public Shape {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
-  Mesh(std::vector<Vec3f>&& positions, std::vector<Vec3f>&& normals,
-       std::vector<Vec2f>&& texcoords);
+  Mesh(const std::string& name, std::vector<Point3f>&& positions,
+       std::vector<Point2f>&& texcoords, std::vector<Color4f>&& colors,
+       std::vector<Vec3f>&& normals, std::vector<GeoSurface>&& surfaces);
+  ~Mesh() override = default;
 
   /// Accessors
   /// @brief Get the name of this mesh
-  [[nodiscard]] const std::string&        name() const { return name_; }
-  [[nodiscard]] const std::vector<Vec3f>& vertexPositions() const
+  [[nodiscard]] const std::string&          name() const { return name_; }
+  [[nodiscard]] const std::vector<Point3f>& vtxPositions() const
   {
-    return vertex_positions_;
+    return vtx_positions_;
   }
 
-  /// @brief Get a vector of vertex normals from this mesh
-  [[nodiscard]] const std::vector<Vec3f>& vertexNormals() const
+  /// @brief Get a vector of vtx texture coordinates for this mest
+  [[nodiscard]] const std::vector<Point2f>& vtxTexCoords() const
   {
-    return vertex_normals_;
+    return vtx_texcoords_;
   }
 
-  /// @brief Get a vector of vertex texture coordinates for this mest
-  [[nodiscard]] const std::vector<Vec2f>& vertexTexCoords() const
+  /// @brief Get a vector of vtx normals from this mesh
+  [[nodiscard]] const std::vector<Vec3f>& vtxNormals() const
   {
-    return vertex_texcoords_;
+    return vtx_normals_;
   }
+
+  [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
+  loadGltfMeshes(vk::VulkanEngine* engine, std::filesystem::path file_path);
+
+  [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
+  loadObj(vk::VulkanEngine* engine, std::filesystem::path file_path);
 
 protected:
-  std::string             name_;
-  std::vector<GeoSurface> surfaces_;
+  std::string name_;
 
-  std::vector<Vec3f> vertex_positions_;
-  std::vector<Vec3f> vertex_normals_;
-  std::vector<Vec2f> vertex_texcoords_;
+  std::vector<Point3f>    vtx_positions_;
+  std::vector<Point2f>    vtx_texcoords_;
+  std::vector<Color4f>    vtx_colors_;
+  std::vector<Vec3f>      vtx_normals_;
+  std::vector<GeoSurface> surfaces_;
 
   // std::optional<vk::wr::GpuBuffer>
 };

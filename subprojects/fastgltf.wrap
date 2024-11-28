@@ -1,0 +1,5 @@
+[wrap-file]
+directory=fastgltf-0.8.0
+source_url=https://github.com/spnda/fastgltf/archive/refs/tags/v0.8.0.tar.gz
+source_filename=fastgltf-0.8.0.tar.gz
+source_hash=0bc88a0858c88d94306443946a5a1606118b7d5e4960f1e6186a3632e9df38fb

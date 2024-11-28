@@ -20,7 +20,7 @@ namespace eldr {
 //   std::vector<RenderObject> opaque_surfaces;
 // };
 
-enum class ShapeType { mesh, disk, rectangle, sphere, other };
+enum class ShapeType { Mesh, Disk, Rectangle, Sphere, Other };
 
 class Shape {
   ELDR_IMPORT_CORE_TYPES();
@@ -30,9 +30,10 @@ public:
   //   virtual RTCGeometry embreeGeometry(RTCDevice device);
   // #endif
 
-protected:
-  inline Shape(){};
   virtual ~Shape() = default;
+
+protected:
+  inline Shape() {};
 
 protected:
   // BSDF bsdf_;
@@ -41,6 +42,6 @@ protected:
   //  Medium interior_medium_;
   //  Medium exterior_medium_;
   // std::string id_;
-  ShapeType shape_type_ = ShapeType::other;
+  ShapeType shape_type_ = ShapeType::Other;
 };
 } // namespace eldr
