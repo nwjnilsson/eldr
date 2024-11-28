@@ -7,7 +7,7 @@ namespace eldr {
 namespace {
 static void glfwErrorCallback(int error, const char* description)
 {
-  core::requestLogger("app")->error("GLFW Error {}: {}", error, description);
+  requestLogger("window")->error("GLFW Error {}: {}", error, description);
 }
 } // namespace
 

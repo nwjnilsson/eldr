@@ -417,7 +417,7 @@ public:
 private:
   const wr::Device&    device_;
   const wr::Swapchain& swapchain_;
-  core::Logger         log_{ core::requestLogger("render-graph") };
+  Logger               log_{ requestLogger("render-graph") };
 
   std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;

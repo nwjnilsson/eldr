@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-namespace eldr::core {
+namespace eldr {
 Logger requestLogger(const std::string& name)
 {
   static std::unordered_map<std::string, Logger> loggers{};
@@ -13,9 +13,9 @@ Logger requestLogger(const std::string& name)
   if (loggers.contains(name))
     return loggers[name];
   else {
-    spdlog::trace("Creating new logger '{}'", name);
+    spdlog::trace("Creating logger #{}: '{}'", loggers.size() + 1, name);
     loggers[name] = spdlog::default_logger()->clone(name);
     return loggers[name];
   }
 }
-} // namespace eldr::core
+} // namespace eldr

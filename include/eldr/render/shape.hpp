@@ -1,18 +1,34 @@
 #pragma once
 
 #include <eldr/core/fwd.hpp>
+#include <eldr/vulkan/fwd.hpp>
 
 namespace eldr {
 
-enum class ShapeType { Mesh, Disk, Rectangle, Sphere, Other };
+// struct RenderObject {
+//   ELDR_IMPORT_CORE_TYPES();
+//   uint32_t index_count;
+//   uint32_t first_index;
+//   VkBuffer index_buffer; // this will be taken from render graph probably
+//
+//   // MaterialInstance* material;
+//   Mat4f           transform;
+//   VkDeviceAddress vertex_buffer_address;
+// };
+//
+// struct DrawContext {
+//   std::vector<RenderObject> opaque_surfaces;
+// };
+
+enum class ShapeType { mesh, disk, rectangle, sphere, other };
 
 class Shape {
-public:
-#ifdef ELDR_ENABLE_EMBREE
-  virtual RTCGeometry embreeGeometry(RTCDevice device);
-#endif
+  ELDR_IMPORT_CORE_TYPES();
 
-  friend class Scene;
+public:
+  // #ifdef ELDR_ENABLE_EMBREE
+  //   virtual RTCGeometry embreeGeometry(RTCDevice device);
+  // #endif
 
 protected:
   inline Shape(){};
@@ -24,7 +40,7 @@ protected:
   //  Sensor sensor_;
   //  Medium interior_medium_;
   //  Medium exterior_medium_;
-  //std::string id_;
-  ShapeType   shape_type_ = ShapeType::Other;
+  // std::string id_;
+  ShapeType shape_type_ = ShapeType::other;
 };
 } // namespace eldr

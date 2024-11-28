@@ -17,7 +17,7 @@ extern "C" {
 #include <stdexcept>
 #include <string>
 
-namespace eldr::core {
+namespace eldr {
 
 Bitmap::Bitmap()
   : pixel_format_(PixelFormat::RGBA), component_format_(Struct::Type::UInt8),
@@ -76,8 +76,7 @@ Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
 }
 
 Bitmap::Bitmap(const Bitmap& bitmap)
-  : name_(bitmap.name_), log_(core::requestLogger("bitmap")),
-    pixel_format_(bitmap.pixel_format_),
+  : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
     component_format_(bitmap.component_format_), size_(bitmap.size_),
     struct_(std::make_unique<Struct>(*bitmap.struct_.get())),
     srgb_gamma_(bitmap.srgb_gamma_),
@@ -99,14 +98,9 @@ Bitmap::Bitmap(Bitmap&& other) noexcept
 {
 }
 
-Bitmap::Bitmap(Stream* stream, FileFormat format)
-  : log_(core::requestLogger("bitmap"))
-{
-  read(stream, format);
-}
+Bitmap::Bitmap(Stream* stream, FileFormat format) { read(stream, format); }
 
 Bitmap::Bitmap(const std::filesystem::path& path, FileFormat format)
-  : log_(core::requestLogger("bitmap"))
 {
   auto fs = std::make_unique<FileStream>(path);
   read(fs.get(), format);
@@ -785,4 +779,4 @@ std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
   }
   return os;
 }
-}; // namespace eldr::core
+}; // namespace eldr

@@ -138,7 +138,7 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
     swapchain_ci.pQueueFamilyIndices   = nullptr; // Optional
   }
 
-  core::requestLogger("vulkan-engine")->trace("Creating swapchain...");
+  requestLogger("vulkan-engine")->trace("Creating swapchain...");
   if (const VkResult result = vkCreateSwapchainKHR(
         device_.logical(), &swapchain_ci, nullptr, &swapchain_);
       result != VK_SUCCESS) {

@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-namespace eldr::core {
+namespace eldr {
 
 namespace detail {
 inline std::ios::openmode ios_flag(FileStream::EMode mode)
@@ -135,9 +135,9 @@ std::string FileStream::readLine()
 {
   std::string result;
   if (!std::getline(*file_, result))
-    core::requestLogger("core")->error(
-      "\"%s\": I/O error while attempting to read a line of text: %s",
-      path_.string(), strerror(errno));
+    requestLogger("FileStream")
+      ->error("\"%s\": I/O error while attempting to read a line of text: %s",
+              path_.string(), strerror(errno));
   return result;
 }
 
@@ -168,4 +168,4 @@ std::string FileStream::toString() const
 
   return oss.str();
 }
-} // namespace eldr::core
+} // namespace eldr

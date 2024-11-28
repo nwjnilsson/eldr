@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr::core {
+namespace eldr {
 
 class Bitmap {
   ELDR_IMPORT_CORE_TYPES();
@@ -152,7 +152,7 @@ protected:
 
 private:
   std::string                name_{ "undefined" };
-  core::Logger               log_{ core::requestLogger("core") };
+  Logger                     log_{ requestLogger("bitmap") };
   PixelFormat                pixel_format_;
   Struct::Type               component_format_;
   Vec2u                      size_{};
@@ -167,10 +167,8 @@ extern std::ostream& operator<<(std::ostream&              os,
                                 const Bitmap::PixelFormat& value);
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Bitmap::FileFormat& value);
-} // namespace eldr::core
+} // namespace eldr
 template <>
-struct fmt::formatter<eldr::core::Bitmap::PixelFormat>
-  : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
 template <>
-struct fmt::formatter<eldr::core::Bitmap::FileFormat> : fmt::ostream_formatter {
-};
+struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};

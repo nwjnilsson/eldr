@@ -76,8 +76,8 @@ private:
   std::unique_ptr<vk::VulkanEngine>               vk_engine_;
   Scene                                           scene_;
 
-  float           frame_time_{};
-  core::StopWatch stop_watch_{};
+  float     frame_time_{};
+  StopWatch stop_watch_{};
 };
 
 } // namespace eldr

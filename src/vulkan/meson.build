@@ -22,6 +22,7 @@ src = [
   'engine.cpp',
   'imgui.cpp',
   'rendergraph.cpp',
+  #'scenegraph.cpp',
   'vertex.cpp'
   ]
 

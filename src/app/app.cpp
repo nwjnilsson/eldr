@@ -165,8 +165,8 @@ void EldrApp::submitGeometry(const std::vector<Shape*>& shapes)
   // TODO: Shape should contain texture ref probably
   Mesh* mesh = dynamic_cast<Mesh*>(shapes[0]);
   if (mesh != nullptr) {
-    vk_engine_->submitGeometry(mesh->vertexPositions(),
-                               mesh->vertexTexCoords());
+    vk_engine_->submitGeometry(mesh->vertexPositions(), mesh->vertexTexCoords(),
+                               mesh->vertexNormals());
   }
 }
 } // namespace eldr

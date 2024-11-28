@@ -35,8 +35,14 @@ struct UniformBufferObject {
   alignas(16) Mat4f mvp_mat;
 };
 
+struct GpuMeshBuffers {
+  BufferResource* index_buffer;
+  BufferResource* vertex_buffer;
+  VkDeviceAddress vertex_buffer_address;
+};
+
 VulkanEngine::VulkanEngine(const Window& window)
-  : window_(window), log_(core::requestLogger("vulkan-engine")),
+  : window_(window), log_(requestLogger("vulkan-engine")),
     in_flight_cmd_bufs_(
       std::vector<const wr::CommandBuffer*>(max_frames_in_flight, nullptr))
 {
@@ -117,8 +123,8 @@ void VulkanEngine::loadTextures()
   const std::string     texture_path = "/assets/textures/viking_room.png";
   std::filesystem::path filepath(std::string(env_p) + texture_path);
 
-  core::Bitmap bitmap(filepath);
-  if (bitmap.pixelFormat() != core::Bitmap::PixelFormat::RGBA)
+  Bitmap bitmap(filepath);
+  if (bitmap.pixelFormat() != Bitmap::PixelFormat::RGBA)
     bitmap.rgbToRgba();
   textures_.emplace_back(*device_, bitmap);
 }
@@ -189,7 +195,7 @@ void VulkanEngine::setupRenderGraph()
                                      offsetof(GpuVertex, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(GpuVertex, uv));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
+  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
                                      offsetof(GpuVertex, color));
   vertex_buffer_->setElementSize(sizeof(GpuVertex));
   vertex_buffer_->uploadData<GpuVertex>(vertices_);
@@ -258,8 +264,8 @@ void VulkanEngine::recreateSwapchain()
 
 void VulkanEngine::updateUniformBuffer(uint32_t current_image)
 {
-  static core::StopWatch stop_watch;
-  float                  time{ stop_watch.seconds(false) };
+  static StopWatch stop_watch;
+  float            time{ stop_watch.seconds(false) };
 
   Mat4f model{ glm::rotate(Mat4f(1.0f), time * glm::radians(20.0f),
                            Vec3f(0.0f, 0.0f, 1.0f)) };
@@ -288,15 +294,18 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 }
 
 // TODO: move this to where it is relevant
-void VulkanEngine::submitGeometry(const std::vector<Vec3f>& positions,
-                                  const std::vector<Vec2f>& texcoords)
+void VulkanEngine::submitGeometry(const std::vector<Point3f>& positions,
+                                  const std::vector<Vec2f>&   texcoords,
+                                  const std::vector<Vec3f>&   normals)
 {
   vertices_.clear();
   indices_.clear();
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   for (uint32_t i = 0; i < positions.size(); ++i) {
-    GpuVertex v{ positions[i], texcoords[i], { 1.0f, 1.0f, 1.0f } };
+    GpuVertex v{
+      positions[i], texcoords[i], { 1.0f, 1.0f, 1.0f, 1.0f }, normals[i]
+    };
     if (unique_vertices.count(v) == 0) {
       unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
       vertices_.push_back(v);
@@ -305,6 +314,8 @@ void VulkanEngine::submitGeometry(const std::vector<Vec3f>& positions,
   }
   // Recreate swapchain to trigger recompilation of render graph with new
   // vertex/index buffers. TODO: improve
+  log_->debug("Vertex deduplication before and after {} -> {}",
+              positions.size(), vertices_.size());
   recreateSwapchain();
 }
 

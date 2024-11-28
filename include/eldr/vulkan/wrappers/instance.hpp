@@ -19,7 +19,7 @@ public:
   VkInstance get() const { return instance_; }
 
 private:
-  core::Logger log_{ core::requestLogger("vulkan-engine") };
-  VkInstance   instance_{ VK_NULL_HANDLE };
+  Logger     log_{ requestLogger("vulkan-engine") };
+  VkInstance instance_{ VK_NULL_HANDLE };
 };
 } // namespace eldr::vk::wr

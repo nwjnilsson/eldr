@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-namespace eldr::core {
+namespace eldr {
 class StopWatch {
 public:
   StopWatch();
@@ -53,4 +53,4 @@ private:
   std::chrono::time_point<std::chrono::high_resolution_clock> init_;
   std::chrono::time_point<std::chrono::high_resolution_clock> latest_;
 };
-} // namespace eldr::core
+} // namespace eldr

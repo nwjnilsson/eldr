@@ -18,7 +18,7 @@ public:
 
   /// Create a GpuTexture given a Bitmap. Will generate mipmaps based on
   /// dimensions of the Bitmap.
-  GpuTexture(const Device&, const core::Bitmap&);
+  GpuTexture(const Device&, const Bitmap&);
   /// Move constructor
   GpuTexture(GpuTexture&&) noexcept;
   ~GpuTexture() = default;

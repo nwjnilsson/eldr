@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr::core {
+namespace eldr {
 namespace detail {
 template <typename T, typename SFINAE = void> struct serialization_helper;
 } // namespace detail
@@ -426,4 +426,4 @@ template <typename T> struct serialization_helper<std::set<T>> {
 };
 
 } // namespace detail
-} // namespace eldr::core
+} // namespace eldr

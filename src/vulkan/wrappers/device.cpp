@@ -143,8 +143,7 @@ selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
 // -----------------------------------------------------------------------------
 
 Device::Device(const Instance& instance, const Surface& surface,
-               std::vector<const char*>& required_extensions,
-               core::Logger              logger)
+               std::vector<const char*>& required_extensions, Logger logger)
   : log_(logger)
 {
   physical_device_ =

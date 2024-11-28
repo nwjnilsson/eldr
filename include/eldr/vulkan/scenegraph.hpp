@@ -1,10 +1,8 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/fwd.hpp>
-#include <eldr/vulkan/fwd.hpp>
+#include <eldr/vulkan/common.hpp>
 
-#include <memory>
-#include <string>
 #include <vector>
 
 namespace eldr {
@@ -27,37 +25,8 @@ struct SceneNode : public IRenderable {
   virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
 };
 
-struct ShapeNode : public SceneNode {
-  std::shared_ptr<Shape> shape;
-  virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
-};
-
 struct MeshNode : public SceneNode {
   std::shared_ptr<Mesh> mesh;
   virtual void draw(const Mat4f& top_matrix, vk::DrawContext& ctx) override;
-};
-
-class Scene {
-  ELDR_IMPORT_CORE_TYPES();
-  struct SceneInfo {
-    const std::string model_path;
-    const std::string texture_path;
-  };
-
-public:
-  Scene(const SceneInfo&);
-  ~Scene();
-
-  //[[nodiscard]] std::vector<Shape*> shapes() const { return shapes_; }
-  [[nodiscard]] const std::vector<SceneNode>& nodes() const { return scene_; }
-
-private:
-  std::vector<Shape*> loadGeometry(const SceneInfo&);
-
-private:
-  // std::vector<Emitter> emitters_;
-  // std::vector<Shape*> shapes_;
-  std::vector<SceneNode> scene_;
-  // std::vector<Sensor> sensors_;
 };
 } // namespace eldr

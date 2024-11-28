@@ -25,7 +25,7 @@ struct QueueFamilyIndices {
 class Device {
 public:
   Device(const Instance&, const Surface&,
-         std::vector<const char*>& required_extensions, core::Logger logger);
+         std::vector<const char*>& required_extensions, Logger logger);
   ~Device();
 
   [[nodiscard]] std::string name() const
@@ -57,7 +57,7 @@ public:
   [[nodiscard]] VkQueue          graphicsQueue() const { return g_queue_; }
   [[nodiscard]] VkQueue          presentQueue() const { return p_queue_; }
   [[nodiscard]] VmaAllocator     allocator() const { return allocator_; }
-  [[nodiscard]] core::Logger     logger() const { return log_; }
+  [[nodiscard]] Logger           logger() const { return log_; }
 
   void waitIdle() const;
   void execute(
@@ -69,7 +69,7 @@ private:
   CommandPool& threadGraphicsPool() const;
 
 private:
-  core::Logger               log_{ nullptr };
+  Logger                     log_{ nullptr };
   VkPhysicalDevice           physical_device_{ VK_NULL_HANDLE };
   VkPhysicalDeviceProperties physical_device_props_;
   VkDevice                   device_{ VK_NULL_HANDLE };

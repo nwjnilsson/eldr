@@ -7,7 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace eldr::core {
+namespace eldr {
 // -----------------------------------------------------------------------------
 // VulkanException
 // -----------------------------------------------------------------------------
@@ -27,4 +27,4 @@ std::string VulkanException::createErrorMessage(std::string          message,
     ss << message;
   return ss.str();
 }
-} // namespace eldr::core
+} // namespace eldr

@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-namespace eldr::core {
+namespace eldr {
 constexpr bool hasFlag(uint32_t flags, Struct::Flags f)
 {
   return (flags & static_cast<uint32_t>(f)) != 0;
@@ -273,4 +273,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-} // namespace eldr::core
+} // namespace eldr

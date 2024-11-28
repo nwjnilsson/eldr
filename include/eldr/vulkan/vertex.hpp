@@ -2,20 +2,19 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
 namespace eldr::vk {
 
 struct GpuVertex {
   ELDR_IMPORT_CORE_TYPES();
-  Vec3f   pos;
+  Point3f pos;
   Vec2f   uv; // texture coord
-  Color3f color;
+  Color4f color;
+  Vec3f   normal;
 
   bool operator==(const GpuVertex& other) const
   {
-    return pos == other.pos && color == other.color && uv == other.uv;
+    return pos == other.pos && color == other.color && uv == other.uv &&
+           normal == other.normal;
   }
 };
 } // namespace eldr::vk

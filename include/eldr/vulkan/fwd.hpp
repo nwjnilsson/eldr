@@ -3,6 +3,10 @@
 namespace eldr::vk {
 struct GpuVertex;
 class ImGuiOverlay;
+// EXPERIMENTAL
+struct GpuMeshBuffers;
+struct RenderObject;
+struct DrawContext;
 
 // RenderGraph types
 class RenderGraph;

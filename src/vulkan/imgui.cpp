@@ -15,8 +15,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   : device_(device), swapchain_(swapchain)
 {
   IMGUI_CHECKVERSION();
-  core::Logger log{ device_.logger() };
-  log->trace("Creating ImGUI context");
+  log_->trace("Creating ImGUI context");
   ImGui::CreateContext();
 
   // ImGui style
@@ -44,7 +43,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   io.FontGlobalScale = scale_;
   // style.ScaleAllSizes(scale_);
 
-  log->trace("Loading ImGUI shaders");
+  log_->trace("Loading ImGUI shaders");
   vertex_shader_ =
     std::make_unique<wr::Shader>(device_, VK_SHADER_STAGE_VERTEX_BIT,
                                  "ImGUI vertex shader", "imgui.vert.spv");
@@ -64,7 +63,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   std::string           font_file_path =
     fmt::format("{}/assets/fonts/{}", std::string(env_p), font);
 
-  log->trace("Loading font {}", font_file_path);
+  log_->trace("Loading font {}", font_file_path);
 
   ImFont* im_font =
     io.Fonts->AddFontFromFileTTF(font_file_path.c_str(), font_size);
@@ -76,12 +75,12 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                &font_texture_height);
 
   if (im_font == nullptr || font_texture_data == nullptr) {
-    log->error("Unable to load font {}.  Falling back to error texture",
-               font_file_path);
-    imgui_texture_ = std::make_unique<wr::GpuTexture>(device_, core::Bitmap{});
+    log_->error("Unable to load font {}.  Falling back to error texture",
+                font_file_path);
+    imgui_texture_ = std::make_unique<wr::GpuTexture>(device_, Bitmap{});
   }
   else {
-    log->trace("Creating ImGUI font texture");
+    log_->trace("Creating ImGUI font texture");
 
     // Our font textures always have 4 channels and a single mip level by
     // definition.

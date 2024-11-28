@@ -29,7 +29,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
       break;
   }
 
-  auto logger = core::requestLogger("vulkan-debug");
+  Logger logger{ requestLogger("vulkan-debug") };
   switch (messageSeverity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
       logger->debug("(type = {}): {}", type, pCallbackData->pMessage);

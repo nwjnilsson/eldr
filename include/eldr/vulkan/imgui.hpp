@@ -28,7 +28,7 @@ public:
 private:
   const wr::Device&    device_;
   const wr::Swapchain& swapchain_;
-  core::Logger         log_{};
+  Logger               log_{ requestLogger("imgui-overlay") };
   float                scale_{ 1.0f };
 
   BufferResource* index_buffer_{ nullptr };

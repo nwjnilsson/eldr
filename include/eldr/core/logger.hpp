@@ -3,7 +3,7 @@
 
 #include <memory>
 
-namespace eldr::core {
+namespace eldr {
 using Logger = std::shared_ptr<spdlog::logger>;
 Logger requestLogger(const std::string& name);
-} // namespace eldr::core
+} // namespace eldr

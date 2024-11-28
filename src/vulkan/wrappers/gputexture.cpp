@@ -84,7 +84,7 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
   sampler_ = std::make_unique<Sampler>(device, mip_levels_);
 }
 
-GpuTexture::GpuTexture(const Device& device, const core::Bitmap& bitmap)
+GpuTexture::GpuTexture(const Device& device, const Bitmap& bitmap)
   : GpuTexture(device, bitmap.uint8Data(),
                static_cast<VkDeviceSize>(bitmap.bufferSize()), bitmap.width(),
                bitmap.height(), bitmap.channelCount(), VK_FORMAT_R8G8B8A8_SRGB,
