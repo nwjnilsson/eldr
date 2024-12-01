@@ -97,6 +97,7 @@ libxkbcommon_dep = dependency('libxkbcommon',
   default_options: 'warning_level=0')
 fastgltf_opts = cmake.subproject_options()
 fastgltf_opts.add_cmake_defines({'FASTGLTF_COMPILE_AS_CPP20': true})
+fastgltf_opts.set_override_option('warning_level', '0')
 fastgltf_dep = cmake.subproject('fastgltf', options: fastgltf_opts).dependency('fastgltf')
 rapidobj_dep= cmake.subproject('rapidobj').dependency('rapidobj')
 

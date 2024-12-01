@@ -9,6 +9,7 @@ GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
                      VmaMemoryUsage memory_usage, const std::string& name)
   : GpuResource(device, name), size_(buffer_size)
 {
+  assert(buffer_size > 0);
   const VkBufferCreateInfo buffer_ci{
     .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .pNext                 = {},
@@ -67,6 +68,7 @@ GpuBuffer::~GpuBuffer()
 
 void GpuBuffer::uploadData(const void* data, size_t data_size)
 {
+  assert(data_size > 0);
   assert(static_cast<VkDeviceSize>(data_size) <= size_);
   assert(alloc_info_.pMappedData != nullptr);
   std::memcpy(alloc_info_.pMappedData, data, data_size);

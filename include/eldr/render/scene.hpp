@@ -3,8 +3,8 @@
 #include <eldr/render/fwd.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
+#include <filesystem>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace eldr {
@@ -35,23 +35,26 @@ struct ShapeNode final : public SceneNode {
 class Scene {
   ELDR_IMPORT_CORE_TYPES();
   struct SceneInfo {
-    const std::string model_path;
-    const std::string texture_path;
+    const std::filesystem::path model_path;
+    const std::filesystem::path texture_path;
   };
 
 public:
   Scene(const SceneInfo&);
-  ~Scene();
+  ~Scene() = default;
 
   //[[nodiscard]] std::vector<Shape*> shapes() const { return shapes_; }
-  [[nodiscard]] const std::vector<Shape*>& shapes() const { return shapes_; }
+  [[nodiscard]] const std::vector<std::shared_ptr<Shape>>& shapes() const
+  {
+    return shapes_;
+  }
 
 private:
-  std::vector<Shape*> loadGeometry(const SceneInfo&);
+  std::vector<std::shared_ptr<Shape>> loadGeometry(const SceneInfo&);
 
 private:
   // std::vector<Emitter> emitters_;
-  std::vector<Shape*> shapes_;
+  std::vector<std::shared_ptr<Shape>> shapes_;
   // std::vector<SceneNode> scene_;
   //  std::vector<Sensor> sensors_;
 };

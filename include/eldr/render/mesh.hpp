@@ -44,11 +44,18 @@ public:
     return vtx_normals_;
   }
 
-  [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
-  loadGltfMeshes(vk::VulkanEngine* engine, std::filesystem::path file_path);
+  [[nodiscard]] const std::vector<Color4f>& vtxColors() const
+  {
+    return vtx_colors_;
+  }
 
   [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
-  loadObj(vk::VulkanEngine* engine, std::filesystem::path file_path);
+  loadGltfMeshes(std::filesystem::path file_path);
+
+  //  template <typename T>
+  [[nodiscard]]
+  static std::optional<std::vector<std::shared_ptr<Shape>>>
+  loadObj(std::filesystem::path file_path);
 
 protected:
   std::string name_;
@@ -61,4 +68,12 @@ protected:
 
   // std::optional<vk::wr::GpuBuffer>
 };
+
+// template <>
+// std::optional<std::vector<std::shared_ptr<Shape>>>
+// Mesh::loadObj<Shape>(vk::VulkanEngine*, std::filesystem::path);
+//
+// template <>
+// std::optional<std::vector<std::shared_ptr<Mesh>>>
+// Mesh::loadObj<Mesh>(vk::VulkanEngine*, std::filesystem::path);
 } // namespace eldr

@@ -22,7 +22,7 @@ Mesh::Mesh(const std::string& name, std::vector<Point3f>&& positions,
 }
 
 std::optional<std::vector<std::shared_ptr<Mesh>>>
-Mesh::loadGltfMeshes(vk::VulkanEngine* engine, std::filesystem::path file_path)
+Mesh::loadGltfMeshes(std::filesystem::path file_path)
 {
   namespace fg = fastgltf;
   Logger log{ requestLogger("mesh") };
@@ -143,18 +143,17 @@ Mesh::loadGltfMeshes(vk::VulkanEngine* engine, std::filesystem::path file_path)
       }
     }
 
-    engine->uploadMesh(positions, texcoords, colors, normals);
-
-    meshes.emplace_back(new Mesh{ name, std::move(positions),
-                                  std::move(texcoords), std::move(colors),
-                                  std::move(normals), std::move(surfaces) });
+    meshes.emplace_back(std::make_unique<Mesh>(
+      name, std::move(positions), std::move(texcoords), std::move(colors),
+      std::move(normals), std::move(surfaces)));
   }
 
   return meshes;
 }
 
-std::optional<std::vector<std::shared_ptr<Mesh>>>
-Mesh::loadObj(vk::VulkanEngine* engine, std::filesystem::path file_path)
+// template <typename T>
+std::optional<std::vector<std::shared_ptr<Shape>>>
+Mesh::loadObj(std::filesystem::path file_path)
 {
   Logger log{ requestLogger("mesh") };
   log->trace("Loading OBJ: {}", file_path.c_str());
@@ -172,7 +171,7 @@ Mesh::loadObj(vk::VulkanEngine* engine, std::filesystem::path file_path)
     return std::nullopt;
   }
 
-  std::vector<std::shared_ptr<Mesh>> loaded_shapes{};
+  std::vector<std::shared_ptr<Shape>> loaded_shapes{};
 
   for (const auto& shape : shapes) {
     std::vector<uint32_t>   indices;
@@ -204,11 +203,11 @@ Mesh::loadObj(vk::VulkanEngine* engine, std::filesystem::path file_path)
                          attrib.colors[3 * index.vertex_index + 2], 1.0f });
     }
 
-    engine->uploadMesh(positions, texcoords, colors, normals);
+    log->trace("Loaded mesh '{}' - {} vertices", shape.name, positions.size());
 
-    loaded_shapes.emplace_back(
-      new Mesh{ shape.name, std::move(positions), std::move(texcoords),
-                std::move(colors), std::move(normals), std::move(surfaces) });
+    loaded_shapes.emplace_back(std::make_shared<Mesh>(
+      shape.name, std::move(positions), std::move(texcoords), std::move(colors),
+      std::move(normals), std::move(surfaces)));
   }
   return loaded_shapes;
 }

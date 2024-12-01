@@ -36,7 +36,7 @@ public:
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
   const CommandBuffer&
-  bindIndexBuffer(const GpuBuffer&,
+  bindIndexBuffer(VkBuffer     buffer,
                   VkIndexType  index_type = VK_INDEX_TYPE_UINT32,
                   VkDeviceSize offset     = 0) const;
 

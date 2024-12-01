@@ -21,8 +21,8 @@ class KeyboardMouseInput;
 namespace eldr {
 class EldrApp {
   ELDR_IMPORT_CORE_TYPES();
-  const std::string model_path_str   = "assets/models/viking_room.obj";
-  const std::string texture_path_str = "assets/textures/viking_room.png";
+  const std::filesystem::path model_path   = "assets/models/viking_room.obj";
+  const std::filesystem::path texture_path = "assets/textures/viking_room.png";
 
 public:
   EldrApp();
@@ -64,7 +64,7 @@ private:
   void setupWindowCallbacks();
   void setupInputCallbacks();
   void updateImGui();
-  void submitGeometry(const std::vector<Shape*>&);
+  void submitGeometry(const std::vector<std::shared_ptr<Shape>>&);
 
 public:
   static constexpr uint32_t width  = 1280;

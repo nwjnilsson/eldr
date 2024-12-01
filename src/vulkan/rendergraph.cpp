@@ -1,3 +1,4 @@
+#include <eldr/core/platform.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
@@ -157,12 +158,18 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     if (physical_buffer == nullptr) {
       continue;
     }
-    if (physical_buffer->buffer_ == nullptr) {
+    if (unlikely(physical_buffer->buffer_ == nullptr)) {
+      log_->debug("The PhysicalBuffer of '{}' in stage '{}' points to null. "
+                  "This can happen when RenderGraph::render(...) gets called "
+                  "before data has been uploaded to the buffer via "
+                  "BufferResource::uploadData<type>(...)), or it could be "
+                  "caused by another bug.",
+                  buffer_resource->name_, stage->name_);
       continue;
     }
     if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
       assert(physical_buffer->buffer_);
-      cb.bindIndexBuffer(*physical_buffer->buffer_);
+      cb.bindIndexBuffer(physical_buffer->buffer_->get());
     }
     else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
       vertex_buffers.push_back(physical_buffer->buffer_->get());
@@ -172,7 +179,6 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   if (!vertex_buffers.empty()) {
     cb.bindVertexBuffers(vertex_buffers);
   }
-
   cb.bindPipeline(physical.pipeline_);
   stage->on_record_(physical, cb);
 
@@ -685,9 +691,25 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
 {
   for (auto& buffer_resource : buffer_resources_) {
     auto& physical = *buffer_resource->physical_->as<PhysicalBuffer>();
-    switch (buffer_resource->on_render_) {
-      case BufferResource::OnNextRender::CreateNew: {
-        // Build buffer
+
+    if (buffer_resource->data_.get() != nullptr) {
+      // There is data to be uploaded to gpu
+      bool new_buffer_needed = false;
+      if (unlikely(physical.buffer_ == nullptr)) {
+        new_buffer_needed = true;
+      }
+      else {
+        // A gpu buffer already exists
+        const size_t buffer_size{ static_cast<size_t>(
+          physical.buffer_->size()) };
+        if (buffer_resource->data_size_ != buffer_size) {
+          // The gpu buffer needs to be resized
+          new_buffer_needed = true;
+        }
+      }
+
+      if (new_buffer_needed) {
+        // Otherwise build a new GPU buffer
         VkBufferUsageFlags buffer_usage{};
         switch (buffer_resource->usage_) {
           case BufferUsage::IndexBuffer:
@@ -702,21 +724,13 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
         physical.buffer_ = std::make_unique<wr::GpuBuffer>(
           device_, buffer_resource->data_size_, buffer_usage,
           VMA_MEMORY_USAGE_CPU_TO_GPU, "render graph buffer");
-        physical.buffer_->uploadData(buffer_resource->data_,
-                                     buffer_resource->data_size_);
-        break;
       }
-      case BufferResource::OnNextRender::UploadOnly: {
-        if (physical.buffer_ != nullptr) {
-          physical.buffer_->uploadData(buffer_resource->data_,
-                                       buffer_resource->data_size_);
-        }
-        break;
-      }
-      default:
-        break;
+      // Upload data
+      physical.buffer_->uploadData(buffer_resource->data_.get(),
+                                   buffer_resource->data_size_);
+      // Reset data held by buffer resource once it has been uploaded to gpu
+      buffer_resource->data_.reset();
     }
-    buffer_resource->on_render_ = BufferResource::OnNextRender::Skip;
   }
 
   // TODO: full memory barrier is not needed between nodes in same subset

@@ -18,7 +18,7 @@ EldrApp::EldrApp()
   : input_data_(std::make_unique<app::input::KeyboardMouseInput>()),
     window_(std::make_unique<Window>(width, height)),
     vk_engine_(std::make_unique<vk::VulkanEngine>(*window_)),
-    scene_({ model_path_str, texture_path_str })
+    scene_({ model_path, texture_path })
 {
   setupWindowCallbacks();
   setupInputCallbacks();
@@ -159,14 +159,14 @@ void EldrApp::updateImGui()
   });
 }
 
-void EldrApp::submitGeometry(const std::vector<Shape*>& shapes)
+void EldrApp::submitGeometry(const std::vector<std::shared_ptr<Shape>>& shapes)
 {
   // Create one big vertex buffer along with index buffer
   // TODO: Shape should contain texture ref probably
-  Mesh* mesh = dynamic_cast<Mesh*>(shapes[0]);
+  Mesh* mesh = dynamic_cast<Mesh*>(shapes[0].get());
   if (mesh != nullptr) {
-    vk_engine_->submitGeometry(mesh->vertexPositions(), mesh->vertexTexCoords(),
-                               mesh->vertexNormals());
+    vk_engine_->uploadMesh(mesh->vtxPositions(), mesh->vtxTexCoords(),
+                           mesh->vtxColors(), mesh->vtxNormals());
   }
 }
 } // namespace eldr

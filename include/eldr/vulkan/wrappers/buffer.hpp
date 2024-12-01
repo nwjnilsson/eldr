@@ -28,6 +28,7 @@ public:
   // VkDeviceSize    size() const { return size_; }
   [[nodiscard]] const std::string& name() const { return name_; }
   [[nodiscard]] VkBuffer           get() const { return buffer_; }
+  [[nodiscard]] VkDeviceSize       size() const { return size_; }
 
   void uploadData(const void* data, size_t data_size);
   void copyFromBuffer(const GpuBuffer&, const CommandPool&);

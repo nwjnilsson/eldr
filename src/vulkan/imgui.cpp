@@ -107,9 +107,9 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   }
 
   index_buffer_  = render_graph->add<BufferResource>("imgui index buffer",
-                                                     BufferUsage::index_buffer);
-  vertex_buffer_ = render_graph->add<BufferResource>(
-    "imgui vertex buffer", BufferUsage::vertex_buffer);
+                                                     BufferUsage::IndexBuffer);
+  vertex_buffer_ = render_graph->add<BufferResource>("imgui vertex buffer",
+                                                     BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(ImDrawVert, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
@@ -165,23 +165,25 @@ void ImGuiOverlay::update(uint32_t frame_index)
     return;
   }
 
-  index_data_.clear();
+  std::vector<uint32_t> index_data;
+  // TODO: there is room for improvement here. Data could be more efficiently
+  // appended to the BufferResource without using a vector in between.
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
     const ImDrawList* cmd_list = imgui_draw_data->CmdLists[i];
     for (int j = 0; j < cmd_list->IdxBuffer.Size; j++) {
-      index_data_.push_back(cmd_list->IdxBuffer.Data[j]);
+      index_data.push_back(cmd_list->IdxBuffer.Data[j]);
     }
   }
-  index_buffer_->uploadData<uint32_t>(index_data_);
+  index_buffer_->uploadData<uint32_t>(index_data);
 
-  vertex_data_.clear();
+  std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
     const ImDrawList* cmd_list = imgui_draw_data->CmdLists[i];
     for (int j = 0; j < cmd_list->VtxBuffer.Size; j++) {
-      vertex_data_.push_back(cmd_list->VtxBuffer.Data[j]);
+      vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  vertex_buffer_->uploadData<ImDrawVert>(vertex_data_);
+  vertex_buffer_->uploadData<ImDrawVert>(vertex_data);
 
   stage_->setOnRecord([frame_index, this](const PhysicalStage&     physical,
                                           const wr::CommandBuffer& cb) {

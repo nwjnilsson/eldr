@@ -86,8 +86,10 @@ public:
 
   /// @brief Specifies the data that should be uploaded to this buffer at the
   /// start of the next frame.
+  /// @tparam T The type of the data uploaded to the buffer, e.g GpuVertex for
+  /// vertices and uint32_t for indices.
   /// @param data A span of elements to upload to the buffer
-  template <typename T> void uploadData(const std::span<T>& data);
+  template <typename T> void uploadData(std::span<T> data);
 
   /// @brief @copybrief upload_data(const T *, std::size_t)
   /// @note This is equivalent to doing `upload_data(data.data(), data.size() *
@@ -99,16 +101,12 @@ private:
   const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
 
-  enum class OnNextRender {
-    UploadOnly, // indicates that data can be uploaded without resizing
-    CreateNew,  // indicates that a new buffer is needed, e.g upon resize
-    Skip,       // nothing needs to be done for this buffer
-  } on_render_;
-
-  // Data to upload during render graph compilation.
-  const void* data_{ nullptr };
-  size_t      data_size_{ 0 };
-  size_t      element_size_{ 0 };
+  // Data to upload to the GPU on a call to render(). BufferResource owns
+  // vertex/index data and when the data has been uploaded, it is a good idea to
+  // reset the data_ pointer to save memory.
+  std::unique_ptr<uint8_t[]> data_{ nullptr };
+  size_t                     data_size_{ 0 };
+  size_t                     element_size_{ 0 };
 };
 
 enum class TextureUsage {
@@ -437,15 +435,10 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-template <typename T> void BufferResource::uploadData(const std::span<T>& data)
+template <typename T> void BufferResource::uploadData(std::span<T> data)
 {
-  size_t new_size = data.size() * (element_size_ = sizeof(T));
-  if (data_size_ == new_size)
-    on_render_ = OnNextRender::UploadOnly;
-  else {
-    on_render_ = OnNextRender::CreateNew;
-    data_size_ = new_size;
-  }
-  data_ = data.data();
+  data_size_ = data.size() * (element_size_ = sizeof(T));
+  data_      = std::make_unique_for_overwrite<uint8_t[]>(data_size_);
+  memcpy(data_.get(), data.data(), data_size_);
 }
 } // namespace eldr::vk

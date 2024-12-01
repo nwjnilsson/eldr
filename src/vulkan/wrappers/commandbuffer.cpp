@@ -203,12 +203,12 @@ CommandBuffer::blitImage(const GpuImage& src_image, VkImageLayout src_layout,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const GpuBuffer& buffer,
-                                                    VkIndexType      index_type,
+const CommandBuffer& CommandBuffer::bindIndexBuffer(VkBuffer     buffer,
+                                                    VkIndexType  index_type,
                                                     VkDeviceSize offset) const
 {
-  assert(buffer.get());
-  vkCmdBindIndexBuffer(command_buffer_, buffer.get(), offset, index_type);
+  assert(buffer);
+  vkCmdBindIndexBuffer(command_buffer_, buffer, offset, index_type);
   return *this;
 }
 

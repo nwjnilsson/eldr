@@ -6,7 +6,7 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
+#include <span>
 
 namespace eldr {
 // fwd
@@ -14,6 +14,7 @@ class EldrApp;
 class Window;
 namespace vk {
 
+// TODO: move Vulkan Engine to eldr:: namespace?
 class VulkanEngine {
   ELDR_IMPORT_CORE_TYPES();
   friend EldrApp; // TODO: I did this to be able to invalidate swapchain from
@@ -27,10 +28,10 @@ public:
 
   void updateImGui(std::function<void()> const& lambda);
 
-  void uploadMesh(const std::vector<Point3f>& positions,
-                  const std::vector<Vec2f>&   texcoords,
-                  const std::vector<Color4f>& colors,
-                  const std::vector<Vec3f>&   normals);
+  void uploadMesh(std::span<const Point3f> positions,
+                  std::span<const Point2f> texcoords,
+                  std::span<const Color4f> colors,
+                  std::span<const Vec3f>   normals);
   void drawFrame();
 
   [[nodiscard]] std::string deviceName() const;

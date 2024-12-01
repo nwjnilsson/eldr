@@ -39,8 +39,6 @@ private:
   std::unique_ptr<wr::Shader>         vertex_shader_;
   std::unique_ptr<wr::Shader>         fragment_shader_;
   std::vector<wr::ResourceDescriptor> descriptors_;
-  std::vector<std::uint32_t>          index_data_;
-  std::vector<ImDrawVert>             vertex_data_;
 
   struct PushConstantBlock {
     Vec2f scale;

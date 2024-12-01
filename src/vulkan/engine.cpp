@@ -294,10 +294,10 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 }
 
 // TODO: move this to where it is relevant
-void VulkanEngine::uploadMesh(const std::vector<Point3f>& positions,
-                              const std::vector<Vec2f>&   texcoords,
-                              const std::vector<Color4f>& colors,
-                              const std::vector<Vec3f>&   normals)
+void VulkanEngine::uploadMesh(std::span<const Point3f> positions,
+                              std::span<const Vec2f>   texcoords,
+                              std::span<const Color4f> colors,
+                              std::span<const Vec3f>   normals)
 {
   vertices_.clear();
   indices_.clear();
@@ -307,7 +307,6 @@ void VulkanEngine::uploadMesh(const std::vector<Point3f>& positions,
   // uploadMesh should look up the mesh's vertex/index buffer resource and do
   // resource->uploadData<GpuVertex>(vertices) (though this requires a vector of
   // GpuVertex...)
-
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   for (uint32_t i = 0; i < positions.size(); ++i) {
@@ -318,10 +317,10 @@ void VulkanEngine::uploadMesh(const std::vector<Point3f>& positions,
     }
     indices_.push_back(unique_vertices[v]);
   }
-  // Recreate swapchain to trigger recompilation of render graph with new
-  // vertex/index buffers. TODO: improve
   log_->debug("Vertex deduplication before and after {} -> {}",
               positions.size(), vertices_.size());
+  // Recreate swapchain to trigger recompilation of render graph with new
+  // vertex/index buffers. TODO: improve
   recreateSwapchain();
 }
 
