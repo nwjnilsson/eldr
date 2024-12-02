@@ -3,6 +3,7 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
+#include <string>
 namespace eldr {
 
 // struct RenderObject {
@@ -29,19 +30,23 @@ public:
   // #ifdef ELDR_ENABLE_EMBREE
   //   virtual RTCGeometry embreeGeometry(RTCDevice device);
   // #endif
-
   virtual ~Shape() = default;
 
-protected:
-  inline Shape() {};
+  /// @brief Get the name of this shape
+  [[nodiscard]] const std::string& name() const { return name_; }
 
 protected:
+  // inline Shape() = default;
+  inline Shape(const std::string& name, ShapeType type)
+    : name_(name), shape_type_(type) {};
+
+protected:
+  std::string name_;
   // BSDF bsdf_;
   //  Emitter emitter_;
   //  Sensor sensor_;
   //  Medium interior_medium_;
   //  Medium exterior_medium_;
-  // std::string id_;
-  ShapeType shape_type_ = ShapeType::Other;
+  ShapeType shape_type_{ ShapeType::Other };
 };
 } // namespace eldr

@@ -20,7 +20,7 @@ Scene::loadGeometry(const SceneInfo& scene_info)
   // each texture
   std::filesystem::path filepath(env_p);
   filepath /= scene_info.model_path;
-  return Mesh::loadObj(filepath).value_or(
+  return Mesh::loadObjMeshes(filepath).value_or(
     std::vector<std::shared_ptr<Shape>>{});
 }
 

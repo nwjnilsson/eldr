@@ -13,17 +13,15 @@
 #  pragma GCC diagnostic ignored "-Wunused-function"
 #  pragma GCC diagnostic ignored "-Wunused-variable"
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#  include <vk_mem_alloc.h> // includes vulkan.h
+#  pragma GCC diagnostic pop
 #endif
+
 #ifdef _MSC_VER
 // TODO: try compiling on windows and disable warnings corresponding to the ones
 // above
 // #  pragma warning(disable:xxxx)
-#endif
-#include <vk_mem_alloc.h> // includes vulkan.h
-#ifdef __GNUG__
-#  pragma GCC diagnostic pop
-#endif
-#ifdef _MSC_VER
+#  include <vk_mem_alloc.h> // includes vulkan.h
 // #  pragma warning(default:xxxx)
 #endif
 // =============================================================================

@@ -25,8 +25,6 @@ public:
   ~Mesh() override = default;
 
   /// Accessors
-  /// @brief Get the name of this mesh
-  [[nodiscard]] const std::string&          name() const { return name_; }
   [[nodiscard]] const std::vector<Point3f>& vtxPositions() const
   {
     return vtx_positions_;
@@ -55,11 +53,9 @@ public:
   //  template <typename T>
   [[nodiscard]]
   static std::optional<std::vector<std::shared_ptr<Shape>>>
-  loadObj(std::filesystem::path file_path);
+  loadObjMeshes(std::filesystem::path file_path);
 
 protected:
-  std::string name_;
-
   std::vector<Point3f>    vtx_positions_;
   std::vector<Point2f>    vtx_texcoords_;
   std::vector<Color4f>    vtx_colors_;

@@ -6,17 +6,31 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include <fastgltf/core.hpp>
-#include <fastgltf/glm_element_traits.hpp>
-#include <fastgltf/tools.hpp>
+// Ignore warnings from fastgltf
+#ifdef __GNUG__
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wredundant-move"
+// this doesn't quite work due to lack of gcc support, but looks like it's on
+// the way
+#  pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#  pragma GCC diagnostic ignored "-Wunused-parameter"
+#  include <fastgltf/core.hpp>
+#  include <fastgltf/glm_element_traits.hpp>
+#  include <fastgltf/tools.hpp>
+#  include <fastgltf/types.hpp>
+#  pragma GCC diagnostic pop
+#endif
+// TODO: corresponding thing for windows builds
+
 #include <spdlog/spdlog.h>
 namespace eldr {
 
 Mesh::Mesh(const std::string& name, std::vector<Point3f>&& positions,
            std::vector<Point2f>&& texcoords, std::vector<Color4f>&& colors,
            std::vector<Vec3f>&& normals, std::vector<GeoSurface>&& surfaces)
-  : name_(name), vtx_positions_(positions), vtx_texcoords_(texcoords),
-    vtx_colors_(colors), vtx_normals_(normals), surfaces_(surfaces)
+  : Shape(name, ShapeType::Mesh), vtx_positions_(positions),
+    vtx_texcoords_(texcoords), vtx_colors_(colors), vtx_normals_(normals),
+    surfaces_(surfaces)
 
 {
 }
@@ -153,7 +167,7 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
 
 // template <typename T>
 std::optional<std::vector<std::shared_ptr<Shape>>>
-Mesh::loadObj(std::filesystem::path file_path)
+Mesh::loadObjMeshes(std::filesystem::path file_path)
 {
   Logger log{ requestLogger("mesh") };
   log->trace("Loading OBJ: {}", file_path.c_str());
