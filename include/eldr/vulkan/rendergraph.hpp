@@ -438,7 +438,9 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
 template <typename T> void BufferResource::uploadData(std::span<T> data)
 {
   data_size_ = data.size() * (element_size_ = sizeof(T));
-  data_      = std::make_unique_for_overwrite<uint8_t[]>(data_size_);
+  if (data_size_ == 0)
+    return;
+  data_ = std::make_unique_for_overwrite<uint8_t[]>(data_size_);
   memcpy(data_.get(), data.data(), data_size_);
 }
 } // namespace eldr::vk

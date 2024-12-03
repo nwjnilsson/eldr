@@ -1,7 +1,6 @@
 #pragma once
-
+#include <cstdint>
 namespace eldr {
-
 // struct BSDFContext;
 // class BSDF;
 // class OptixDenoiser;
@@ -15,6 +14,7 @@ namespace eldr {
 // class AdjointIntegrator;
 // class Medium;
 class Mesh;
+enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;

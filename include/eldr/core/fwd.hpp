@@ -1,6 +1,7 @@
 #pragma once
 
 #include <eldr/core/math.hpp>
+using Float = typename glm::float32_t;
 
 namespace eldr {
 class Bitmap;
@@ -118,4 +119,4 @@ template <typename Float_> struct CoreAliases {
   using prefix##Color3d     = typename prefix##CoreAliases::Color3d;           \
   using prefix##Color4d     = typename prefix##CoreAliases::Color4d;
 
-#define ELDR_IMPORT_CORE_TYPES() ELDR_IMPORT_CORE_TYPES_PREFIX(glm::float32_t, )
+#define ELDR_IMPORT_CORE_TYPES() ELDR_IMPORT_CORE_TYPES_PREFIX(Float, )

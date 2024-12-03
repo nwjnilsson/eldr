@@ -21,7 +21,7 @@ namespace eldr {
 //   std::vector<RenderObject> opaque_surfaces;
 // };
 
-enum class ShapeType { Mesh, Disk, Rectangle, Sphere, Other };
+enum class ShapeType : uint8_t { Mesh, Disk, Rectangle, Sphere, Other };
 
 class Shape {
   ELDR_IMPORT_CORE_TYPES();
@@ -34,6 +34,7 @@ public:
 
   /// @brief Get the name of this shape
   [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] ShapeType          type() const { return shape_type_; }
 
 protected:
   // inline Shape() = default;

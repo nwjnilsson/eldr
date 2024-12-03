@@ -64,7 +64,7 @@ private:
   void setupWindowCallbacks();
   void setupInputCallbacks();
   void updateImGui();
-  void submitGeometry(const std::vector<std::shared_ptr<Shape>>&);
+  void submitGeometry(const std::vector<SceneNode>&);
 
 public:
   static constexpr uint32_t width  = 1280;

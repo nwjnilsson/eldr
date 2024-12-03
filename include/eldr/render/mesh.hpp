@@ -10,12 +10,20 @@
 
 namespace eldr {
 
-struct GeoSurface {
-  uint32_t start_index;
-  uint32_t count;
+// TODO: decide how to deal with materials. I think an enumeration like this
+// could be of use for the Vulkan side of things (selecting pipeline etc) but
+// the path tracing side will deal with it differently maybe
+enum class MaterialType : uint8_t {
+  Metallic,
 };
 
-class Mesh : public Shape {
+struct GeoSurface {
+  uint32_t     start_index;
+  uint32_t     count;
+  MaterialType material;
+};
+
+class Mesh final : public Shape {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
@@ -36,15 +44,22 @@ public:
     return vtx_texcoords_;
   }
 
+  /// @brief Get a vector of vtx colors from this mesh
+  [[nodiscard]] const std::vector<Color4f>& vtxColors() const
+  {
+    return vtx_colors_;
+  }
+
   /// @brief Get a vector of vtx normals from this mesh
   [[nodiscard]] const std::vector<Vec3f>& vtxNormals() const
   {
     return vtx_normals_;
   }
 
-  [[nodiscard]] const std::vector<Color4f>& vtxColors() const
+  /// @brief Get a vector surface info from this mesh
+  [[nodiscard]] const std::vector<GeoSurface>& surfaces() const
   {
-    return vtx_colors_;
+    return surfaces_;
   }
 
   [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
@@ -52,7 +67,7 @@ public:
 
   //  template <typename T>
   [[nodiscard]]
-  static std::optional<std::vector<std::shared_ptr<Shape>>>
+  static std::optional<std::vector<std::shared_ptr<Mesh>>>
   loadObjMeshes(std::filesystem::path file_path);
 
 protected:

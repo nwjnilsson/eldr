@@ -1,11 +1,8 @@
 #pragma once
-#include <eldr/core/fwd.hpp>
 #include <eldr/core/logger.hpp>
-#include <eldr/render/fwd.hpp>
-#include <eldr/vulkan/fwd.hpp>
+#include <eldr/render/scene.hpp>
 
 #include <functional>
-#include <memory>
 #include <span>
 
 namespace eldr {
@@ -26,6 +23,23 @@ public:
   VulkanEngine(const Window& window);
   ~VulkanEngine();
 
+  // template <typename T, typename... Args> T* add(Args&&... args)
+  //{
+  //   auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
+  //   if constexpr (std::is_same_v<T, SceneNode>) {
+  //     return
+  //     static_cast<T*>(scene_nodes_.emplace_back(std::move(ptr)).get());
+  //   }
+  //   else {
+  //     static_assert(!std::is_same_v<T, T>, "T must be a SceneNode ");
+  //   }
+  // }
+
+  void addSceneNode(std::shared_ptr<SceneNode> node)
+  {
+    scene_nodes_.push_back(node);
+  }
+
   void updateImGui(std::function<void()> const& lambda);
 
   void uploadMesh(std::span<const Point3f> positions,
@@ -44,8 +58,9 @@ private:
   void createResourceDescriptors();
   void setupRenderGraph();
   void recreateSwapchain();
-  void updateUniformBuffer(uint32_t current_image);
-  void record(uint32_t image_index);
+  void buildBuffers();
+  void updateScene(uint32_t current_image);
+  void drawGeometry(const PhysicalStage& physical, const wr::CommandBuffer& cb);
 
 private:
   const Window& window_;
@@ -54,6 +69,9 @@ private:
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
   uint32_t current_frame_{ 0 };
+
+  DrawContext                             main_draw_context_{};
+  std::vector<std::shared_ptr<SceneNode>> scene_nodes_{};
 
   std::unique_ptr<wr::Instance>             instance_;
   std::unique_ptr<wr::DebugUtilsMessenger>  debug_messenger_;

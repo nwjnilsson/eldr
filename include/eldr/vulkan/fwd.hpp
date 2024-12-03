@@ -6,14 +6,13 @@ struct GpuVertex;
 class ImGuiOverlay;
 // EXPERIMENTAL
 struct GpuMeshBuffers;
-struct RenderObject;
-struct DrawContext;
 
 // RenderGraph types
 class RenderGraph;
 class BufferResource;
 class TextureResource;
 class GraphicsStage;
+class PhysicalStage;
 class PhysicalGraphicsStage;
 enum class TextureUsage;
 

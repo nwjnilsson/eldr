@@ -17,8 +17,7 @@ namespace eldr {
 EldrApp::EldrApp()
   : input_data_(std::make_unique<app::input::KeyboardMouseInput>()),
     window_(std::make_unique<Window>(width, height)),
-    vk_engine_(std::make_unique<vk::VulkanEngine>(*window_)),
-    scene_({ model_path, texture_path })
+    vk_engine_(std::make_unique<vk::VulkanEngine>(*window_))
 {
   setupWindowCallbacks();
   setupInputCallbacks();
@@ -77,7 +76,7 @@ void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/, double /*x_offset*/,
 
 void EldrApp::run()
 {
-  submitGeometry(scene_.shapes());
+  Scene::loadGeometry(vk_engine_.get(), { model_path, texture_path });
   while (!window_->shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
@@ -157,16 +156,5 @@ void EldrApp::updateImGui()
       ImGui::ShowDemoWindow(&show_demo_window);
     }
   });
-}
-
-void EldrApp::submitGeometry(const std::vector<std::shared_ptr<Shape>>& shapes)
-{
-  // Create one big vertex buffer along with index buffer
-  // TODO: Shape should contain texture ref probably
-  Mesh* mesh = dynamic_cast<Mesh*>(shapes[0].get());
-  if (mesh != nullptr) {
-    vk_engine_->uploadMesh(mesh->vtxPositions(), mesh->vtxTexCoords(),
-                           mesh->vtxColors(), mesh->vtxNormals());
-  }
 }
 } // namespace eldr

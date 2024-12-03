@@ -5,6 +5,8 @@
 #include <eldr/core/math.hpp>
 #include <eldr/core/platform.hpp>
 #include <eldr/core/stopwatch.hpp>
+#include <eldr/render/mesh.hpp>
+#include <eldr/render/scene.hpp>
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/imgui.hpp>
@@ -164,6 +166,37 @@ void VulkanEngine::createResourceDescriptors()
   }
 }
 
+void VulkanEngine::buildBuffers()
+{
+  indices_.clear();
+  vertices_.clear();
+
+  std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
+  // Vertex deduplication
+  size_t total_vtx_count{ 0 };
+  for (auto& node : scene_nodes_) {
+    if (auto* mesh_node{ dynamic_cast<MeshNode*>(node.get()) }) {
+      const auto&  mesh{ mesh_node->mesh };
+      const size_t vtx_count{ mesh->vtxPositions().size() };
+      total_vtx_count += vtx_count;
+      for (uint32_t i = 0; i < vtx_count; ++i) {
+        GpuVertex v{ mesh->vtxPositions()[i], mesh->vtxTexCoords()[i],
+                     mesh->vtxColors()[i], mesh->vtxNormals()[i] };
+        if (unique_vertices.count(v) == 0) {
+          unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
+          vertices_.push_back(v);
+        }
+        indices_.push_back(unique_vertices[v]);
+      }
+    }
+  }
+  log_->debug("Vertex deduplication before and after {} -> {}", total_vtx_count,
+              vertices_.size());
+
+  vertex_buffer_->uploadData<GpuVertex>(vertices_);
+  index_buffer_->uploadData<uint32_t>(indices_);
+}
+
 void VulkanEngine::setupRenderGraph()
 {
   // 1 sample for back buffer, max possible sample count for color images and
@@ -212,24 +245,7 @@ void VulkanEngine::setupRenderGraph()
   main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
-      cb.bindDescriptorSets(descriptors_[current_frame_].descriptorSets(),
-                            physical.pipelineLayout());
-      const VkViewport viewports[] = { {
-        .x        = 0.0f,
-        .y        = 0.0f,
-        .width    = static_cast<float>(swapchain_->extent().width),
-        .height   = static_cast<float>(swapchain_->extent().height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f,
-      } };
-      cb.setViewport(viewports, 0);
-
-      const VkRect2D scissors[] = { {
-        .offset = { 0, 0 },
-        .extent = swapchain_->extent(),
-      } };
-      cb.setScissor(scissors, 0);
-      cb.drawIndexed(static_cast<uint32_t>(indices_.size()));
+      drawGeometry(physical, cb);
     });
 
   for (const auto& shader : shaders_) {
@@ -262,8 +278,20 @@ void VulkanEngine::recreateSwapchain()
   render_graph_->compile();
 }
 
-void VulkanEngine::updateUniformBuffer(uint32_t current_image)
+void VulkanEngine::updateScene(uint32_t current_image)
 {
+  // TODO: if scene has changed, rebuild vertices/indices
+  static size_t last_scene_node_count{ 0 };
+  if (scene_nodes_.size() != last_scene_node_count) {
+    buildBuffers();
+    last_scene_node_count = scene_nodes_.size();
+  }
+
+  main_draw_context_.opaque_surfaces.clear();
+  for (auto& node : scene_nodes_) {
+    node->draw(Mat4f{ 1.f }, main_draw_context_);
+  }
+
   static StopWatch stop_watch;
   float            time{ stop_watch.seconds(false) };
 
@@ -278,6 +306,37 @@ void VulkanEngine::updateUniformBuffer(uint32_t current_image)
   proj[1][1] *= -1;
   UniformBufferObject ubo{ .mvp_mat = proj * view * model };
   uniform_buffers_[current_image].uploadData(&ubo, sizeof(ubo));
+}
+
+void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
+                                const wr::CommandBuffer& cb)
+{
+  for (const RenderObject& draw : main_draw_context_.opaque_surfaces) {
+    cb.bindDescriptorSets(descriptors_[current_frame_].descriptorSets(),
+                          physical.pipelineLayout());
+    // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
+    // physical.pipelineLayout(), 1);
+
+    const VkViewport viewports[] = { {
+      .x        = 0.0f,
+      .y        = 0.0f,
+      .width    = static_cast<float>(swapchain_->extent().width),
+      .height   = static_cast<float>(swapchain_->extent().height),
+      .minDepth = 0.0f,
+      .maxDepth = 1.0f,
+    } };
+    cb.setViewport(viewports, 0);
+
+    const VkRect2D scissors[] = { {
+      .offset = { 0, 0 },
+      .extent = swapchain_->extent(),
+    } };
+    cb.setScissor(scissors, 0);
+
+    // TODO: push constants
+
+    cb.drawIndexed(draw.index_count, 1, draw.first_index);
+  }
 }
 
 void VulkanEngine::updateImGui(std::function<void()> const& lambda)
@@ -348,8 +407,6 @@ void VulkanEngine::drawFrame()
   in_flight_cmd_bufs_[current_frame_] = &cb;
   render_graph_->render(image_index, cb);
 
-  updateUniformBuffer(current_frame_); // move
-
   VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
   };
@@ -382,6 +439,8 @@ void VulkanEngine::drawFrame()
   };
 
   swapchain_->present(present_info, swapchain_invalidated_);
+
+  updateScene(current_frame_); // move
 
   current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }

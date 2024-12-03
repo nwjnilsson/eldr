@@ -56,41 +56,36 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
   fg::Category category{ fg::Category::All };
   auto load{ parser.loadGltf(data.get(), file_path.parent_path(), gltf_options,
                              category) };
-  if (load.error() == fg::Error::None) {
+  fg::Error err{ load.error() };
+  if (err == fg::Error::None) {
     gltf = std::move(load.get());
   }
   else {
-    log->error("fg error: {}", fg::getErrorName(load.error()));
+    log->error("fastgltf error: {} - {}", fg::getErrorName(err),
+               fg::getErrorMessage(err));
     return std::nullopt;
   }
 
   std::vector<std::shared_ptr<Mesh>> meshes;
 
-  // use the same vectors for all meshes so that the memory doesnt reallocate as
-  // often
-  std::vector<uint32_t>   indices;
-  std::vector<Point3f>    positions;
-  std::vector<Point2f>    texcoords;
-  std::vector<Color4f>    colors;
-  std::vector<Vec3f>      normals;
-  std::vector<GeoSurface> surfaces;
-
   for (fg::Mesh& mesh : gltf.meshes) {
-    const std::string name{ mesh.name };
-    indices.clear();
-    positions.clear();
-    texcoords.clear();
-    colors.clear();
-    normals.clear();
+    const std::string       name{ mesh.name };
+    std::vector<uint32_t>   indices;
+    std::vector<Point3f>    positions;
+    std::vector<Point2f>    texcoords;
+    std::vector<Color4f>    colors;
+    std::vector<Vec3f>      normals;
+    std::vector<GeoSurface> surfaces;
+    surfaces.reserve(mesh.primitives.size());
 
     for (auto&& p : mesh.primitives) {
       GeoSurface new_surface;
       new_surface.start_index = static_cast<uint32_t>(indices.size());
       new_surface.count =
         static_cast<uint32_t>(gltf.accessors[p.indicesAccessor.value()].count);
+      surfaces.push_back(new_surface);
 
       const size_t initial_vtx = positions.size();
-
       // load indexes
       {
         fg::Accessor& index_accessor =
@@ -110,8 +105,8 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
         const size_t new_size{ initial_vtx + pos_accessor.count };
         positions.reserve(new_size);
         texcoords.reserve(new_size);
-        positions.reserve(new_size);
-        positions.reserve(new_size);
+        colors.reserve(new_size);
+        normals.reserve(new_size);
 
         fg::iterateAccessor<Point3f>(gltf, pos_accessor, [&](Point3f p) {
           positions.push_back(p);
@@ -146,7 +141,6 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
           gltf, gltf.accessors[attr_colors->accessorIndex],
           [&](Color4f c, size_t index) { colors[initial_vtx + index] = c; });
       }
-      surfaces.push_back(new_surface);
     }
 
     // display the vertex normals
@@ -157,7 +151,7 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
       }
     }
 
-    meshes.emplace_back(std::make_unique<Mesh>(
+    meshes.emplace_back(std::make_shared<Mesh>(
       name, std::move(positions), std::move(texcoords), std::move(colors),
       std::move(normals), std::move(surfaces)));
   }
@@ -166,7 +160,7 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
 }
 
 // template <typename T>
-std::optional<std::vector<std::shared_ptr<Shape>>>
+std::optional<std::vector<std::shared_ptr<Mesh>>>
 Mesh::loadObjMeshes(std::filesystem::path file_path)
 {
   Logger log{ requestLogger("mesh") };
@@ -185,15 +179,20 @@ Mesh::loadObjMeshes(std::filesystem::path file_path)
     return std::nullopt;
   }
 
-  std::vector<std::shared_ptr<Shape>> loaded_shapes{};
+  std::vector<std::shared_ptr<Mesh>> loaded_shapes{};
 
   for (const auto& shape : shapes) {
-    std::vector<uint32_t>   indices;
     std::vector<Point3f>    positions;
     std::vector<Point2f>    texcoords;
     std::vector<Color4f>    colors;
     std::vector<Vec3f>      normals;
     std::vector<GeoSurface> surfaces;
+
+    // OBJ does not support submeshes so each surface starts on index 0
+    GeoSurface new_surface;
+    new_surface.start_index = 0;
+    new_surface.count       = static_cast<uint32_t>(shape.mesh.indices.size());
+    surfaces.push_back(new_surface);
 
     for (const auto& index : shape.mesh.indices) {
       positions.push_back({
@@ -216,8 +215,6 @@ Mesh::loadObjMeshes(std::filesystem::path file_path)
                          attrib.colors[3 * index.vertex_index + 1],
                          attrib.colors[3 * index.vertex_index + 2], 1.0f });
     }
-
-    log->trace("Loaded mesh '{}' - {} vertices", shape.name, positions.size());
 
     loaded_shapes.emplace_back(std::make_shared<Mesh>(
       shape.name, std::move(positions), std::move(texcoords), std::move(colors),
