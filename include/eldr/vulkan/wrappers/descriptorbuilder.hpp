@@ -2,9 +2,6 @@
 
 #include <eldr/vulkan/common.hpp>
 
-#include <cassert>
-#include <cstdint>
-#include <string>
 #include <vector>
 
 namespace eldr::vk::wr {
@@ -48,15 +45,15 @@ public:
   /// @brief Builds the resource descriptor.
   /// @param name The internal name of the resource descriptor.
   /// @return The resource descriptor which was created by the builder.
-  [[nodiscard]] ResourceDescriptor build(const std::string& name);
+  [[nodiscard]] DescriptorWriter build(std::string_view name);
 
 private:
   const Device& device_;
 
   std::vector<VkDescriptorSetLayoutBinding> layout_bindings_;
-  std::vector<VkWriteDescriptorSet>         descriptor_write_sets_;
-  std::vector<VkDescriptorBufferInfo>       descriptor_buffer_infos_;
-  std::vector<VkDescriptorImageInfo>        descriptor_image_infos_;
+  std::vector<VkWriteDescriptorSet>         write_sets_;
+  std::vector<VkDescriptorBufferInfo>       buffer_infos_;
+  std::vector<VkDescriptorImageInfo>        image_infos_;
 };
 
 template <typename T>
@@ -74,13 +71,13 @@ DescriptorBuilder::addUniformBuffer(VkBuffer uniform_buffer, uint32_t binding,
     .pImmutableSamplers = nullptr,
   });
 
-  descriptor_buffer_infos_.push_back({
+  buffer_infos_.push_back({
     .buffer = uniform_buffer,
     .offset = 0,
     .range  = sizeof(T),
   });
 
-  descriptor_write_sets_.push_back(VkWriteDescriptorSet{
+  write_sets_.push_back(VkWriteDescriptorSet{
     .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     .pNext            = {},
     .dstSet           = nullptr,
@@ -89,7 +86,7 @@ DescriptorBuilder::addUniformBuffer(VkBuffer uniform_buffer, uint32_t binding,
     .descriptorCount  = 1,
     .descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     .pImageInfo       = {},
-    .pBufferInfo      = &descriptor_buffer_infos_.back(),
+    .pBufferInfo      = &buffer_infos_.back(),
     .pTexelBufferView = {},
   });
 

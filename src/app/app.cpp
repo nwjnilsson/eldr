@@ -76,7 +76,7 @@ void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/, double /*x_offset*/,
 
 void EldrApp::run()
 {
-  Scene::loadGeometry(vk_engine_.get(), { model_path, texture_path });
+  Scene::loadGeometry(vk_engine_.get(), { model_path });
   while (!window_->shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();

@@ -58,7 +58,6 @@ class Scene {
   ELDR_IMPORT_CORE_TYPES();
   struct SceneInfo {
     const std::filesystem::path model_path;
-    const std::filesystem::path texture_path;
   };
 
 public:

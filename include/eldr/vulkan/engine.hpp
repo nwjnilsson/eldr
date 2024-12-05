@@ -73,18 +73,20 @@ private:
   DrawContext                             main_draw_context_{};
   std::vector<std::shared_ptr<SceneNode>> scene_nodes_{};
 
-  std::unique_ptr<wr::Instance>             instance_;
-  std::unique_ptr<wr::DebugUtilsMessenger>  debug_messenger_;
-  std::unique_ptr<wr::Surface>              surface_;
-  std::unique_ptr<wr::Device>               device_;
-  std::unique_ptr<wr::Swapchain>            swapchain_;
-  std::vector<wr::ResourceDescriptor>       descriptors_;
-  std::unique_ptr<RenderGraph>              render_graph_;
-  std::unique_ptr<ImGuiOverlay>             imgui_overlay_;
-  std::vector<wr::GpuTexture>               textures_;
-  std::vector<GpuVertex>                    vertices_;
-  std::vector<uint32_t>                     indices_;
-  std::vector<wr::Shader>                   shaders_;
+  std::unique_ptr<wr::Instance>            instance_;
+  std::unique_ptr<wr::DebugUtilsMessenger> debug_messenger_;
+  std::unique_ptr<wr::Surface>             surface_;
+  std::unique_ptr<wr::Device>              device_;
+  std::unique_ptr<wr::Swapchain>           swapchain_;
+  std::vector<wr::ResourceDescriptor>      descriptors_;
+  std::unique_ptr<RenderGraph>             render_graph_;
+  std::unique_ptr<ImGuiOverlay>            imgui_overlay_;
+  std::vector<wr::GpuTexture>              textures_;
+  std::vector<GpuVertex>                   vertices_;
+  std::vector<uint32_t>                    indices_;
+  std::vector<wr::Shader> shaders_; // shader module is not needed after
+                                    // building pipeline so check if this can be
+                                    // rearranged
   TextureResource*                          back_buffer_{ nullptr };
   TextureResource*                          msaa_buffer_{ nullptr };
   BufferResource*                           vertex_buffer_{ nullptr };

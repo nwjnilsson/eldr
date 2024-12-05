@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <eldr/vulkan/vertex.hpp>
+#include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/gpuresource.hpp>
 
 namespace eldr::vk::wr {

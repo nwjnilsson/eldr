@@ -3,7 +3,7 @@ src = [
   'wrappers/commandbuffer.cpp',
   'wrappers/commandpool.cpp',
   'wrappers/debugutilsmessenger.cpp',
-  'wrappers/descriptor.cpp',
+  'wrappers/descriptorwriter.cpp',
   'wrappers/descriptorbuilder.cpp',
   'wrappers/descriptorpool.cpp',
   'wrappers/descriptorsetlayout.cpp',
@@ -22,7 +22,7 @@ src = [
   'engine.cpp',
   'imgui.cpp',
   'rendergraph.cpp',
-  'vertex.cpp'
+  'vktypes.cpp'
   ]
 
 configure_file(

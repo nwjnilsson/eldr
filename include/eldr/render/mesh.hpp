@@ -17,6 +17,7 @@ enum class MaterialType : uint8_t {
   Metallic,
 };
 
+
 struct GeoSurface {
   uint32_t     start_index;
   uint32_t     count;
@@ -24,7 +25,7 @@ struct GeoSurface {
 };
 
 class Mesh final : public Shape {
-  ELDR_IMPORT_CORE_TYPES();
+  ELDR_IMPORT_CORE_TYPES()
 
 public:
   Mesh(const std::string& name, std::vector<Point3f>&& positions,

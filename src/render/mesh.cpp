@@ -159,6 +159,7 @@ Mesh::loadGltfMeshes(std::filesystem::path file_path)
   return meshes;
 }
 
+// TODO: support MTL file and loading texture from such a reference
 // template <typename T>
 std::optional<std::vector<std::shared_ptr<Mesh>>>
 Mesh::loadObjMeshes(std::filesystem::path file_path)

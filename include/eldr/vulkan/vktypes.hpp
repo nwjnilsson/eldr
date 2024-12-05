@@ -4,6 +4,12 @@
 
 namespace eldr::vk {
 
+struct GpuDrawPushConstants {
+  using Mat4f = CoreAliases<Float>::Mat4f;
+  Mat4f           world_matrix;
+  VkDeviceAddress vertex_buffer;
+};
+
 struct GpuVertex {
   ELDR_IMPORT_CORE_TYPES();
   Point3f pos;

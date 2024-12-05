@@ -1,5 +1,5 @@
 #include <eldr/core/hash.hpp>
-#include <eldr/vulkan/vertex.hpp>
+#include <eldr/vulkan/vktypes.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>

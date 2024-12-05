@@ -694,43 +694,52 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
 
     if (buffer_resource->data_.get() != nullptr) {
       // There is data to be uploaded to gpu
-      bool new_buffer_needed = false;
-      if (unlikely(physical.buffer_ == nullptr)) {
-        new_buffer_needed = true;
+      if (buffer_resource->data_size_ == 0) {
+        // Free the buffer
+        // TODO: Decide whether BufferResource::uploadData() should allow
+        // upploading empty spans at all. Doing so is most likely a mistake (as
+        // far as I can see right now).
+        physical.buffer_.reset();
       }
       else {
-        // A gpu buffer already exists
-        const size_t buffer_size{ static_cast<size_t>(
-          physical.buffer_->size()) };
-        if (buffer_resource->data_size_ != buffer_size) {
-          // The gpu buffer needs to be resized
+        bool new_buffer_needed = false;
+        if (unlikely(physical.buffer_ == nullptr)) {
           new_buffer_needed = true;
         }
-      }
-
-      if (new_buffer_needed) {
-        // Otherwise build a new GPU buffer
-        VkBufferUsageFlags buffer_usage{};
-        switch (buffer_resource->usage_) {
-          case BufferUsage::IndexBuffer:
-            buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-            break;
-          case BufferUsage::VertexBuffer:
-            buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-            break;
-          default:
-            assert(false);
+        else {
+          // A gpu buffer already exists
+          const size_t buffer_size{ static_cast<size_t>(
+            physical.buffer_->size()) };
+          if (buffer_resource->data_size_ != buffer_size) {
+            // The gpu buffer needs to be resized
+            new_buffer_needed = true;
+          }
         }
-        physical.buffer_ = std::make_unique<wr::GpuBuffer>(
-          device_, buffer_resource->data_size_, buffer_usage,
-          VMA_MEMORY_USAGE_CPU_TO_GPU, "render graph buffer");
+
+        if (new_buffer_needed) {
+          // Otherwise build a new GPU buffer
+          VkBufferUsageFlags buffer_usage{};
+          switch (buffer_resource->usage_) {
+            case BufferUsage::IndexBuffer:
+              buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+              break;
+            case BufferUsage::VertexBuffer:
+              buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+              break;
+            default:
+              assert(false);
+          }
+          physical.buffer_ = std::make_unique<wr::GpuBuffer>(
+            device_, buffer_resource->data_size_, buffer_usage,
+            VMA_MEMORY_USAGE_CPU_TO_GPU, "render graph buffer");
+        }
+        // Upload data
+        physical.buffer_->uploadData(buffer_resource->data_.get(),
+                                     buffer_resource->data_size_);
       }
-      // Upload data
-      physical.buffer_->uploadData(buffer_resource->data_.get(),
-                                   buffer_resource->data_size_);
-      // Reset data held by buffer resource once it has been uploaded to gpu
-      buffer_resource->data_.reset();
     }
+    // Reset data held by buffer resource once it has been uploaded to gpu
+    buffer_resource->data_.reset();
   }
 
   // TODO: full memory barrier is not needed between nodes in same subset

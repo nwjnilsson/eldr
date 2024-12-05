@@ -11,7 +11,7 @@
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/imgui.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
-#include <eldr/vulkan/vertex.hpp>
+#include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
@@ -311,7 +311,11 @@ void VulkanEngine::updateScene(uint32_t current_image)
 void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
                                 const wr::CommandBuffer& cb)
 {
-  for (const RenderObject& draw : main_draw_context_.opaque_surfaces) {
+  // for (const RenderObject& draw : main_draw_context_.opaque_surfaces) {
+  const size_t surface_count{ main_draw_context_.opaque_surfaces.size() };
+  size_t       idx_offset{ 0 };
+  for (size_t i = 0; i < surface_count; ++i) {
+    const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
     cb.bindDescriptorSets(descriptors_[current_frame_].descriptorSets(),
                           physical.pipelineLayout());
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
@@ -335,7 +339,8 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
 
     // TODO: push constants
 
-    cb.drawIndexed(draw.index_count, 1, draw.first_index);
+    cb.drawIndexed(draw.index_count, 1, draw.first_index + idx_offset);
+    idx_offset += draw.index_count;
   }
 }
 
@@ -391,6 +396,8 @@ void VulkanEngine::drawFrame()
     return;
   }
 
+  updateScene(current_frame_); // move
+
   // Wait until the previous command buffer with the current frame index
   // has finished executing
   if (likely(in_flight_cmd_bufs_[current_frame_] != nullptr))
@@ -439,8 +446,6 @@ void VulkanEngine::drawFrame()
   };
 
   swapchain_->present(present_info, swapchain_invalidated_);
-
-  updateScene(current_frame_); // move
 
   current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
 }
