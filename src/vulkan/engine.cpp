@@ -15,8 +15,9 @@
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
-#include <eldr/vulkan/wrappers/descriptor.hpp>
-#include <eldr/vulkan/wrappers/descriptorbuilder.hpp>
+#include <eldr/vulkan/wrappers/descriptorallocator.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
@@ -32,9 +33,9 @@
 #include <string>
 
 namespace eldr::vk {
-struct UniformBufferObject {
-  ELDR_IMPORT_CORE_TYPES();
-  alignas(16) Mat4f mvp_mat;
+struct GpuModelData {
+  ELDR_IMPORT_CORE_TYPES()
+  Mat4f model_mat;
 };
 
 struct GpuMeshBuffers {
@@ -44,9 +45,7 @@ struct GpuMeshBuffers {
 };
 
 VulkanEngine::VulkanEngine(const Window& window)
-  : window_(window), log_(requestLogger("vulkan-engine")),
-    in_flight_cmd_bufs_(
-      std::vector<const wr::CommandBuffer*>(max_frames_in_flight, nullptr))
+  : window_(window), log_(requestLogger("vulkan-engine"))
 {
   // ---------------------------------------------------------------------------
   // Create instance
@@ -101,10 +100,10 @@ VulkanEngine::VulkanEngine(const Window& window)
   loadShaders();
 
   // ---------------------------------------------------------------------------
-  // Create uniform buffers and descriptors
+  // Set up frame data
   // ---------------------------------------------------------------------------
-  createUniformBuffers();
-  createResourceDescriptors();
+  setupFrameData();
+  initDescriptors();
   //  ---------------------------------------------------------------------------
   //  Create render graph
   //  ---------------------------------------------------------------------------
@@ -141,29 +140,39 @@ void VulkanEngine::loadShaders()
                         "default frag shader", "main.frag.spv");
 }
 
-void VulkanEngine::createUniformBuffers()
+void VulkanEngine::setupFrameData()
 {
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
-    uniform_buffers_.emplace_back(
-      *device_, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      VMA_MEMORY_USAGE_CPU_TO_GPU, "Uniform buffer");
+    std::vector<wr::DescriptorAllocator::PoolSizeRatio> frame_sizes{
+      { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+      { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 }
+    };
+    frames_in_flight_.push_back(
+      { .descriptors = std::make_unique<wr::DescriptorAllocator>(*device_, 1000,
+                                                                 frame_sizes),
+        .scene_data_buffer = std::make_unique<wr::GpuBuffer>(
+          *device_, sizeof(GpuSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+          VMA_MEMORY_USAGE_CPU_TO_GPU, "Scene data uniform buffer"),
+        .model_data_buffer = std::make_unique<wr::GpuBuffer>(
+          *device_, sizeof(GpuModelData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+          VMA_MEMORY_USAGE_CPU_TO_GPU, "Model data uniform buffer"),
+        .cmd_buf = nullptr });
   }
 }
 
-void VulkanEngine::createResourceDescriptors()
+void VulkanEngine::initDescriptors()
 {
-  wr::DescriptorBuilder descriptor_builder(*device_);
-  for (size_t i = 0; i < max_frames_in_flight; ++i) {
-    descriptor_builder
-      .addUniformBuffer<UniformBufferObject>(uniform_buffers_[i].get(), 0)
-      .addCombinedImageSampler(textures_[0].sampler(), textures_[0].imageView(),
-                               1);
-    descriptors_.emplace_back(descriptor_builder.build(fmt::format(
-      "{} (frame {})", textures_[0].name(), i))); // TODO: textures created with
-                                                  // bitmaps are named
-                                                  // "undefined" by default. Get
-                                                  // name some other way.
-  }
+  std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+  layout_bindings.push_back({
+    .binding         = 0,
+    .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorCount = 1,
+    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+    .pImmutableSamplers = nullptr,
+  });
+
+  gpu_scene_data_descriptor_layout =
+    std::make_unique<wr::DescriptorSetLayout>(*device_, layout_bindings, 0);
 }
 
 void VulkanEngine::buildBuffers()
@@ -258,7 +267,7 @@ void VulkanEngine::setupRenderGraph()
   // is (for now) okay to only add a single layout for each resource descriptor
   // that applies to all frames.
   // for (const auto& descriptor : descriptors_)
-  main_stage->addDescriptorLayout(descriptors_[0].descriptorSetLayout());
+  main_stage->addDescriptorLayout(gpu_scene_data_descriptor_layout->get());
 }
 
 void VulkanEngine::recreateSwapchain()
@@ -303,9 +312,18 @@ void VulkanEngine::updateScene(uint32_t current_image)
                                swapchain_->extent().width /
                                  (float) swapchain_->extent().height,
                                0.1f, 10.0f) };
+  GpuModelData model_data{ .model_mat = model };
   proj[1][1] *= -1;
-  UniformBufferObject ubo{ .mvp_mat = proj * view * model };
-  uniform_buffers_[current_image].uploadData(&ubo, sizeof(ubo));
+  scene_data_.proj               = proj;
+  scene_data_.view               = view;
+  scene_data_.viewproj           = proj * view;
+  scene_data_.ambient_color      = {};
+  scene_data_.sunlight_color     = {};
+  scene_data_.sunlight_direction = {};
+  frames_in_flight_[current_image].scene_data_buffer->uploadData(
+    &scene_data_, sizeof(scene_data_));
+  frames_in_flight_[current_image].model_data_buffer->uploadData(
+    &model_data, sizeof(model_data));
 }
 
 void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
@@ -316,8 +334,18 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
   size_t       idx_offset{ 0 };
   for (size_t i = 0; i < surface_count; ++i) {
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
-    cb.bindDescriptorSets(descriptors_[current_frame_].descriptorSets(),
-                          physical.pipelineLayout());
+    // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
+    //                       physical.pipelineLayout());
+    VkDescriptorSet global_descriptor{
+      frames_in_flight_[frame_index_].descriptors->allocate(
+        gpu_scene_data_descriptor_layout->get())
+    };
+
+    wr::DescriptorWriter writer{ *device_ };
+    writer.writeUniformBuffer<GpuSceneData>(
+      0, frames_in_flight_[frame_index_].scene_data_buffer->get());
+    writer.updateSet(global_descriptor);
+
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
 
@@ -354,7 +382,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
   lambda();
   ImGui::EndFrame();
   ImGui::Render();
-  imgui_overlay_->update(current_frame_);
+  imgui_overlay_->update(frame_index_);
 }
 
 // TODO: move this to where it is relevant
@@ -396,22 +424,26 @@ void VulkanEngine::drawFrame()
     return;
   }
 
-  updateScene(current_frame_); // move
+  updateScene(frame_index_); // move
+
+  FrameData& frame{ frames_in_flight_[frame_index_] };
 
   // Wait until the previous command buffer with the current frame index
   // has finished executing
-  if (likely(in_flight_cmd_bufs_[current_frame_] != nullptr))
-    in_flight_cmd_bufs_[current_frame_]->waitFence();
+  if (likely(frame.cmd_buf != nullptr))
+    frame.cmd_buf->waitFence();
+
+  frame.descriptors->resetPools();
 
   const uint32_t image_index{ swapchain_->acquireNextImage(
-    current_frame_, swapchain_invalidated_) };
+    frame_index_, swapchain_invalidated_) };
   if (swapchain_invalidated_) {
     // Skip rendering, swapchain is recreated on next call
     return;
   }
 
   const auto& cb{ device_->requestCommandBuffer() };
-  in_flight_cmd_bufs_[current_frame_] = &cb;
+  frame.cmd_buf = &cb;
   render_graph_->render(image_index, cb);
 
   VkPipelineStageFlags wait_stages[]{
@@ -422,12 +454,12 @@ void VulkanEngine::drawFrame()
     .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
     .pNext                = {},
     .waitSemaphoreCount   = 1,
-    .pWaitSemaphores      = swapchain_->imageAvailableSemaphore(current_frame_),
+    .pWaitSemaphores      = swapchain_->imageAvailableSemaphore(frame_index_),
     .pWaitDstStageMask    = wait_stages,
     .commandBufferCount   = 1,
     .pCommandBuffers      = &cb.get(),
     .signalSemaphoreCount = 1,
-    .pSignalSemaphores    = swapchain_->renderFinishedSemaphore(current_frame_),
+    .pSignalSemaphores    = swapchain_->renderFinishedSemaphore(frame_index_),
   };
 
   // Submit without waiting (we wait at the beginning of this function)
@@ -438,7 +470,7 @@ void VulkanEngine::drawFrame()
     .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
     .pNext              = {},
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores    = swapchain_->renderFinishedSemaphore(current_frame_),
+    .pWaitSemaphores    = swapchain_->renderFinishedSemaphore(frame_index_),
     .swapchainCount     = 1,
     .pSwapchains        = swapchains,
     .pImageIndices      = &image_index,
@@ -447,7 +479,7 @@ void VulkanEngine::drawFrame()
 
   swapchain_->present(present_info, swapchain_invalidated_);
 
-  current_frame_ = (current_frame_ + 1) % max_frames_in_flight;
+  frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
 
 std::string VulkanEngine::deviceName() const { return device_->name(); }

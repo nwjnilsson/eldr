@@ -1,18 +1,20 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
 
-#include <vector>
+#include <span>
 
 namespace eldr::vk::wr {
 
 class DescriptorSetLayout {
 public:
-  DescriptorSetLayout(const Device&,
-                      const std::vector<VkDescriptorSetLayoutBinding>&);
+  DescriptorSetLayout()                           = delete;
+  DescriptorSetLayout(const DescriptorSetLayout&) = delete;
+  DescriptorSetLayout(DescriptorSetLayout&&) noexcept;
+  DescriptorSetLayout(const Device&, std::span<VkDescriptorSetLayoutBinding>,
+                      VkDescriptorSetLayoutCreateFlags flags);
   ~DescriptorSetLayout();
 
-  const VkDescriptorSetLayout& get() const { return layout_; }
+  [[nodiscard]] VkDescriptorSetLayout get() const { return layout_; }
 
 private:
   const Device& device_;

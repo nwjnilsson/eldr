@@ -2,47 +2,6 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 namespace eldr::vk::wr {
-DescriptorWriter::DescriptorWriter(const Device& device, std::string_view name)
-  : device_(device), name_(name)
-{
-  // Create layout
-  //  const VkDescriptorSetLayoutCreateInfo layout_ci{
-  //    .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-  //    .pNext        = {},
-  //    .flags        = {},
-  //    .bindingCount = static_cast<uint32_t>(bindings_.size()),
-  //    .pBindings    = bindings_.data(),
-  //  };
-  //
-  //  if (const VkResult result = vkCreateDescriptorSetLayout(
-  //        device_.logical(), &layout_ci, nullptr, &descriptor_set_layout_);
-  //      result != VK_SUCCESS)
-  //    ThrowVk(result, "vkCreateDescriptorSetLayout(): ");
-
-  // updateSet(descriptor_sets_[0]);
-  // for (size_t i = 0; i < write_sets_.size(); ++i) {
-  //   write_sets_[i].dstSet = descriptor_sets_[0];
-  //   // write_sets_[i].dstBinding = static_cast<uint32_t>(i);
-  // }
-  // vkUpdateDescriptorSets(device_.logical(),
-  //                        static_cast<uint32_t>(write_sets_.size()),
-  //                        write_sets_.data(), 0, nullptr);
-}
-
-DescriptorWriter::DescriptorWriter(DescriptorWriter&& other) noexcept
-  : device_(other.device_), name_(std::move(other.name_))
-{
-  // name_ = std::exchange(other.name_, "");
-  //   descriptor_set_layout_ =
-  //     std::exchange(other.descriptor_set_layout_, VK_NULL_HANDLE);
-}
-
-DescriptorWriter::~DescriptorWriter()
-{
-  //  if (descriptor_set_layout_ != VK_NULL_HANDLE)
-  //    vkDestroyDescriptorSetLayout(device_.logical(), descriptor_set_layout_,
-  //                                 nullptr);
-}
 
 void DescriptorWriter::clear()
 {

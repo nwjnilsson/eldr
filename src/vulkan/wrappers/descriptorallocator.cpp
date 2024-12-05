@@ -1,4 +1,5 @@
 #include <eldr/vulkan/wrappers/descriptorallocator.hpp>
+#include <eldr/vulkan/wrappers/descriptorpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
 namespace eldr::vk::wr {
@@ -9,72 +10,54 @@ DescriptorAllocator::DescriptorAllocator(const Device&            device,
   : device_(device), ratios_(ratios.begin(), ratios.end()),
     sets_per_pool_(std::min(max_sets, max_sets_limit))
 {
-  ready_pools_.push_back(createPool(ratios_));
+  ready_pools_.push_back(createPool());
 }
 
 DescriptorAllocator::~DescriptorAllocator() { destroyPools(); }
 
-VkDescriptorPool DescriptorAllocator::getPool()
+DescriptorPool DescriptorAllocator::getPool()
 {
-  VkDescriptorPool new_pool;
   if (!ready_pools_.empty()) {
-    new_pool = ready_pools_.back();
+    DescriptorPool new_pool{ std::move(ready_pools_.back()) };
     ready_pools_.pop_back();
+    return new_pool;
   }
   else {
     // need to create a new pool
-    sets_per_pool_ =
-      std::min(static_cast<uint32_t>(sets_per_pool_ * 1.5), max_sets_limit);
-    new_pool = createPool(ratios_);
+    return createPool();
   }
-  return new_pool;
 }
 
-VkDescriptorPool
-DescriptorAllocator::createPool(std::span<PoolSizeRatio> pool_ratios)
+DescriptorPool DescriptorAllocator::createPool()
 {
+  // Update max sets per pool for the creation of this pool
+  sets_per_pool_ =
+    std::min(static_cast<uint32_t>(sets_per_pool_ * 1.5), max_sets_limit);
+
   std::vector<VkDescriptorPoolSize> pool_sizes;
-  for (PoolSizeRatio ratio : pool_ratios) {
+  for (PoolSizeRatio ratio : ratios_) {
     pool_sizes.push_back({ .type            = ratio.type,
                            .descriptorCount = static_cast<uint32_t>(
                              ratio.ratio * sets_per_pool_) });
   }
 
-  const VkDescriptorPoolCreateInfo pool_ci{
-    .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-    .pNext         = {},
-    .flags         = 0,
-    .maxSets       = sets_per_pool_,
-    .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
-    .pPoolSizes    = pool_sizes.data(),
-  };
-
-  VkDescriptorPool new_pool;
-  if (const VkResult result =
-        vkCreateDescriptorPool(device_.logical(), &pool_ci, nullptr, &new_pool);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateDescriptorPool(): ");
-  return new_pool;
+  return DescriptorPool{ device_, sets_per_pool_, pool_sizes };
 }
 
 void DescriptorAllocator::resetPools()
 {
-  for (auto p : ready_pools_)
-    vkResetDescriptorPool(device_.logical(), p, 0);
-  for (auto p : full_pools_) {
-    vkResetDescriptorPool(device_.logical(), p, 0);
-    ready_pools_.push_back(p);
+  for (auto& p : ready_pools_)
+    p.reset();
+  for (auto& p : full_pools_) {
+    p.reset();
+    ready_pools_.push_back(std::move(p));
   }
   full_pools_.clear();
 }
 
 void DescriptorAllocator::destroyPools()
 {
-  for (auto p : ready_pools_)
-    vkDestroyDescriptorPool(device_.logical(), p, nullptr);
   ready_pools_.clear();
-  for (auto p : full_pools_)
-    vkDestroyDescriptorPool(device_.logical(), p, nullptr);
   full_pools_.clear();
 }
 
@@ -97,12 +80,12 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
    */
 
   // get or create a pool to allocate from
-  VkDescriptorPool pool_to_use{ getPool() };
+  DescriptorPool pool_to_use{ getPool() };
 
   VkDescriptorSetAllocateInfo alloc_info{
     .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .pNext              = pNext,
-    .descriptorPool     = pool_to_use,
+    .descriptorPool     = pool_to_use.get(),
     .descriptorSetCount = 1,
     .pSetLayouts        = &layout,
   };
@@ -113,9 +96,9 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
   // allocation failed. Try again
   if (result == VK_ERROR_OUT_OF_POOL_MEMORY ||
       result == VK_ERROR_FRAGMENTED_POOL) {
-    full_pools_.push_back(pool_to_use);
+    full_pools_.push_back(std::move(pool_to_use));
     pool_to_use               = getPool();
-    alloc_info.descriptorPool = pool_to_use;
+    alloc_info.descriptorPool = pool_to_use.get();
     if (result = vkAllocateDescriptorSets(device_.logical(), &alloc_info, &ds);
         result != VK_SUCCESS)
       ThrowVk(result, "vkAllocateDescriptorSets(): ");
@@ -124,7 +107,7 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
     ThrowVk(result, "vkAllocateDescriptorSets(): ");
   }
 
-  ready_pools_.push_back(pool_to_use);
+  ready_pools_.push_back(std::move(pool_to_use));
   return ds;
 }
 

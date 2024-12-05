@@ -3,17 +3,16 @@
 #include <eldr/vulkan/common.hpp>
 
 #include <deque>
-#include <string>
 #include <vector>
 
 namespace eldr::vk::wr {
 
 class DescriptorWriter {
 public:
-  DescriptorWriter(const Device& device, std::string_view name);
-  DescriptorWriter(DescriptorWriter&&) noexcept;
-  DescriptorWriter(const DescriptorWriter&) = delete;
-  ~DescriptorWriter();
+  inline DescriptorWriter(const Device& device) : device_(device) {};
+  DescriptorWriter(DescriptorWriter&&) noexcept = default;
+  DescriptorWriter(const DescriptorWriter&)     = delete;
+  ~DescriptorWriter()                           = default;
 
   void clear();
 
@@ -46,16 +45,11 @@ public:
 
 private:
   const Device& device_;
-  std::string   name_;
+  // std::string   name_;
 
   std::deque<VkDescriptorBufferInfo> buffer_infos_;
   std::deque<VkDescriptorImageInfo>  image_infos_;
   std::vector<VkWriteDescriptorSet>  write_sets_;
-
-  // VkDescriptorSetLayout descriptor_set_layout_{ VK_NULL_HANDLE };
-  // std::vector<VkDescriptorSetLayoutBinding> bindings_;
-  // std::vector<VkWriteDescriptorSet>         descriptor_writes_;
-  // std::vector<VkDescriptorSet>              descriptor_sets_;
 };
 
 template <typename T>

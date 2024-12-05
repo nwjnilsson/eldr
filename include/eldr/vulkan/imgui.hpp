@@ -7,7 +7,6 @@
 #include <imgui.h>
 
 #include <memory>
-#include <vector>
 
 class GLFWwindow;
 namespace eldr::vk {
@@ -35,10 +34,9 @@ private:
   BufferResource* vertex_buffer_{ nullptr };
   GraphicsStage*  stage_{ nullptr };
 
-  std::unique_ptr<wr::GpuTexture>     imgui_texture_;
-  std::unique_ptr<wr::Shader>         vertex_shader_;
-  std::unique_ptr<wr::Shader>         fragment_shader_;
-  std::vector<wr::ResourceDescriptor> descriptors_;
+  std::unique_ptr<wr::GpuTexture> imgui_texture_;
+  std::unique_ptr<wr::Shader>     vertex_shader_;
+  std::unique_ptr<wr::Shader>     fragment_shader_;
 
   struct PushConstantBlock {
     Vec2f scale;

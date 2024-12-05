@@ -24,17 +24,17 @@ public:
   VkDescriptorSet allocate(VkDescriptorSetLayout layout, void* pNext = nullptr);
 
 private:
-  VkDescriptorPool getPool();
-  VkDescriptorPool createPool(std::span<PoolSizeRatio> pool_ratios);
+  DescriptorPool getPool();
+  DescriptorPool createPool();
 
 private:
   static constexpr uint32_t max_sets_limit{ 4092 };
 
   const Device& device_;
 
-  std::vector<PoolSizeRatio>    ratios_;
-  std::vector<VkDescriptorPool> full_pools_;
-  std::vector<VkDescriptorPool> ready_pools_;
-  uint32_t                      sets_per_pool_;
+  std::vector<PoolSizeRatio>  ratios_;
+  std::vector<DescriptorPool> full_pools_;
+  std::vector<DescriptorPool> ready_pools_;
+  uint32_t                    sets_per_pool_;
 };
 } // namespace eldr::vk::wr
