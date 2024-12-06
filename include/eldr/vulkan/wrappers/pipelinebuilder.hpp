@@ -10,7 +10,7 @@ namespace eldr::vk::wr {
 /// and pipeline into the same object
 class PipelineBuilder {
 public:
-  PipelineBuilder(const Device& device) : device_(device) { clear(); }
+  PipelineBuilder() { clear(); }
 
   void clear();
 
@@ -28,10 +28,10 @@ public:
                               const Shader& fragment_shader);
   PipelineBuilder& setInputTopology(VkPrimitiveTopology topology);
 
-  [[nodiscard]] GraphicsPipeline build(std::string_view name);
+  [[nodiscard]] GraphicsPipeline build(const Device&    device,
+                                       std::string_view name);
 
 private:
-  const Device& device_;
   // Pipeline layout stuff
   std::vector<VkDescriptorSetLayout> descriptor_layouts_;
   std::vector<VkPushConstantRange>   push_constant_ranges_;

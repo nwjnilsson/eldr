@@ -64,7 +64,8 @@ PipelineBuilder& PipelineBuilder::setShaders(const Shader& vertex_shader,
   return *this;
 }
 
-GraphicsPipeline PipelineBuilder::build(std::string_view name)
+GraphicsPipeline PipelineBuilder::build(const Device&    device,
+                                        std::string_view name)
 {
   // Pipeline layout
   const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
@@ -139,6 +140,8 @@ GraphicsPipeline PipelineBuilder::build(std::string_view name)
     .basePipelineIndex   = -1,
   };
 
-  return GraphicsPipeline(device_, name, pipeline_layout_ci, pipeline_ci);
+  GraphicsPipeline pipeline{ device, name, pipeline_layout_ci, pipeline_ci };
+  clear();
+  return pipeline;
 }
 } // namespace eldr::vk::wr

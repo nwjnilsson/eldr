@@ -16,7 +16,7 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
 #include <eldr/vulkan/wrappers/descriptorallocator.hpp>
-#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/wrappers/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
@@ -162,17 +162,19 @@ void VulkanEngine::setupFrameData()
 
 void VulkanEngine::initDescriptors()
 {
-  std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-  layout_bindings.push_back({
-    .binding         = 0,
-    .descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    .descriptorCount = 1,
-    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-    .pImmutableSamplers = nullptr,
-  });
+
+  wr::DescriptorSetLayoutBuilder layout_builder;
+  wr::DescriptorSetLayout        layout{
+    layout_builder
+      .addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT |
+                                    VK_SHADER_STAGE_FRAGMENT_BIT)
+      .addUniformBuffer(1, VK_SHADER_STAGE_VERTEX_BIT)
+      .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT)
+      .build(*device_, 0)
+  };
 
   gpu_scene_data_descriptor_layout =
-    std::make_unique<wr::DescriptorSetLayout>(*device_, layout_bindings, 0);
+    std::make_unique<wr::DescriptorSetLayout>(std::move(layout));
 }
 
 void VulkanEngine::buildBuffers()
@@ -341,10 +343,14 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
         gpu_scene_data_descriptor_layout->get())
     };
 
-    wr::DescriptorWriter writer{ *device_ };
+    wr::DescriptorWriter writer;
     writer.writeUniformBuffer<GpuSceneData>(
       0, frames_in_flight_[frame_index_].scene_data_buffer->get());
-    writer.updateSet(global_descriptor);
+    writer.writeUniformBuffer<GpuModelData>(
+      1, frames_in_flight_[frame_index_].model_data_buffer->get());
+    writer.writeCombinedImageSampler(2, viking_texture_->imageView(),
+                                     viking_texture_->sampler());
+    writer.updateSet(*device_, global_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);

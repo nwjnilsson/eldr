@@ -41,7 +41,7 @@ DescriptorWriter& DescriptorWriter::writeImage(uint32_t         binding,
 DescriptorWriter& DescriptorWriter::writeSampler(uint32_t  binding,
                                                  VkSampler sampler)
 {
-  return writeImage(binding, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_NULL_HANDLE,
+  return writeImage(binding, VK_DESCRIPTOR_TYPE_SAMPLER, VK_NULL_HANDLE,
                     sampler, {});
 }
 
@@ -68,13 +68,14 @@ DescriptorWriter& DescriptorWriter::writeStorageImage(uint32_t      binding,
                     VK_NULL_HANDLE, layout);
 }
 
-void DescriptorWriter::updateSet(VkDescriptorSet set)
+void DescriptorWriter::updateSet(const Device& device, VkDescriptorSet set)
 {
   for (auto& write : write_sets_)
     write.dstSet = set;
 
-  vkUpdateDescriptorSets(device_.logical(),
+  vkUpdateDescriptorSets(device.logical(),
                          static_cast<uint32_t>(write_sets_.size()),
                          write_sets_.data(), 0, nullptr);
+  clear();
 }
 } // namespace eldr::vk::wr
