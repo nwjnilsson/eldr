@@ -1,4 +1,5 @@
 #pragma once
+#include "eldr/vulkan/material.hpp"
 #include <eldr/core/logger.hpp>
 #include <eldr/render/scene.hpp>
 
@@ -13,10 +14,10 @@ namespace vk {
 
 // TODO: decide where to put this struct
 struct FrameData {
-  std::unique_ptr<wr::DescriptorAllocator> descriptors;
-  std::unique_ptr<wr::GpuBuffer>           scene_data_buffer;
-  std::unique_ptr<wr::GpuBuffer>           model_data_buffer;
-  const wr::CommandBuffer*                 cmd_buf;
+  std::unique_ptr<DescriptorAllocator> descriptors;
+  std::unique_ptr<wr::GpuBuffer>       scene_data_buffer;
+  std::unique_ptr<wr::GpuBuffer>       model_data_buffer;
+  const wr::CommandBuffer*             cmd_buf;
 };
 
 struct GpuSceneData {
@@ -68,11 +69,14 @@ public:
 
   [[nodiscard]] std::string deviceName() const;
 
+  void buildMaterialPipelines(GltfMetallicRoughness& material);
+
 private:
   void loadTextures();
   void loadShaders();
   void setupFrameData();
   void initDescriptors();
+  void initDefaultData();
   void createCommandBuffers();
   void setupRenderGraph();
   void recreateSwapchain();
@@ -88,21 +92,24 @@ private:
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
 
-  DrawContext                             main_draw_context_{};
-  std::vector<std::shared_ptr<SceneNode>> scene_nodes_{};
+  // TODO: put data in engine data, get rid of unique_ptrs
+  struct EngineResources;
+  std::unique_ptr<EngineResources> ed;
+
+  DrawContext                             main_draw_context_;
+  std::vector<std::shared_ptr<SceneNode>> scene_nodes_;
 
   std::unique_ptr<wr::Instance>            instance_;
   std::unique_ptr<wr::DebugUtilsMessenger> debug_messenger_;
   std::unique_ptr<wr::Surface>             surface_;
   std::unique_ptr<wr::Device>              device_;
   std::unique_ptr<wr::Swapchain>           swapchain_;
-  // std::vector<wr::ResourceDescriptor>      descriptors_;
-  std::unique_ptr<RenderGraph>  render_graph_;
-  std::unique_ptr<ImGuiOverlay> imgui_overlay_;
-  std::vector<wr::GpuTexture>   textures_;
-  std::vector<GpuVertex>        vertices_;
-  std::vector<uint32_t>         indices_;
-  std::vector<wr::Shader>       shaders_; // shader module is not needed after
+  std::unique_ptr<RenderGraph>             render_graph_;
+  std::unique_ptr<ImGuiOverlay>            imgui_overlay_;
+  std::vector<wr::GpuTexture>              textures_;
+  std::vector<GpuVertex>                   vertices_;
+  std::vector<uint32_t>                    indices_;
+  std::vector<wr::Shader> shaders_; // shader module is not needed after
                                     // building pipeline so check if this can be
                                     // rearranged
   TextureResource*       back_buffer_{ nullptr };
@@ -111,11 +118,16 @@ private:
   BufferResource*        index_buffer_{ nullptr };
   std::vector<FrameData> frames_in_flight_;
 
+  // The data below is experimental, default data
+  std::unique_ptr<wr::GpuTexture>          default_texture_sampler_linear_;
   GpuSceneData                             scene_data_;
-  std::unique_ptr<wr::DescriptorSetLayout> gpu_scene_data_descriptor_layout;
+  std::unique_ptr<wr::DescriptorSetLayout> gpu_scene_data_descriptor_layout_;
+  std::unique_ptr<wr::DescriptorSetLayout> viking_model_descriptor_layout_;
+  MaterialInstance                         default_data_;
+  GltfMetallicRoughness                    metal_rough_material_;
 
-  std::unique_ptr<wr::GpuTexture>           viking_texture_;
-  std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
+  std::unique_ptr<wr::GpuTexture> viking_texture_;
+  // std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
 };
 
 } // namespace vk

@@ -2,18 +2,48 @@
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
 namespace eldr::vk::wr {
+//------------------------------------------------------------------------------
+// SamplerImpl
+//------------------------------------------------------------------------------
+class Sampler::SamplerImpl {
+public:
+  SamplerImpl(const Device& device, const VkSamplerCreateInfo& ci);
+  ~SamplerImpl();
+  const Device& device_;
+  VkSampler     sampler_{ VK_NULL_HANDLE };
+};
 
-Sampler::Sampler(const Device& device, uint32_t mip_levels) : device_(device)
+Sampler::SamplerImpl::SamplerImpl(const Device&              device,
+                                  const VkSamplerCreateInfo& ci)
+  : device_(device)
+{
+  if (const auto result =
+        vkCreateSampler(device.logical(), &ci, nullptr, &sampler_);
+      result != VK_SUCCESS) {
+    ThrowVk(result, "vkCreateSampler(): ");
+  }
+}
+
+Sampler::SamplerImpl::~SamplerImpl()
+{
+  if (sampler_ != VK_NULL_HANDLE)
+    vkDestroySampler(device_.logical(), sampler_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// Sampler
+//------------------------------------------------------------------------------
+Sampler::Sampler(const Device& device, VkFilter filter, uint32_t mip_levels)
 {
   VkPhysicalDeviceProperties props{};
-  vkGetPhysicalDeviceProperties(device_.physical(), &props);
+  vkGetPhysicalDeviceProperties(device.physical(), &props);
 
   const VkSamplerCreateInfo sampler_info{
     .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
     .pNext                   = {},
     .flags                   = {},
-    .magFilter               = VK_FILTER_LINEAR,
-    .minFilter               = VK_FILTER_LINEAR,
+    .magFilter               = filter,
+    .minFilter               = filter,
     .mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR,
     .addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
     .addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -29,17 +59,9 @@ Sampler::Sampler(const Device& device, uint32_t mip_levels) : device_(device)
     .unnormalizedCoordinates = VK_FALSE,
   };
 
-  if (const auto result =
-        vkCreateSampler(device_.logical(), &sampler_info, nullptr, &sampler_);
-      result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateSampler(): ");
-  }
+  sampler_data_ = std::make_shared<SamplerImpl>(device, sampler_info);
 }
 
-Sampler::~Sampler()
-{
-  if (sampler_ != VK_NULL_HANDLE)
-    vkDestroySampler(device_.logical(), sampler_, nullptr);
-}
+VkSampler Sampler::get() const { return sampler_data_->sampler_; }
 
 } // namespace eldr::vk::wr

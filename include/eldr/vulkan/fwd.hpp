@@ -7,6 +7,9 @@ class ImGuiOverlay;
 // EXPERIMENTAL
 struct GpuMeshBuffers;
 
+// Material
+struct GltfMetallicRoughness;
+
 // RenderGraph types
 class RenderGraph;
 class BufferResource;
@@ -16,6 +19,9 @@ class PhysicalStage;
 class PhysicalGraphicsStage;
 enum class TextureUsage;
 
+class DescriptorWriter;
+class DescriptorAllocator;
+
 namespace wr {
 class DebugUtilsMessenger;
 class Instance;
@@ -24,18 +30,15 @@ class Device;
 struct QueueFamilyIndices;
 class Swapchain;
 class DescriptorPool;
-class DescriptorWriter;
 class DescriptorSetLayout;
-class DescriptorAllocator;
 class CommandPool;
 class Sampler;
 class Pipeline;
 class GraphicsPipeline;
 // class ComputePipeline;
-class GpuTexture;
-class GpuResource;
-class GpuBuffer;
-class GpuImage;
+class Texture;
+class Buffer;
+class Image;
 class ImageView;
 class Framebuffer;
 class CommandBuffer;

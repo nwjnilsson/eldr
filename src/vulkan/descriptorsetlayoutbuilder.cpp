@@ -1,6 +1,6 @@
-#include <eldr/vulkan/wrappers/descriptorsetlayoutbuilder.hpp>
+#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 DescriptorSetLayoutBuilder&
 DescriptorSetLayoutBuilder::add(uint32_t binding, VkDescriptorType type,
                                 VkShaderStageFlags stage_flags)
@@ -55,13 +55,11 @@ DescriptorSetLayoutBuilder::addStorageBuffer(uint32_t           binding,
   return add(binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage_flags);
 }
 
-DescriptorSetLayout
-DescriptorSetLayoutBuilder::build(const Device&                    device,
+wr::DescriptorSetLayout
+DescriptorSetLayoutBuilder::build(const wr::Device&                device,
                                   VkDescriptorSetLayoutCreateFlags create_flags)
 {
-  DescriptorSetLayout layout(device, bindings_, create_flags);
-  bindings_.clear();
-  return layout;
+  return wr::DescriptorSetLayout{ device, bindings_, create_flags };
 }
 
-} // namespace eldr::vk::wr
+} // namespace eldr::vk

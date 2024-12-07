@@ -5,15 +5,14 @@
 namespace eldr::vk::wr {
 
 class Sampler {
-public:
-  Sampler(const Device&, uint32_t mip_levels);
-  ~Sampler();
 
-  const VkSampler& get() const { return sampler_; }
+public:
+  Sampler(const Device&, VkFilter filter, uint32_t mip_levels);
+
+  [[nodiscard]] VkSampler get() const;
 
 private:
-  const Device& device_;
-
-  VkSampler sampler_{ VK_NULL_HANDLE };
+  class SamplerImpl;
+  std::shared_ptr<SamplerImpl> sampler_data_;
 };
 } // namespace eldr::vk::wr

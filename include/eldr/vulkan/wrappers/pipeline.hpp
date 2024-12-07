@@ -8,6 +8,8 @@ public:
   Pipeline(const Pipeline&) = delete;
   virtual ~Pipeline();
 
+  [[nodiscard]] VkPipeline get() const { return pipeline_; }
+
 protected:
   Pipeline(Pipeline&&) noexcept;
   Pipeline(const Device& device, std::string_view name,

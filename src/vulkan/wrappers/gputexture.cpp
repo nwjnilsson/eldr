@@ -1,11 +1,8 @@
 #include <eldr/core/fstream.hpp>
-#include <eldr/render/scene.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
 
 namespace eldr::vk::wr {
 
@@ -13,19 +10,21 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
                        VkDeviceSize data_size, uint32_t texture_width,
                        uint32_t texture_height, uint32_t n_channels,
                        VkFormat format, uint32_t n_mip_levels,
-                       const std::string& name)
+                       std::string_view name)
   : name_(name), channels_(n_channels)
 {
-  // ---------------------------------------------------------------------------
-  // Create image
-  // ---------------------------------------------------------------------------
-  // Calculate mip levels for generating them (below)
+  // Calculate mip level count to generate mip levels
   mip_levels_ = n_mip_levels == 0
                   ? static_cast<uint32_t>(std::floor(
                       std::log2(std::max(texture_width, texture_height)))) +
                       1
                   : n_mip_levels;
+  // Create sampler
+  sampler_ = Sampler{ device, VK_FILTER_LINEAR, mip_levels_ };
 
+  // ---------------------------------------------------------------------------
+  // Create image
+  // ---------------------------------------------------------------------------
   ImageInfo image_info{ .extent      = { texture_width, texture_height },
                         .format      = format,
                         .tiling      = VK_IMAGE_TILING_OPTIMAL,
@@ -47,7 +46,7 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
     .priority       = {},
   };
 
-  image_ = std::make_unique<GpuImage>(device, image_info, alloc_ci, name_);
+  image_ = GpuImage{ device, image_info, alloc_ci, name_ };
 
   // ---------------------------------------------------------------------------
   // Copy data to image and transition layout
@@ -81,7 +80,6 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
       // above necessary again (I think)).
       .generateMipmaps(*image_, mip_levels_);
   });
-  sampler_ = std::make_unique<Sampler>(device, mip_levels_);
 }
 
 GpuTexture::GpuTexture(const Device& device, const Bitmap& bitmap)
@@ -92,16 +90,8 @@ GpuTexture::GpuTexture(const Device& device, const Bitmap& bitmap)
 {
 }
 
-GpuTexture::GpuTexture(GpuTexture&& other) noexcept
-{
-  name_     = std::exchange(other.name_, "");
-  channels_ = std::exchange(other.channels_, 0);
-  image_    = std::move(other.image_);
-  sampler_  = std::move(other.sampler_);
-}
+const GpuImage& GpuTexture::image() const { return *image_; }
 
-VkImageView GpuTexture::imageView() const { return image_->view(); }
-
-VkSampler GpuTexture::sampler() const { return sampler_->get(); }
+const Sampler& GpuTexture::sampler() const { return *sampler_; }
 
 } // namespace eldr::vk::wr

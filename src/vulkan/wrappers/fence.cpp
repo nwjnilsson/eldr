@@ -2,34 +2,53 @@
 
 namespace eldr::vk::wr {
 
-Fence::Fence(const Device& device) : device_(device)
-{
-  VkFenceCreateInfo fence_ci{};
-  fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+//------------------------------------------------------------------------------
+// FenceImpl
+//------------------------------------------------------------------------------
+class Fence::FenceImpl {
+public:
+  FenceImpl(const Device& device, const VkFenceCreateInfo& fence_ci);
+  ~FenceImpl();
+  const Device& device_;
+  VkFence       fence_{ VK_NULL_HANDLE };
+};
 
+Fence::FenceImpl::FenceImpl(const Device&            device,
+                            const VkFenceCreateInfo& fence_ci)
+  : device_(device)
+{
   if (const auto result =
         vkCreateFence(device_.logical(), &fence_ci, nullptr, &fence_);
       result != VK_SUCCESS)
     ThrowVk(result, "vkCreateFence(): ");
 }
 
-Fence::Fence(Fence&& other) : device_(other.device_), fence_(other.fence_)
+Fence::FenceImpl::~FenceImpl()
 {
-  other.fence_ = VK_NULL_HANDLE;
+  vkDestroyFence(device_.logical(), fence_, nullptr);
 }
 
-Fence::~Fence()
+//------------------------------------------------------------------------------
+// Fence
+//------------------------------------------------------------------------------
+Fence::Fence(const Device& device)
 {
-  if (fence_ != VK_NULL_HANDLE)
-    vkDestroyFence(device_.logical(), fence_, nullptr);
+  VkFenceCreateInfo fence_ci{};
+  fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  f_data_        = std::make_shared<FenceImpl>(device, fence_ci);
 }
 
-void Fence::reset() const { vkResetFences(device_.logical(), 1, &fence_); }
+VkFence Fence::get() const { return f_data_->fence_; }
+
+VkResult Fence::reset()
+{
+  return vkResetFences(f_data_->device_.logical(), 1, &f_data_->fence_);
+}
 
 VkResult Fence::wait(uint64_t timeout) const
 {
-  const VkResult result =
-    vkWaitForFences(device_.logical(), 1, &fence_, VK_TRUE, timeout);
+  const VkResult result = vkWaitForFences(f_data_->device_.logical(), 1,
+                                          &f_data_->fence_, VK_TRUE, timeout);
   switch (result) {
     case VK_SUCCESS:
     case VK_TIMEOUT:
@@ -41,6 +60,6 @@ VkResult Fence::wait(uint64_t timeout) const
 
 VkResult Fence::status() const
 {
-  return vkGetFenceStatus(device_.logical(), fence_);
+  return vkGetFenceStatus(f_data_->device_.logical(), f_data_->fence_);
 }
 } // namespace eldr::vk::wr

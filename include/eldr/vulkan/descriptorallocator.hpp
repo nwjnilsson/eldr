@@ -4,7 +4,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 class DescriptorAllocator {
 public:
   struct PoolSizeRatio {
@@ -15,26 +15,27 @@ public:
   DescriptorAllocator()                           = delete;
   DescriptorAllocator(const DescriptorAllocator&) = delete;
   DescriptorAllocator(DescriptorAllocator&&)      = delete;
-  DescriptorAllocator(const Device& device, uint32_t max_sets,
+  DescriptorAllocator(const wr::Device& device, uint32_t max_sets,
                       std::span<PoolSizeRatio> ratios);
   ~DescriptorAllocator();
 
   void            resetPools();
   void            destroyPools();
-  VkDescriptorSet allocate(VkDescriptorSetLayout layout, void* pNext = nullptr);
+  VkDescriptorSet allocate(const wr::DescriptorSetLayout& layout,
+                           void*                          pNext = nullptr);
 
 private:
-  DescriptorPool getPool();
-  DescriptorPool createPool();
+  wr::DescriptorPool getPool();
+  wr::DescriptorPool createPool();
 
 private:
   static constexpr uint32_t max_sets_limit{ 4092 };
 
-  const Device& device_;
+  const wr::Device& device_;
 
-  std::vector<PoolSizeRatio>  ratios_;
-  std::vector<DescriptorPool> full_pools_;
-  std::vector<DescriptorPool> ready_pools_;
-  uint32_t                    sets_per_pool_;
+  std::vector<PoolSizeRatio>      ratios_;
+  std::vector<wr::DescriptorPool> full_pools_;
+  std::vector<wr::DescriptorPool> ready_pools_;
+  uint32_t                        sets_per_pool_;
 };
-} // namespace eldr::vk::wr
+} // namespace eldr::vk

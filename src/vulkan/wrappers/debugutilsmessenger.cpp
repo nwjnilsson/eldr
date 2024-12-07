@@ -1,9 +1,47 @@
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 
+#ifdef ELDR_VULKAN_DEBUG_REPORT
 namespace eldr::vk::wr {
 
-#ifdef ELDR_VULKAN_DEBUG_REPORT
+//------------------------------------------------------------------------------
+// DebugUtilsMessengerImpl
+//------------------------------------------------------------------------------
+class DebugUtilsMessenger::DebugUtilsMessengerImpl {
+  DebugUtilsMessengerImpl(
+    const Instance&                           instance,
+    const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);
+  ~DebugUtilsMessengerImpl();
+
+  const Instance&          instance_;
+  VkDebugUtilsMessengerEXT debug_messenger_;
+};
+
+DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
+  const Instance&                           instance,
+  const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci)
+  : instance_(instance)
+{
+  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance.get(), "vkCreateDebugUtilsMessengerEXT");
+  assert(func != nullptr);
+  VkResult err =
+    func(instance.get(), &debug_report_ci, nullptr, &debug_messenger_);
+  if (err != VK_SUCCESS)
+    ThrowVk(err, "Failed to create debug utils messenger: ");
+}
+
+DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()
+{
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance_.get(), "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr)
+    func(instance_.get(), debug_messenger_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// DebugUtilsMessenger
+//------------------------------------------------------------------------------
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
   VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
   VkDebugUtilsMessageTypeFlagsEXT             messageType,
@@ -47,43 +85,26 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
       break;
   }
   return VK_FALSE;
-#endif
 }
 
 DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
-  : instance_(instance)
 {
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-  VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{};
-  debug_report_ci.sType =
-    VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  debug_report_ci.messageSeverity =
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  debug_report_ci.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  debug_report_ci.pfnUserCallback = vkDebugReportCallback;
-  debug_report_ci.pUserData       = nullptr; // Optional
-
-  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance.get(), "vkCreateDebugUtilsMessengerEXT");
-  assert(func != nullptr);
-  VkResult err =
-    func(instance.get(), &debug_report_ci, nullptr, &debug_messenger_);
-  if (err != VK_SUCCESS)
-    ThrowVk(err, "Failed to create debug utils messenger: ");
-#endif
+  const VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{
+    .sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+    .pNext           = {},
+    .flags           = {},
+    .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+    .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                   VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                   VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+    .pfnUserCallback = vkDebugReportCallback,
+    .pUserData       = {},
+  };
+  messenger_data_ =
+    std::make_shared<DebugUtilsMessengerImpl>(instance, debug_report_ci);
 }
 
-DebugUtilsMessenger::~DebugUtilsMessenger()
-{
-#ifdef ELDR_VULKAN_DEBUG_REPORT
-  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance_.get(), "vkDestroyDebugUtilsMessengerEXT");
-  if (func != nullptr)
-    func(instance_.get(), debug_messenger_, nullptr);
-#endif
-}
 } // namespace eldr::vk::wr
+#endif

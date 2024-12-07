@@ -1,57 +1,36 @@
+#include <eldr/vulkan/descriptorallocator.hpp>
+#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/material.hpp>
 #include <eldr/vulkan/vktypes.hpp>
-#include <eldr/vulkan/wrappers/descriptorbuilder.hpp>
-#include <eldr/vulkan/wrappers/pipelinebuilder.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
 
 namespace eldr::vk {
-GltfMetallicRoughness::buildPipelines(VulkanEngine* engine)
+MaterialInstance GltfMetallicRoughness::writeMaterial(
+  const wr::Device& device, MaterialPass pass,
+  const MaterialResources& resources, DescriptorAllocator& descriptor_allocator)
 {
-  const VkPushConstantRange matrix_range{
-    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    .offset     = 0,
-    .size       = sizeof(GpuDrawPushConstants),
-  };
+  MaterialInstance mat_data;
+  mat_data.pass_type = pass;
+  if (pass == MaterialPass::Transparent) {
+    mat_data.pipeline = transparent_pipeline.get();
+  }
+  else {
+    mat_data.pipeline = opaque_pipeline.get();
+  }
 
-  wr::DescriptorBuilder descriptor_builder{ engine->device() };
-  descriptor_builder.addUniformBuffer<MaterialConstants>(buff, 0)
-    .addCombinedImageSampler(sampler, view, 1)
-    .addCombinedImageSampler(sampler, view, 2);
-  DescriptorLayoutBuilder layout_builder;
-  layout_builder.add_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-  layout_builder.add_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  layout_builder.add_binding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  mat_data.material_set = descriptor_allocator.allocate(material_layout->get());
 
-  material_layout = layout_builder.build(
-    engine->device_, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+  writer.reset();
+  writer.writeUniformBuffer<MaterialConstants>(0, *resources.data_buffer,
+                                               resources.data_buffer_offset);
+  writer.writeCombinedImageSampler(1, *resources.color_texture,
+                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  writer.writeCombinedImageSampler(2, *resources.metal_rough_texture,
+                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  VkDescriptorSetLayout layouts[] = { engine->_gpuSceneDataDescriptorLayout,
-                                      material_layout };
+  writer.updateSet(device, mat_data.material_set);
 
-  wr::PipelineBuilder pipeline_builder(engine->device());
-  pipeline_builder.addDescriptorSetLayout(engine->sceneDescriptorLayout())
-    .addDescriptorSetLayout(material_layout)
-    .setShaders(engine->getShader("vert"), engine->getShader("frag"))
-    .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-    .setPolygonMode(VK_POLYGON_MODE_FILL)
-    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
-    .setMultisamplingNone()
-    .disableBlending()
-    .enableDepthtest(true, VK_COMPARE_OP_GREATER_OR_EQUAL)
-
-    // render format
-    .setColorAttachmentFormat(engine->draw_image_.imageFormat)
-    .setDepthFormat(engine->depth_image_.imageFormat)
-
-    // finally build the pipeline
-    opaque_pipeline.pipeline = pipeline_builder.buildPipeline(engine->device_);
-
-  // create the transparent variant
-  pipeline_builder.enable_blending_additive();
-
-  pipeline_builder.enable_depthtest(false, VK_COMPARE_OP_GREATER_OR_EQUAL);
-
-  transparent_pipeline.pipeline =
-    pipeline_builder.buildPipeline(engine->device_);
+  return mat_data;
 }
 } // namespace eldr::vk

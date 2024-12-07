@@ -1,13 +1,14 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/descriptorwriter.hpp>
 
 namespace eldr::vk {
 
 enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 
 struct MaterialInstance {
-  wr::Pipeline*   material_pipeline;
+  wr::Pipeline*   pipeline;
   VkDescriptorSet material_set;
   MaterialPass    pass_type;
 };
@@ -17,7 +18,7 @@ struct GltfMetallicRoughness {
   std::unique_ptr<wr::Pipeline> opaque_pipeline;
   std::unique_ptr<wr::Pipeline> transparent_pipeline;
 
-  VkDescriptorSetLayout material_layout;
+  std::unique_ptr<wr::DescriptorSetLayout> material_layout;
 
   struct MaterialConstants {
     Vec4f color_factors;
@@ -27,20 +28,18 @@ struct GltfMetallicRoughness {
   };
 
   struct MaterialResources {
-    wr::GpuTexture color_texture;
-    wr::GpuTexture metal_rough_texture;
-    VkBuffer       data_buffer;
-    uint32_t       data_buffer_offset;
+    wr::GpuTexture*                color_texture;
+    wr::GpuTexture*                metal_rough_texture;
+    std::unique_ptr<wr::GpuBuffer> data_buffer;
+    size_t                         data_buffer_offset;
   };
 
-  // DescriptorWriter writer;
-  wr::ResourceDescriptor writer;
+  MaterialInstance writeMaterial(const wr::Device& device, MaterialPass pass,
+                                 const MaterialResources& resources,
+                                 DescriptorAllocator&     descriptor_allocator);
 
-  void buildPipelines(VulkanEngine* engine);
-  void clearResources(VkDevice device);
-
-  MaterialInstance writeMaterial(VkDevice device, MaterialPass pass,
-                                 const MaterialResources& resources);
+private:
+  DescriptorWriter writer;
 };
 
 } // namespace eldr::vk

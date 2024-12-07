@@ -9,16 +9,15 @@ public:
   Fence(Fence&&);
   ~Fence();
 
-  VkFence get() const { return fence_; }
+  [[nodiscard]] VkFence get() const;
 
-  void reset() const;
+  VkResult reset();
   [[nodiscard]] VkResult
   wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
 
 private:
-  const Device& device_;
-
-  VkFence fence_{ VK_NULL_HANDLE };
+  class FenceImpl;
+  std::shared_ptr<FenceImpl> f_data_;
 };
 } // namespace eldr::vk::wr

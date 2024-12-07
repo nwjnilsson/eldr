@@ -3,9 +3,10 @@
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 class DescriptorSetLayoutBuilder {
 public:
+  void                        reset() { bindings_.clear(); }
   DescriptorSetLayoutBuilder& addSampler(uint32_t           binding,
                                          VkShaderStageFlags stage_flags);
   DescriptorSetLayoutBuilder& addSampledImage(uint32_t           binding,
@@ -20,8 +21,9 @@ public:
   DescriptorSetLayoutBuilder& addStorageBuffer(uint32_t           binding,
                                                VkShaderStageFlags stage_flags);
 
-  [[nodiscard]] DescriptorSetLayout
-  build(const Device& device, VkDescriptorSetLayoutCreateFlags create_flags);
+  [[nodiscard]] wr::DescriptorSetLayout
+  build(const wr::Device&                device,
+        VkDescriptorSetLayoutCreateFlags create_flags);
 
 private:
   DescriptorSetLayoutBuilder& add(uint32_t binding, VkDescriptorType type,
@@ -30,4 +32,4 @@ private:
 private:
   std::vector<VkDescriptorSetLayoutBinding> bindings_;
 };
-} // namespace eldr::vk::wr
+} // namespace eldr::vk

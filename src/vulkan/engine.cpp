@@ -8,16 +8,18 @@
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/descriptorallocator.hpp>
+#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
+#include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/imgui.hpp>
+#include <eldr/vulkan/material.hpp>
+#include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
-#include <eldr/vulkan/wrappers/descriptorallocator.hpp>
-#include <eldr/vulkan/wrappers/descriptorsetlayoutbuilder.hpp>
-#include <eldr/vulkan/wrappers/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
@@ -104,6 +106,9 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   setupFrameData();
   initDescriptors();
+
+  initDefaultData();
+  buildMaterialPipelines(metal_rough_material_);
   //  ---------------------------------------------------------------------------
   //  Create render graph
   //  ---------------------------------------------------------------------------
@@ -143,13 +148,13 @@ void VulkanEngine::loadShaders()
 void VulkanEngine::setupFrameData()
 {
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
-    std::vector<wr::DescriptorAllocator::PoolSizeRatio> frame_sizes{
+    std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes{
       { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
       { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 }
     };
     frames_in_flight_.push_back(
-      { .descriptors = std::make_unique<wr::DescriptorAllocator>(*device_, 1000,
-                                                                 frame_sizes),
+      { .descriptors =
+          std::make_unique<DescriptorAllocator>(*device_, 1000, frame_sizes),
         .scene_data_buffer = std::make_unique<wr::GpuBuffer>(
           *device_, sizeof(GpuSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
           VMA_MEMORY_USAGE_CPU_TO_GPU, "Scene data uniform buffer"),
@@ -163,18 +168,38 @@ void VulkanEngine::setupFrameData()
 void VulkanEngine::initDescriptors()
 {
 
-  wr::DescriptorSetLayoutBuilder layout_builder;
-  wr::DescriptorSetLayout        layout{
-    layout_builder
-      .addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT |
-                                    VK_SHADER_STAGE_FRAGMENT_BIT)
-      .addUniformBuffer(1, VK_SHADER_STAGE_VERTEX_BIT)
-      .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT)
-      .build(*device_, 0)
-  };
+  DescriptorSetLayoutBuilder layout_builder;
+  layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT |
+                                       VK_SHADER_STAGE_FRAGMENT_BIT);
+  gpu_scene_data_descriptor_layout_ = std::make_unique<wr::DescriptorSetLayout>(
+    layout_builder.build(*device_, 0));
 
-  gpu_scene_data_descriptor_layout =
-    std::make_unique<wr::DescriptorSetLayout>(std::move(layout));
+  layout_builder.reset();
+
+  layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
+    .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
+  viking_model_descriptor_layout_ = std::make_unique<wr::DescriptorSetLayout>(
+    layout_builder.build(*device_, 0));
+}
+
+void VulkanEngine::initDefaultData()
+{
+  default_texture_sampler_linear_ =
+    std::make_unique<wr::GpuTexture>(*device_, Bitmap{});
+
+  GltfMetallicRoughness::MaterialResources material_resources{
+    .color_texture       = default_texture_sampler_linear_.get(),
+    .metal_rough_texture = default_texture_sampler_linear_.get(),
+    .data_buffer         = std::make_unique<wr::GpuBuffer>(
+      *device_, sizeof(GltfMetallicRoughness::MaterialConstants),
+      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU,
+      "GLTF metallic roughness constants"),
+    .data_buffer_offset = 0,
+  };
+  GltfMetallicRoughness::MaterialConstants constants{ Vec4f{ 1, 1, 1, 1 },
+                                                      Vec4f{ 1, 0.5, 0, 0 },
+                                                      {} };
+  material_resources.data_buffer->uploadData(&constants, sizeof(constants));
 }
 
 void VulkanEngine::buildBuffers()
@@ -269,7 +294,7 @@ void VulkanEngine::setupRenderGraph()
   // is (for now) okay to only add a single layout for each resource descriptor
   // that applies to all frames.
   // for (const auto& descriptor : descriptors_)
-  main_stage->addDescriptorLayout(gpu_scene_data_descriptor_layout->get());
+  main_stage->addDescriptorLayout(gpu_scene_data_descriptor_layout_->get());
 }
 
 void VulkanEngine::recreateSwapchain()
@@ -338,19 +363,20 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
     // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
     //                       physical.pipelineLayout());
-    VkDescriptorSet global_descriptor{
-      frames_in_flight_[frame_index_].descriptors->allocate(
-        gpu_scene_data_descriptor_layout->get())
-    };
+    FrameData&      frame{ frames_in_flight_[frame_index_] };
+    VkDescriptorSet global_descriptor{ frame.descriptors->allocate(
+      *gpu_scene_data_descriptor_layout_) };
+    VkDescriptorSet viking_descriptor{ frame.descriptors->allocate(
+      *viking_model_descriptor_layout_) };
 
-    wr::DescriptorWriter writer;
-    writer.writeUniformBuffer<GpuSceneData>(
-      0, frames_in_flight_[frame_index_].scene_data_buffer->get());
-    writer.writeUniformBuffer<GpuModelData>(
-      1, frames_in_flight_[frame_index_].model_data_buffer->get());
-    writer.writeCombinedImageSampler(2, viking_texture_->imageView(),
-                                     viking_texture_->sampler());
-    writer.updateSet(*device_, global_descriptor);
+    DescriptorWriter writer;
+    writer.writeUniformBuffer<GpuSceneData>(0, *frame.scene_data_buffer, 0)
+      .updateSet(*device_, global_descriptor);
+    writer.reset();
+
+    writer.writeUniformBuffer<GpuModelData>(0, *frame.model_data_buffer, 0)
+      .writeCombinedImageSampler(1, *viking_texture_)
+      .updateSet(*device_, viking_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
@@ -489,5 +515,62 @@ void VulkanEngine::drawFrame()
 }
 
 std::string VulkanEngine::deviceName() const { return device_->name(); }
+
+void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
+{
+  const VkPushConstantRange matrix_range{
+    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    .offset     = 0,
+    .size       = sizeof(GpuDrawPushConstants),
+  };
+
+  DescriptorSetLayoutBuilder layout_builder;
+  layout_builder
+    .addUniformBuffer(0,
+                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+    .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT)
+    .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+  material.material_layout = std::make_unique<wr::DescriptorSetLayout>(
+    layout_builder.build(*device_, 0));
+
+  wr::Shader      vert_shader{ *device_, VK_SHADER_STAGE_VERTEX_BIT,
+                          "material vertex shader", "mesh.vert.spv" };
+  wr::Shader      frag_shader{ *device_, VK_SHADER_STAGE_FRAGMENT_BIT,
+                          "material fragment shader", "mesh.frag.spv" };
+  PipelineBuilder pipeline_builder;
+  pipeline_builder
+    .addDescriptorSetLayout(gpu_scene_data_descriptor_layout_->get())
+    .addDescriptorSetLayout(material.material_layout->get())
+    .addPushConstantRange(matrix_range)
+    .setShaders(vert_shader, frag_shader)
+    .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+    .setPolygonMode(VK_POLYGON_MODE_FILL)
+    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+    .setMultisamplingNone()
+    .disableBlending()
+    .enableDepthtest(
+      true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op as
+                                            // i used in rendergraph
+
+    // render format
+    //.setColorAttachmentFormat(back_buffer_->format_)
+    //.setDepthFormat(depth_buffer->format_);
+
+    // TODO: THE FORMATS SHOULD BE SET FROM TEXTURE RESOURCE
+    .setColorAttachmentFormat(swapchain_->imageFormat())
+    .setDepthFormat(device_->findDepthFormat());
+
+  // finally build the pipeline
+  material.opaque_pipeline =
+    std::make_unique<wr::GraphicsPipeline>(pipeline_builder.build(*device_));
+
+  // create the transparent variant
+  pipeline_builder.enableBlendingAdditive().enableDepthtest(
+    false, VK_COMPARE_OP_GREATER_OR_EQUAL);
+
+  material.transparent_pipeline =
+    std::make_unique<wr::GraphicsPipeline>(pipeline_builder.build(*device_));
+}
 
 } // namespace eldr::vk

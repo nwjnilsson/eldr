@@ -3,7 +3,6 @@
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
-#include <string>
 #include <vector>
 
 namespace eldr::vk::wr {
@@ -14,20 +13,12 @@ public:
               const std::vector<VkImageView>& attachments,
               const Swapchain&                swapchain);
 
-  Framebuffer(const Framebuffer&) = delete;
-  Framebuffer(Framebuffer&&) noexcept;
-
-  ~Framebuffer();
-
-  Framebuffer& operator=(const Framebuffer&) = delete;
-  Framebuffer& operator=(Framebuffer&&)      = delete;
-
-  [[nodiscard]] VkFramebuffer get() const { return framebuffer_; }
+  [[nodiscard]] VkFramebuffer get() const;
 
 private:
-  const Device& device_;
-  VkFramebuffer framebuffer_{ VK_NULL_HANDLE };
-  std::string   name_;
+  // std::string name_;
+  class FramebufferImpl;
+  std::shared_ptr<FramebufferImpl> fb_data_;
 };
 
 } // namespace eldr::vk::wr

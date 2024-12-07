@@ -3,12 +3,40 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk::wr {
+//------------------------------------------------------------------------------
+// FramebufferImpl
+//------------------------------------------------------------------------------
+class Framebuffer::FramebufferImpl {
+public:
+  FramebufferImpl(const Device&                  device,
+                  const VkFramebufferCreateInfo& framebuffer_ci);
+  ~FramebufferImpl();
+  const Device& device_;
+  VkFramebuffer framebuffer_{ VK_NULL_HANDLE };
+};
+
+Framebuffer::FramebufferImpl::FramebufferImpl(
+  const Device& device, const VkFramebufferCreateInfo& framebuffer_ci)
+  : device_(device)
+{
+  if (const auto result = vkCreateFramebuffer(
+        device_.logical(), &framebuffer_ci, nullptr, &framebuffer_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vkCreateFramebuffer(): ");
+}
+
+Framebuffer::FramebufferImpl::~FramebufferImpl()
+{
+  vkDestroyFramebuffer(device_.logical(), framebuffer_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// Framebuffer
+//------------------------------------------------------------------------------
 Framebuffer::Framebuffer(const Device& device, VkRenderPass render_pass,
                          const std::vector<VkImageView>& attachments,
                          const Swapchain&                swapchain)
-  : device_(device)
 {
-
   VkFramebufferCreateInfo framebuffer_ci{
     .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
     .pNext           = nullptr,
@@ -20,22 +48,8 @@ Framebuffer::Framebuffer(const Device& device, VkRenderPass render_pass,
     .height          = swapchain.extent().height,
     .layers          = 1,
   };
-
-  if (const auto result = vkCreateFramebuffer(
-        device_.logical(), &framebuffer_ci, nullptr, &framebuffer_);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateFramebuffer(): ");
+  fb_data_ = std::make_shared<FramebufferImpl>(device, framebuffer_ci);
 }
 
-Framebuffer::Framebuffer(Framebuffer&& other) noexcept : device_(other.device_)
-{
-  framebuffer_ = std::exchange(other.framebuffer_, VK_NULL_HANDLE);
-  name_        = std::exchange(other.name_, "");
-}
-
-Framebuffer::~Framebuffer()
-{
-  if (framebuffer_ != VK_NULL_HANDLE)
-    vkDestroyFramebuffer(device_.logical(), framebuffer_, nullptr);
-}
+VkFramebuffer Framebuffer::get() const { return fb_data_->framebuffer_; }
 } // namespace eldr::vk::wr

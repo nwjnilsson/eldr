@@ -3,11 +3,42 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 namespace eldr::vk::wr {
+//------------------------------------------------------------------------------
+// GpuBufferImpl
+//------------------------------------------------------------------------------
+class GpuBuffer::GpuBufferImpl : public GpuResourceAllocation {
+public:
+  GpuBufferImpl(const Device& device, const VkBufferCreateInfo& buffer_ci,
+                const VmaAllocationCreateInfo& alloc_ci);
+  ~GpuBufferImpl();
+  VkBuffer buffer_{ VK_NULL_HANDLE };
+};
 
-GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
-                     VkBufferUsageFlags buffer_usage,
-                     VmaMemoryUsage memory_usage, const std::string& name)
-  : GpuResource(device, name), size_(buffer_size)
+GpuBuffer::GpuBufferImpl::GpuBufferImpl(const Device&             device,
+                                        const VkBufferCreateInfo& buffer_ci,
+                                        const VmaAllocationCreateInfo& alloc_ci)
+  : GpuResourceAllocation(device)
+{
+  if (const VkResult result =
+        vmaCreateBuffer(device_.allocator(), &buffer_ci, &alloc_ci, &buffer_,
+                        &allocation_, &alloc_info_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vmaCreateBuffer(): ");
+}
+
+GpuBuffer::GpuBufferImpl::~GpuBufferImpl()
+{
+  vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
+}
+
+//------------------------------------------------------------------------------
+// GpuBuffer
+//------------------------------------------------------------------------------
+GpuBuffer::GpuBuffer(const Device& device, std::string_view name,
+                     VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
+                     VmaMemoryUsage           memory_usage,
+                     VmaAllocationCreateFlags flags)
+  : size_(buffer_size)
 {
   assert(buffer_size > 0);
   const VkBufferCreateInfo buffer_ci{
@@ -22,7 +53,7 @@ GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
   };
 
   const VmaAllocationCreateInfo alloc_ci{
-    .flags          = VMA_ALLOCATION_CREATE_MAPPED_BIT,
+    .flags          = flags,
     .usage          = memory_usage,
     .requiredFlags  = {},
     .preferredFlags = {},
@@ -31,14 +62,10 @@ GpuBuffer::GpuBuffer(const Device& device, VkDeviceSize buffer_size,
     .pUserData      = {},
     .priority       = {},
   };
-
-  if (const VkResult result =
-        vmaCreateBuffer(device_.allocator(), &buffer_ci, &alloc_ci, &buffer_,
-                        &allocation_, &alloc_info_);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vmaCreateBuffer(): ");
-
-  vmaSetAllocationName(device_.allocator(), allocation_, name.c_str());
+  buffer_data_ =
+    std::make_shared<GpuBufferImpl>(device, buffer_ci, alloc_ci, name);
+  vmaSetAllocationName(device.allocator(), buffer_data_->allocation_,
+                       fmt::format("{} allocation", name).c_str());
 }
 
 GpuBuffer::GpuBuffer(const Device& device, const void* data,
@@ -51,27 +78,13 @@ GpuBuffer::GpuBuffer(const Device& device, const void* data,
   uploadData(data, data_size);
 }
 
-GpuBuffer::GpuBuffer(GpuBuffer&& other) noexcept
-  : GpuResource(other.device_, other.name_)
-{
-  allocation_ = std::exchange(other.allocation_, {});
-  alloc_info_ = std::exchange(other.alloc_info_, {});
-  buffer_     = std::exchange(other.buffer_, VK_NULL_HANDLE);
-  size_       = std::exchange(other.size_, 0);
-}
-
-GpuBuffer::~GpuBuffer()
-{
-  if (buffer_ != VK_NULL_HANDLE)
-    vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
-}
-
 void GpuBuffer::uploadData(const void* data, size_t data_size)
 {
   assert(data_size > 0);
   assert(static_cast<VkDeviceSize>(data_size) <= size_);
-  assert(alloc_info_.pMappedData != nullptr);
-  std::memcpy(alloc_info_.pMappedData, data, data_size);
+  assert(buffer_data_->alloc_info_.pMappedData != nullptr);
+  std::memcpy(buffer_data_->alloc_info_.pMappedData, data, data_size);
 }
 
+VkBuffer GpuBuffer::get() const { return buffer_data_->buffer_; }
 } // namespace eldr::vk::wr

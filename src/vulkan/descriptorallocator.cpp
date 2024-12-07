@@ -1,10 +1,11 @@
-#include <eldr/vulkan/wrappers/descriptorallocator.hpp>
+#include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 
-DescriptorAllocator::DescriptorAllocator(const Device&            device,
+DescriptorAllocator::DescriptorAllocator(const wr::Device&        device,
                                          uint32_t                 max_sets,
                                          std::span<PoolSizeRatio> ratios)
   : device_(device), ratios_(ratios.begin(), ratios.end()),
@@ -15,10 +16,10 @@ DescriptorAllocator::DescriptorAllocator(const Device&            device,
 
 DescriptorAllocator::~DescriptorAllocator() { destroyPools(); }
 
-DescriptorPool DescriptorAllocator::getPool()
+wr::DescriptorPool DescriptorAllocator::getPool()
 {
   if (!ready_pools_.empty()) {
-    DescriptorPool new_pool{ std::move(ready_pools_.back()) };
+    wr::DescriptorPool new_pool{ std::move(ready_pools_.back()) };
     ready_pools_.pop_back();
     return new_pool;
   }
@@ -28,7 +29,7 @@ DescriptorPool DescriptorAllocator::getPool()
   }
 }
 
-DescriptorPool DescriptorAllocator::createPool()
+wr::DescriptorPool DescriptorAllocator::createPool()
 {
   // Update max sets per pool for the creation of this pool
   sets_per_pool_ =
@@ -41,7 +42,7 @@ DescriptorPool DescriptorAllocator::createPool()
                              ratio.ratio * sets_per_pool_) });
   }
 
-  return DescriptorPool{ device_, sets_per_pool_, pool_sizes };
+  return wr::DescriptorPool{ device_, sets_per_pool_, pool_sizes };
 }
 
 void DescriptorAllocator::resetPools()
@@ -61,8 +62,9 @@ void DescriptorAllocator::destroyPools()
   full_pools_.clear();
 }
 
-VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
-                                              void*                 pNext)
+VkDescriptorSet
+DescriptorAllocator::allocate(const wr::DescriptorSetLayout& layout,
+                              void*                          pNext)
 {
   /**
    * From Vulkan tutorial:
@@ -80,14 +82,15 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
    */
 
   // get or create a pool to allocate from
-  DescriptorPool pool_to_use{ getPool() };
+  wr::DescriptorPool pool_to_use{ getPool() };
 
+  VkDescriptorSetLayout       layouts[]{ layout.get() };
   VkDescriptorSetAllocateInfo alloc_info{
     .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .pNext              = pNext,
     .descriptorPool     = pool_to_use.get(),
     .descriptorSetCount = 1,
-    .pSetLayouts        = &layout,
+    .pSetLayouts        = layouts,
   };
 
   VkDescriptorSet ds;
@@ -111,4 +114,4 @@ VkDescriptorSet DescriptorAllocator::allocate(VkDescriptorSetLayout layout,
   return ds;
 }
 
-} // namespace eldr::vk::wr
+} // namespace eldr::vk

@@ -1,9 +1,10 @@
-#include <eldr/vulkan/wrappers/descriptorwriter.hpp>
+#include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/wrappers/gputexture.hpp>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 
-void DescriptorWriter::clear()
+void DescriptorWriter::reset()
 {
   buffer_infos_.clear();
   image_infos_.clear();
@@ -11,9 +12,9 @@ void DescriptorWriter::clear()
 }
 
 DescriptorWriter& DescriptorWriter::writeImage(uint32_t         binding,
-                                               VkDescriptorType type,
                                                VkImageView      image,
                                                VkSampler        sampler,
+                                               VkDescriptorType type,
                                                VkImageLayout    layout)
 {
   image_infos_.push_back({
@@ -38,37 +39,37 @@ DescriptorWriter& DescriptorWriter::writeImage(uint32_t         binding,
   return *this;
 }
 
-DescriptorWriter& DescriptorWriter::writeSampler(uint32_t  binding,
-                                                 VkSampler sampler)
+DescriptorWriter& DescriptorWriter::writeSampler(uint32_t           binding,
+                                                 const wr::Sampler& sampler)
 {
-  return writeImage(binding, VK_DESCRIPTOR_TYPE_SAMPLER, VK_NULL_HANDLE,
-                    sampler, {});
+  return writeImage(binding, VK_NULL_HANDLE, sampler.get(),
+                    VK_DESCRIPTOR_TYPE_SAMPLER, {});
 }
 
-DescriptorWriter& DescriptorWriter::writeSampledImage(uint32_t      binding,
-                                                      VkImageView   image,
+DescriptorWriter& DescriptorWriter::writeSampledImage(uint32_t binding,
+                                                      const wr::GpuImage& image,
                                                       VkImageLayout layout)
 {
-  return writeImage(binding, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, image,
-                    VK_NULL_HANDLE, layout);
+  return writeImage(binding, image.view(), VK_NULL_HANDLE,
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, layout);
 }
 
 DescriptorWriter& DescriptorWriter::writeCombinedImageSampler(
-  uint32_t binding, VkImageView image, VkSampler sampler, VkImageLayout layout)
+  uint32_t binding, const wr::GpuTexture& texture, VkImageLayout layout)
 {
-  return writeImage(binding, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, image,
-                    sampler, layout);
+  return writeImage(binding, texture.image().view(), texture.sampler().get(),
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, layout);
 }
 
-DescriptorWriter& DescriptorWriter::writeStorageImage(uint32_t      binding,
-                                                      VkImageView   image,
+DescriptorWriter& DescriptorWriter::writeStorageImage(uint32_t binding,
+                                                      const wr::GpuImage& image,
                                                       VkImageLayout layout)
 {
-  return writeImage(binding, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, image,
-                    VK_NULL_HANDLE, layout);
+  return writeImage(binding, image.view(), VK_NULL_HANDLE,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, layout);
 }
 
-void DescriptorWriter::updateSet(const Device& device, VkDescriptorSet set)
+void DescriptorWriter::updateSet(const wr::Device& device, VkDescriptorSet set)
 {
   for (auto& write : write_sets_)
     write.dstSet = set;
@@ -76,6 +77,5 @@ void DescriptorWriter::updateSet(const Device& device, VkDescriptorSet set)
   vkUpdateDescriptorSets(device.logical(),
                          static_cast<uint32_t>(write_sets_.size()),
                          write_sets_.data(), 0, nullptr);
-  clear();
 }
-} // namespace eldr::vk::wr
+} // namespace eldr::vk

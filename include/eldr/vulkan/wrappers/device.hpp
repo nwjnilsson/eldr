@@ -26,7 +26,6 @@ class Device {
 public:
   Device(const Instance&, const Surface&,
          std::vector<const char*>& required_extensions, Logger logger);
-  ~Device();
 
   [[nodiscard]] std::string name() const
   {
@@ -52,35 +51,29 @@ public:
   };
   [[nodiscard]] SwapchainSupportDetails
   swapchainSupportDetails(VkSurfaceKHR surface) const;
-  [[nodiscard]] VkPhysicalDevice physical() const { return physical_device_; }
-  [[nodiscard]] VkDevice         logical() const { return device_; }
+  [[nodiscard]] VkPhysicalDevice physical() const;
+  [[nodiscard]] VkDevice         logical() const;
+  [[nodiscard]] VmaAllocator     allocator() const;
   [[nodiscard]] VkQueue          graphicsQueue() const { return g_queue_; }
   [[nodiscard]] VkQueue          presentQueue() const { return p_queue_; }
-  [[nodiscard]] VmaAllocator     allocator() const { return allocator_; }
   [[nodiscard]] Logger           logger() const { return log_; }
 
   void waitIdle() const;
   void execute(
     const std::function<void(const CommandBuffer& cmd_buf)>& cmd_lambda) const;
-  void createImageView(const VkImageViewCreateInfo& image_view_ci,
-                       VkImageView* image_view, const std::string& name) const;
 
 private:
   CommandPool& threadGraphicsPool() const;
 
 private:
+  class DeviceImpl;
+  std::shared_ptr<DeviceImpl> d_data_;
+
   Logger                     log_{ nullptr };
-  VkPhysicalDevice           physical_device_{ VK_NULL_HANDLE };
   VkPhysicalDeviceProperties physical_device_props_;
-  VkDevice                   device_{ VK_NULL_HANDLE };
-  VmaAllocator               allocator_{ VK_NULL_HANDLE };
   QueueFamilyIndices         queue_family_indices_;
   VkQueue                    p_queue_{ VK_NULL_HANDLE }; // present
   VkQueue                    g_queue_{ VK_NULL_HANDLE }; // graphics
-
-  // One command pool per thread
-  mutable std::vector<std::unique_ptr<CommandPool>> command_pools_;
-  mutable std::mutex                                mutex_;
 };
 // QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice, VkSurfaceKHR);
 } // namespace eldr::vk::wr

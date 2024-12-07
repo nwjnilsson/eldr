@@ -8,22 +8,17 @@ namespace eldr::vk::wr {
 
 class DescriptorPool {
 public:
-  DescriptorPool()                      = delete;
-  DescriptorPool(const DescriptorPool&) = delete;
-  DescriptorPool(DescriptorPool&&) noexcept;
   DescriptorPool(const Device& device, uint32_t max_sets,
                  std::span<VkDescriptorPoolSize> pool_sizes,
                  VkDescriptorPoolCreateFlags     flags = 0);
-  ~DescriptorPool();
 
   DescriptorPool& operator=(DescriptorPool&& other);
 
-  VkDescriptorPool get() const { return pool_; }
+  VkDescriptorPool get() const;
   void             reset(VkDescriptorPoolResetFlags flags = 0);
 
 private:
-  const Device& device_;
-
-  VkDescriptorPool pool_{ VK_NULL_HANDLE };
+  class DescriptorPoolImpl;
+  std::shared_ptr<DescriptorPoolImpl> dp_data_;
 };
 } // namespace eldr::vk::wr

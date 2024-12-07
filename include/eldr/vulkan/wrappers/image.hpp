@@ -4,7 +4,7 @@
 #include <eldr/core/math.hpp>
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <eldr/vulkan/wrappers/gpuresource.hpp>
+#include <eldr/vulkan/wrappers/imageview.hpp>
 
 namespace eldr::vk::wr {
 // Minimum info required for image creation
@@ -18,46 +18,31 @@ struct ImageInfo {
   uint32_t              mip_levels;
 };
 
-class GpuImage final : public GpuResource {
+class Image final {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
-  GpuImage(GpuImage&) = delete;
-  GpuImage(const Device&, const ImageInfo&, const VmaAllocationCreateInfo&,
-           const std::string& name);
-  GpuImage(const Device&, const Bitmap&, const VmaAllocationCreateInfo&,
-           const std::string& name);
-  GpuImage(const GpuImage&) = delete;
-  GpuImage(GpuImage&&)      = delete;
-  ~GpuImage();
+  Image(const Device&, std::string_view name, const ImageInfo&,
+        VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY);
+  Image(const Device&, std::string_view name, const Bitmap&,
+        VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY);
 
   [[nodiscard]] VkImage     get() const { return image_; }
   [[nodiscard]] VkImageView view() const { return image_view_; }
   [[nodiscard]] VkFormat    format() const { return format_; }
   [[nodiscard]] VkExtent2D  size() const { return size_; }
+  [[nodiscard]] uint32_t    mipLevels() const { return mip_levels_; }
 
-protected:
-  VkImage     image_{ VK_NULL_HANDLE };
-  VkImageView image_view_{ VK_NULL_HANDLE };
-  VkFormat    format_;
-  VkExtent2D  size_;
+private:
+  std::string name_;
+  class ImageImpl;
+  std::shared_ptr<ImageImpl> i_data_;
+
+  VkImage    image_{ VK_NULL_HANDLE };
+  uint32_t   mip_levels_{ 1 };
+  ImageView  image_view_;
+  VkFormat   format_;
+  VkExtent2D size_;
 };
 
-// class ImageView {
-//   ELDR_IMPORT_CORE_TYPES();
-//
-// public:
-//   ImageView() = delete;
-//   ImageView(const Device&, const GpuImage&, VkImageAspectFlags);
-//   ImageView(const ImageView&) = delete;
-//   ImageView(ImageView&&)      = delete;
-//   ~ImageView();
-//
-//   VkImageView get() const { return image_view_; }
-//
-// protected:
-//   const Device& device_;
-//
-//   VkImageView image_view_{ VK_NULL_HANDLE };
-// };
 } // namespace eldr::vk::wr

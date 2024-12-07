@@ -5,11 +5,39 @@
 
 namespace eldr::vk::wr {
 
-GpuImage::GpuImage(const Device& device, const ImageInfo& image_info,
-                   const VmaAllocationCreateInfo& alloc_ci,
-                   const std::string&             name)
-  : GpuResource(device, name), format_(image_info.format),
-    size_(image_info.extent)
+//------------------------------------------------------------------------------
+// GpuImageImpl
+//------------------------------------------------------------------------------
+class Image::ImageImpl : public GpuResourceAllocation {
+public:
+  ImageImpl(const Device& device, const VkImageCreateInfo& image_ci);
+  ~ImageImpl();
+  VkImage image_{ VK_NULL_HANDLE };
+};
+
+Image::ImageImpl::ImageImpl(const Device&                  device,
+                            const VkImageCreateInfo&       image_ci,
+                            const VmaAllocationCreateInfo& alloc_ci)
+  : GpuResourceAllocation(device)
+{
+  if (const VkResult result =
+        vmaCreateImage(device_.allocator(), &image_ci, &alloc_ci, &image_,
+                       &allocation_, &alloc_info_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vmaCreateImage(): ");
+}
+
+Image::ImageImpl::~ImageImpl()
+{
+  vmaDestroyImage(device_.allocator(), image_, allocation_);
+}
+
+//------------------------------------------------------------------------------
+// Image
+//------------------------------------------------------------------------------
+Image::Image(const Device& device, std::string_view name,
+             const ImageInfo& image_info, VmaMemoryUsage memory_usage)
+  : name_(name), format_(image_info.format), size_(image_info.extent)
 {
   // ---------------------------------------------------------------------------
   // Create image view
@@ -32,42 +60,17 @@ GpuImage::GpuImage(const Device& device, const ImageInfo& image_info,
     .initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED,
   };
 
-  VmaAllocationInfo alloc_info;
-  if (const VkResult result =
-        vmaCreateImage(device_.allocator(), &image_ci, &alloc_ci, &image_,
-                       &allocation_, &alloc_info);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vmaCreateImage(): ");
-
-  // ---------------------------------------------------------------------------
-  // Create image view
-  // ---------------------------------------------------------------------------
-  const VkImageViewCreateInfo image_view_ci{
-    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = {},
-    .image    = image_,
-    .viewType = VK_IMAGE_VIEW_TYPE_2D,
-    .format   = format_,
-    // Standard color properties
-    .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY },
-    .subresourceRange = { 
-      .aspectMask     = image_info.aspect_flags,
-      .baseMipLevel   = 0,
-      .levelCount     = image_info.mip_levels,
-      .baseArrayLayer = 0,
-      .layerCount     = 1,
-    },
+  const VmaAllocationCreateInfo alloc_ci{
+    .flags          = {},
+    .usage          = memory_usage,
+    .requiredFlags  = {},
+    .preferredFlags = {},
+    .memoryTypeBits = {},
+    .pool           = {},
+    .pUserData      = {},
+    .priority       = {},
   };
-  device_.createImageView(image_view_ci, &image_view_, name);
+  i_data_ = std::make_shared<ImageImpl>(device, image_ci, alloc_ci);
 }
 
-GpuImage::~GpuImage()
-{
-  vmaDestroyImage(device_.allocator(), image_, allocation_);
-  vkDestroyImageView(device_.logical(), image_view_, nullptr);
-}
 } // namespace eldr::vk::wr

@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace eldr::vk::wr {
+namespace eldr::vk {
 
 /// @brief Builder class for wr::Pipeline, which combines the pipeline layout
 /// and pipeline into the same object
@@ -24,12 +24,21 @@ public:
     push_constant_ranges_.push_back(pcr);
     return *this;
   }
-  PipelineBuilder& setShaders(const Shader& vertex_shader,
-                              const Shader& fragment_shader);
+  PipelineBuilder& setShaders(const wr::Shader& vertex_shader,
+                              const wr::Shader& fragment_shader);
   PipelineBuilder& setInputTopology(VkPrimitiveTopology topology);
+  PipelineBuilder& setPolygonMode(VkPolygonMode mode);
+  PipelineBuilder& setCullMode(VkCullModeFlags mode, VkFrontFace front_face);
+  PipelineBuilder& setMultisamplingNone();
+  PipelineBuilder& disableBlending();
+  PipelineBuilder& disableDepthtest();
+  PipelineBuilder& enableDepthtest(bool depthWriteEnable, VkCompareOp op);
+  PipelineBuilder& setColorAttachmentFormat(VkFormat format);
+  PipelineBuilder& setDepthFormat(VkFormat format);
+  PipelineBuilder& enableBlendingAdditive();
+  PipelineBuilder& enableBlendingAlphaBlend();
 
-  [[nodiscard]] GraphicsPipeline build(const Device&    device,
-                                       std::string_view name);
+  [[nodiscard]] wr::GraphicsPipeline build(const wr::Device& device);
 
 private:
   // Pipeline layout stuff
@@ -47,4 +56,4 @@ private:
   VkPipelineRenderingCreateInfo                render_info_{};
   VkFormat                                     color_attachment_format_{};
 };
-} // namespace eldr::vk::wr
+} // namespace eldr::vk
