@@ -11,13 +11,14 @@ class Pipeline {
 public:
   Pipeline() = default;
   Pipeline(const Device& device, std::string_view name,
-           const VkPipelineLayoutCreateInfo&   layout_ci,
-           const VkGraphicsPipelineCreateInfo& pipeline_ci);
+           const VkPipelineLayoutCreateInfo& layout_ci,
+           VkGraphicsPipelineCreateInfo&     pipeline_ci);
   Pipeline(const Device& device, std::string_view name,
-           const VkPipelineLayoutCreateInfo&  layout_ci,
-           const VkComputePipelineCreateInfo& pipeline_ci);
+           const VkPipelineLayoutCreateInfo& layout_ci,
+           VkComputePipelineCreateInfo&      pipeline_ci);
 
-  [[nodiscard]] VkPipeline get() const;
+  [[nodiscard]] VkPipeline       get() const;
+  [[nodiscard]] VkPipelineLayout layout() const;
 
 protected:
 protected:

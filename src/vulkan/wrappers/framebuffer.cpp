@@ -1,5 +1,6 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
+#include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk::wr {
@@ -11,7 +12,7 @@ public:
   FramebufferImpl(const Device&                  device,
                   const VkFramebufferCreateInfo& framebuffer_ci);
   ~FramebufferImpl();
-  const Device& device_;
+  const Device  device_;
   VkFramebuffer framebuffer_{ VK_NULL_HANDLE };
 };
 
@@ -33,7 +34,7 @@ Framebuffer::FramebufferImpl::~FramebufferImpl()
 //------------------------------------------------------------------------------
 // Framebuffer
 //------------------------------------------------------------------------------
-Framebuffer::Framebuffer(const Device& device, VkRenderPass render_pass,
+Framebuffer::Framebuffer(const Device& device, const RenderPass& render_pass,
                          const std::vector<VkImageView>& attachments,
                          const Swapchain&                swapchain)
 {
@@ -41,7 +42,7 @@ Framebuffer::Framebuffer(const Device& device, VkRenderPass render_pass,
     .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
     .pNext           = nullptr,
     .flags           = 0,
-    .renderPass      = render_pass,
+    .renderPass      = render_pass.get(),
     .attachmentCount = static_cast<uint32_t>(attachments.size()),
     .pAttachments    = attachments.data(),
     .width           = swapchain.extent().width,

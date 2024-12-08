@@ -1,3 +1,4 @@
+#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/fence.hpp>
 
 namespace eldr::vk::wr {
@@ -9,8 +10,8 @@ class Fence::FenceImpl {
 public:
   FenceImpl(const Device& device, const VkFenceCreateInfo& fence_ci);
   ~FenceImpl();
-  const Device& device_;
-  VkFence       fence_{ VK_NULL_HANDLE };
+  const Device device_;
+  VkFence      fence_{ VK_NULL_HANDLE };
 };
 
 Fence::FenceImpl::FenceImpl(const Device&            device,
@@ -40,7 +41,7 @@ Fence::Fence(const Device& device)
 
 VkFence Fence::get() const { return f_data_->fence_; }
 
-VkResult Fence::reset()
+VkResult Fence::reset() const
 {
   return vkResetFences(f_data_->device_.logical(), 1, &f_data_->fence_);
 }

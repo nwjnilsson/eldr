@@ -1,4 +1,5 @@
 #include <eldr/core/platform.hpp>
+#include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
@@ -9,34 +10,6 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk {
-PhysicalImage::PhysicalImage(const wr::Device& device)
-  : PhysicalResource(device)
-{
-}
-PhysicalBuffer::PhysicalBuffer(const wr::Device& device)
-  : PhysicalResource(device)
-{
-}
-
-PhysicalStage::~PhysicalStage()
-{
-  if (pipeline_ != VK_NULL_HANDLE)
-    vkDestroyPipeline(device_.logical(), pipeline_, nullptr);
-  if (layout_ != VK_NULL_HANDLE)
-    vkDestroyPipelineLayout(device_.logical(), layout_, nullptr);
-}
-
-PhysicalGraphicsStage::PhysicalGraphicsStage(const wr::Device& device)
-  : PhysicalStage(device)
-{
-}
-
-PhysicalGraphicsStage::~PhysicalGraphicsStage()
-{
-  if (render_pass_ != VK_NULL_HANDLE)
-    vkDestroyRenderPass(device_.logical(), render_pass_, nullptr);
-}
-
 void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
 {
   vertex_attributes_.push_back({
@@ -124,27 +97,41 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     // Note that fixing this problem will also most likely involve changing how
     // the framebuffers are created, as the image_views array order should
     // correspond to the attachment order.
-    std::array<VkClearValue, 2> clear_values{};
-    if (graphics_stage->clears_screen_) {
-      // Black with 100% opacity
-      clear_values[0].color        = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-      clear_values[1].depthStencil = { 1.0f, 0 };
-    }
+    // std::array<VkClearValue, 2> clear_values{};
+    // if (graphics_stage->clears_screen_) {
+    //   // Black with 100% opacity
+    //   clear_values[0].color        = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+    //   clear_values[1].depthStencil = { 1.0f, 0 };
+    // }
 
-    const VkRenderPassBeginInfo render_pass_bi{
-      .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-      .pNext       = nullptr,
-      .renderPass  = phys_graphics_stage->render_pass_,
-      .framebuffer = phys_graphics_stage->framebuffers_.at(image_index).get(),
+    // const VkRenderPassBeginInfo render_pass_bi{
+    //   .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+    //   .pNext       = nullptr,
+    //   .renderPass  = phys_graphics_stage->render_pass_.get(),
+    //   .framebuffer =
+    //   phys_graphics_stage->framebuffers_.at(image_index).get(), .renderArea{
+    //     .offset = {},
+    //     .extent = swapchain_.extent(),
+    //   },
+    //   .clearValueCount = static_cast<uint32_t>(clear_values.size()),
+    //   .pClearValues    = clear_values.data(),
+    // };
+    const VkRenderingInfoKHR render_info{
+      .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+      .pNext = nullptr,
+      .flags = 0,
       .renderArea{
-        .offset = {},
-        .extent = swapchain_.extent(),
+        .offset{},
+        .extent{ swapchain_.extent() },
       },
-      .clearValueCount = static_cast<uint32_t>(clear_values.size()),
-      .pClearValues    = clear_values.data(),
+      .layerCount           = 0,
+      .viewMask             = 0,
+      .colorAttachmentCount = 1,
+      .pColorAttachments    = VK_NULL_HANDLE,
+      .pDepthAttachment     = VK_NULL_HANDLE,
+      .pStencilAttachment   = VK_NULL_HANDLE,
     };
-
-    cb.beginRenderPass(render_pass_bi);
+    cb.beginRendering(render_info);
   }
 
   std::vector<VkBuffer> vertex_buffers;
@@ -158,8 +145,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     if (physical_buffer == nullptr) {
       continue;
     }
-    if (unlikely(physical_buffer->buffer_ == nullptr)) {
-      log_->debug("The PhysicalBuffer of '{}' in stage '{}' points to null. "
+    if (unlikely(physical_buffer->buffer_.empty())) {
+      log_->debug("The PhysicalBuffer of '{}' in stage '{}' is empty. "
                   "This can happen when RenderGraph::render(...) gets called "
                   "before data has been uploaded to the buffer via "
                   "BufferResource::uploadData<type>(...)), or it could be "
@@ -168,22 +155,22 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
       continue;
     }
     if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-      assert(physical_buffer->buffer_);
-      cb.bindIndexBuffer(physical_buffer->buffer_->get());
+      assert(physical_buffer->buffer_.get());
+      cb.bindIndexBuffer(physical_buffer->buffer_);
     }
     else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
-      vertex_buffers.push_back(physical_buffer->buffer_->get());
+      vertex_buffers.push_back(physical_buffer->buffer_.get());
     }
   }
 
   if (!vertex_buffers.empty()) {
     cb.bindVertexBuffers(vertex_buffers);
   }
-  cb.bindPipeline(physical.pipeline_);
+  // cb.bindPipeline(physical.pipeline_);
   stage->on_record_(physical, cb);
 
   if (graphics_stage != nullptr) {
-    cb.endRenderPass();
+    cb.endRendering();
   }
 
   // TODO: Find a more performant solution instead of placing a full memory
@@ -289,228 +276,87 @@ void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
     .dependencyFlags = 0,
   };
 
-  const VkRenderPassCreateInfo render_pass_ci = {
-    .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-    .pNext           = nullptr,
-    .flags           = 0,
-    .attachmentCount = static_cast<std::uint32_t>(attachments.size()),
-    .pAttachments    = attachments.data(),
-    .subpassCount    = 1,
-    .pSubpasses      = &subpass_description,
-    .dependencyCount = 1,
-    .pDependencies   = &subpass_dependency,
-  };
-  if (const auto result = vkCreateRenderPass(device_.logical(), &render_pass_ci,
-                                             nullptr, &physical.render_pass_);
-      result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateRenderPass(): ");
-  }
+  // TODO: make a render pass builder? see how it pans out with dynamic
+  // rendering, dunno where I will end up
+  physical.render_pass_ =
+    wr::RenderPass{ device_, attachments, subpass_description,
+                    subpass_dependency };
 }
 
-void RenderGraph::buildPipelineLayout(const RenderStage* stage,
-                                      PhysicalStage&     physical) const
-{
-  const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-    .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    .pNext          = nullptr,
-    .flags          = 0,
-    .setLayoutCount = static_cast<uint32_t>(stage->descriptor_layouts_.size()),
-    .pSetLayouts    = stage->descriptor_layouts_.data(),
-    .pushConstantRangeCount =
-      static_cast<uint32_t>(stage->push_constant_ranges_.size()),
-    .pPushConstantRanges = stage->push_constant_ranges_.data(),
-  };
+// void RenderGraph::buildPipelineLayout(const RenderStage* stage,
+//                                       PhysicalStage&     physical) const
+//{
+//   const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+//     .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+//     .pNext          = nullptr,
+//     .flags          = 0,
+//     .setLayoutCount =
+//     static_cast<uint32_t>(stage->descriptor_layouts_.size()), .pSetLayouts =
+//     stage->descriptor_layouts_.data(), .pushConstantRangeCount =
+//       static_cast<uint32_t>(stage->push_constant_ranges_.size()),
+//     .pPushConstantRanges = stage->push_constant_ranges_.data(),
+//   };
+//
+//   if (const auto result = vkCreatePipelineLayout(
+//         device_.logical(), &pipeline_layout_ci, nullptr,
+//         &physical.pipelineLayout());
+//       result != VK_SUCCESS) {
+//     ThrowVk(result, "vkCreatePipelineLayout(): failed for pipeline layout
+//     {}!",
+//             stage->name());
+//   }
+// }
 
-  if (const auto result = vkCreatePipelineLayout(
-        device_.logical(), &pipeline_layout_ci, nullptr, &physical.layout_);
-      result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreatePipelineLayout(): failed for pipeline layout {}!",
-            stage->name());
-  }
-}
-
-void RenderGraph::buildGraphicsPipeline(const GraphicsStage*   stage,
-                                        PhysicalGraphicsStage& physical) const
-{
-  // Build buffer and vertex layout bindings. For every buffer resource that
-  // stage reads from, we create a corresponding attribute binding and vertex
-  // binding description.
-  std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
-  std::vector<VkVertexInputBindingDescription>   vertex_bindings;
-  for (const auto* resource : stage->reads_) {
-    const auto* buffer_resource = resource->as<BufferResource>();
-    if (buffer_resource == nullptr) {
-      continue;
-    }
-
-    // Don't mess with index buffers here.
-    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-      continue;
-    }
-
-    // We use std::unordered_map::at() here to ensure that a binding value
-    // exists for buffer_resource.
-    const uint32_t binding = stage->buffer_bindings_.at(buffer_resource);
-    for (auto attribute_description : buffer_resource->vertex_attributes_) {
-      attribute_description.binding = binding;
-      attribute_descriptions.push_back(attribute_description);
-    }
-
-    vertex_bindings.push_back({
-      .binding   = binding,
-      .stride    = static_cast<uint32_t>(buffer_resource->element_size_),
-      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-    });
-  }
-
-  const VkPipelineVertexInputStateCreateInfo vertex_input = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .vertexBindingDescriptionCount =
-      static_cast<std::uint32_t>(vertex_bindings.size()),
-    .pVertexBindingDescriptions = vertex_bindings.data(),
-    .vertexAttributeDescriptionCount =
-      static_cast<std::uint32_t>(attribute_descriptions.size()),
-    .pVertexAttributeDescriptions = attribute_descriptions.data(),
-  };
-
-  const VkPipelineInputAssemblyStateCreateInfo input_assembly = {
-    .sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-    .pNext    = nullptr,
-    .flags    = 0,
-    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-    .primitiveRestartEnable = VK_FALSE,
-  };
-
-  const VkViewport viewport{
-    .x        = 0.0f,
-    .y        = 0.0f,
-    .width    = static_cast<float>(swapchain_.extent().width),
-    .height   = static_cast<float>(swapchain_.extent().height),
-    .minDepth = 0.0f,
-    .maxDepth = 1.0f,
-  };
-
-  const VkRect2D scissor{
-    .offset = { 0, 0 },
-    .extent = swapchain_.extent(),
-  };
-
-  const std::vector<VkDynamicState> dynamic_states = {
-    VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
-  };
-
-  const VkPipelineDynamicStateCreateInfo dynamic_state = {
-    .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-    .pNext             = nullptr,
-    .flags             = 0,
-    .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
-    .pDynamicStates    = dynamic_states.data()
-  };
-
-  const VkPipelineViewportStateCreateInfo viewport_state = {
-    .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-    .pNext         = nullptr,
-    .flags         = 0,
-    .viewportCount = 1,
-    .pViewports    = &viewport,
-    .scissorCount  = 1,
-    .pScissors     = &scissor,
-  };
-
-  const VkPipelineRasterizationStateCreateInfo rasterization_state = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .depthClampEnable        = VK_FALSE,
-    .rasterizerDiscardEnable = VK_FALSE,
-    .polygonMode             = VK_POLYGON_MODE_FILL,
-    .cullMode                = stage->cull_mode_,
-    .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-    .depthBiasEnable         = VK_FALSE,
-    .depthBiasConstantFactor = 0,
-    .depthBiasClamp          = 0,
-    .depthBiasSlopeFactor    = 0,
-    .lineWidth               = 1.0f,
-  };
-
-  const VkPipelineMultisampleStateCreateInfo multisample_state = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    // TODO: rasterizationSamples should be passed as an argument based on the
-    // textures in the stage in question. Also may want to add support for
-    // single sample pipelines in which there are no resolve attachments
-    .rasterizationSamples  = stage->sample_count_,
-    .sampleShadingEnable   = VK_TRUE,
-    .minSampleShading      = 0.2f,
-    .pSampleMask           = nullptr,  // Optional
-    .alphaToCoverageEnable = VK_FALSE, // Optional
-    .alphaToOneEnable      = VK_FALSE, // Optional
-  };
-
-  const VkPipelineDepthStencilStateCreateInfo depth_stencil = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .depthTestEnable       = stage->depth_test_ ? VK_TRUE : VK_FALSE,
-    .depthWriteEnable      = stage->depth_write_ ? VK_TRUE : VK_FALSE,
-    .depthCompareOp        = VK_COMPARE_OP_LESS,
-    .depthBoundsTestEnable = VK_FALSE,
-    .stencilTestEnable     = VK_FALSE,
-    .front                 = {},
-    .back                  = {},
-    .minDepthBounds        = 0.0f, // optional
-    .maxDepthBounds        = 1.0f, // optional
-  };
-
-  auto blend_attachment = stage->blend_attachment_;
-  blend_attachment.colorWriteMask =
-    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-    VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-  const VkPipelineColorBlendStateCreateInfo blend_state = {
-    .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-    .pNext           = nullptr,
-    .flags           = 0,
-    .logicOpEnable   = VK_FALSE,
-    .logicOp         = VK_LOGIC_OP_COPY, // Optional
-    .attachmentCount = 1,
-    .pAttachments    = &blend_attachment,
-    .blendConstants  = { 0.0f, 0.0f, 0.0f, 0.0f }, // Optional
-  };
-
-  const VkGraphicsPipelineCreateInfo pipeline_ci = {
-    .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext               = nullptr,
-    .flags               = 0,
-    .stageCount          = static_cast<std::uint32_t>(stage->shaders_.size()),
-    .pStages             = stage->shaders_.data(),
-    .pVertexInputState   = &vertex_input,
-    .pInputAssemblyState = &input_assembly,
-    .pTessellationState  = nullptr,
-    .pViewportState      = &viewport_state,
-    .pRasterizationState = &rasterization_state,
-    .pMultisampleState   = &multisample_state,
-    .pDepthStencilState  = &depth_stencil,
-    .pColorBlendState    = &blend_state,
-    .pDynamicState       = &dynamic_state,
-    .layout              = physical.layout_,
-    .renderPass          = physical.render_pass_,
-    .subpass             = 0,
-    .basePipelineHandle  = VK_NULL_HANDLE,
-    .basePipelineIndex   = -1,
-  };
-
-  if (const auto result =
-        vkCreateGraphicsPipelines(device_.logical(), nullptr, 1, &pipeline_ci,
-                                  nullptr, &physical.pipeline_);
-      result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateGraphicsPipelines(): failed for pipeline {}!",
-            stage->name());
-  }
-}
+// void RenderGraph::buildGraphicsPipeline(const GraphicsStage*   stage,
+//                                         PhysicalGraphicsStage& physical)
+//                                         const
+// {
+//
+//   // Build buffer and vertex layout bindings. For every buffer resource that
+//   // stage reads from, we create a corresponding attribute binding and vertex
+//   // binding description.
+//   // std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
+//   // std::vector<VkVertexInputBindingDescription>   vertex_bindings;
+//   // for (const auto* resource : stage->reads_) {
+//   //   const auto* buffer_resource = resource->as<BufferResource>();
+//   //   if (buffer_resource == nullptr) {
+//   //     continue;
+//   //   }
+//
+//   //   // Don't mess with index buffers here.
+//   //   if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
+//   //     continue;
+//   //   }
+//
+//   //   // We use std::unordered_map::at() here to ensure that a binding value
+//   //   // exists for buffer_resource.
+//   //   const uint32_t binding = stage->buffer_bindings_.at(buffer_resource);
+//   //   for (auto attribute_description : buffer_resource->vertex_attributes_)
+//   {
+//   //     attribute_description.binding = binding;
+//   //     attribute_descriptions.push_back(attribute_description);
+//   //   }
+//
+//   //   vertex_bindings.push_back({
+//   //     .binding   = binding,
+//   //     .stride    = static_cast<uint32_t>(buffer_resource->element_size_),
+//   //     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+//   //   });
+//   // }
+//
+//   PipelineBuilder pipeline_builder;
+//   pipeline_builder.setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+//     .setPolygonMode(VK_POLYGON_MODE_FILL)
+//     .setCullMode(stage->cull_mode_,
+//                  VK_FRONT_FACE_COUNTER_CLOCKWISE) // cull mode should
+//                  probably
+//                                                   // not be a member of stage
+//     .setMultisampling(stage->sample_count_)
+//     .setDepthFormat(device_.findDepthFormat()) // should be set from depth
+//                                                // texture in the end
+//     .enableBlendingAlphaBlend();
+//   physical.pipeline_ = pipeline_builder.build(device_, stage->name());
+// }
 
 void RenderGraph::compile()
 {
@@ -586,7 +432,8 @@ void RenderGraph::compile()
       continue;
     }
 
-    const wr::ImageInfo texture_info = {
+    const wr::Image::ImageCreateInfo texture_info = {
+      .name   = fmt::format("{} image", texture_resource->name_),
       .extent = swapchain_.extent(),
       .format = texture_resource->format_,
       .tiling = VK_IMAGE_TILING_OPTIMAL,
@@ -601,32 +448,21 @@ void RenderGraph::compile()
           : VK_IMAGE_ASPECT_COLOR_BIT,
       .sample_count = texture_resource->sample_count_,
       .mip_levels   = 1,
+      .memory_usage = VMA_MEMORY_USAGE_GPU_ONLY,
     };
 
-    const VmaAllocationCreateInfo alloc_ci{
-      .flags          = {},
-      .usage          = VMA_MEMORY_USAGE_GPU_ONLY,
-      .requiredFlags  = {},
-      .preferredFlags = {},
-      .memoryTypeBits = {},
-      .pool           = {},
-      .pUserData      = {},
-      .priority       = {},
-    };
-
-    auto physical    = std::make_shared<PhysicalImage>(device_);
-    physical->image_ = std::make_unique<wr::GpuImage>(
-      device_, texture_info, alloc_ci,
-      fmt::format("{} image", texture_resource->name_));
+    auto physical               = std::make_shared<PhysicalImage>();
+    physical->image_            = wr::Image{ device_, texture_info };
     texture_resource->physical_ = physical;
   }
 
   for (auto substages : stage_stack_) {
     for (auto* stage : substages) {
       if (auto* graphics_stage = stage->as<GraphicsStage>()) {
-        auto  physical_ptr = std::make_unique<PhysicalGraphicsStage>(device_);
-        auto& physical     = *physical_ptr;
-        graphics_stage->physical_ = std::move(physical_ptr);
+        auto g_stage_ptr = std::make_unique<PhysicalGraphicsStage>();
+        // Need PhysicalGraphicsStage& later
+        auto& physical            = *g_stage_ptr;
+        graphics_stage->physical_ = std::move(g_stage_ptr); // upcasts
 
         // Deduce sample count to be used in stage
         VkSampleCountFlagBits sample_count{ VK_SAMPLE_COUNT_1_BIT };
@@ -642,8 +478,8 @@ void RenderGraph::compile()
         //             static_cast<uint32_t>(sample_count));
 
         buildRenderPass(graphics_stage, physical);
-        buildPipelineLayout(graphics_stage, physical);
-        buildGraphicsPipeline(graphics_stage, physical);
+        // buildPipelineLayout(graphics_stage, physical);
+        // buildGraphicsPipeline(graphics_stage, physical);
 
         // If we write to at least one texture, we need to make framebuffers.
         if (!stage->writes_.empty()) {
@@ -669,14 +505,14 @@ void RenderGraph::compile()
           // The render graph renders to a single target
           // TODO: test if this is actually correct when using more images
           image_views.reserve(back_buffers.size() + images.size());
-          for (auto* const img_view : swapchain_.imageViews()) {
+          for (auto& img_view : swapchain_.imageViews()) {
             // the order of the image views need to correspond with the
             // attachment order in the VkRenderPass
             for (const auto* image : images) {
-              image_views.push_back(image->image_->view());
+              image_views.push_back(image->image_.view().get());
             }
             std::fill_n(std::back_inserter(image_views), back_buffers.size(),
-                        img_view);
+                        img_view.get());
             physical.framebuffers_.emplace_back(device_, physical.render_pass_,
                                                 image_views, swapchain_);
             image_views.clear();
@@ -699,17 +535,18 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
         // TODO: Decide whether BufferResource::uploadData() should allow
         // upploading empty spans at all. Doing so is most likely a mistake (as
         // far as I can see right now).
-        physical.buffer_.reset();
+        // physical.buffer_.reset();
+        physical.buffer_ = {};
       }
       else {
         bool new_buffer_needed = false;
-        if (unlikely(physical.buffer_ == nullptr)) {
+        if (unlikely(physical.buffer_.empty())) {
           new_buffer_needed = true;
         }
         else {
           // A gpu buffer already exists
           const size_t buffer_size{ static_cast<size_t>(
-            physical.buffer_->size()) };
+            physical.buffer_.size()) };
           if (buffer_resource->data_size_ != buffer_size) {
             // The gpu buffer needs to be resized
             new_buffer_needed = true;
@@ -729,13 +566,14 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
             default:
               assert(false);
           }
-          physical.buffer_ = std::make_unique<wr::GpuBuffer>(
-            device_, buffer_resource->data_size_, buffer_usage,
-            VMA_MEMORY_USAGE_CPU_TO_GPU, "render graph buffer");
+          physical.buffer_ =
+            wr::Buffer{ device_, "render graph buffer",
+                        buffer_resource->data_size_, buffer_usage,
+                        VMA_MEMORY_USAGE_CPU_TO_GPU };
         }
         // Upload data
-        physical.buffer_->uploadData(buffer_resource->data_.get(),
-                                     buffer_resource->data_size_);
+        physical.buffer_.uploadData(buffer_resource->data_.get(),
+                                    buffer_resource->data_size_);
       }
     }
     // Reset data held by buffer resource once it has been uploaded to gpu

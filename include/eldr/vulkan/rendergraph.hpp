@@ -1,7 +1,11 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/image.hpp>
+#include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <eldr/vulkan/wrappers/renderpass.hpp>
+#include <eldr/vulkan/wrappers/swapchain.hpp>
 
 #include <functional>
 #include <memory>
@@ -200,7 +204,7 @@ public:
   bool hasBlockingRead() const;
 
 protected:
-  explicit RenderStage(std::string name) : name_(std::move(name)) {}
+  explicit RenderStage(std::string_view name) : name_(name) {}
 
 private:
   const std::string                  name_;
@@ -218,7 +222,7 @@ class GraphicsStage : public RenderStage {
   friend RenderGraph;
 
 public:
-  explicit GraphicsStage(std::string&& name) : RenderStage(name) {}
+  explicit GraphicsStage(std::string_view name) : RenderStage(name) {}
   GraphicsStage(const GraphicsStage&) = delete;
   GraphicsStage(GraphicsStage&&)      = delete;
   ~GraphicsStage() override           = default;
@@ -258,9 +262,9 @@ public:
   void usesShader(const wr::Shader& shader);
 
 private:
-  bool                                clears_screen_{ false };
-  bool                                depth_test_{ false };
-  bool                                depth_write_{ false };
+  // bool                                clears_screen_{ false };
+  // bool                                depth_test_{ false };
+  // bool                                depth_write_{ false };
   VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
   VkPipelineColorBlendAttachmentState blend_attachment_{};
   VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
@@ -280,9 +284,7 @@ public:
   PhysicalResource& operator=(PhysicalResource&&)      = delete;
 
 protected:
-  const wr::Device& device_;
-
-  explicit PhysicalResource(const wr::Device& device) : device_(device) {}
+  explicit PhysicalResource() = default;
 };
 
 class PhysicalBuffer : public PhysicalResource {
@@ -305,7 +307,7 @@ class PhysicalImage : public PhysicalResource {
   friend RenderGraph;
 
 public:
-  explicit PhysicalImage(const wr::Device& device);
+  explicit PhysicalImage()            = default;
   PhysicalImage(const PhysicalImage&) = delete;
   PhysicalImage(PhysicalImage&&)      = delete;
   ~PhysicalImage() override           = default;
@@ -321,7 +323,7 @@ class PhysicalBackBuffer : public PhysicalResource {
   friend RenderGraph;
 
 public:
-  PhysicalBackBuffer(const wr::Device& device) : PhysicalResource(device) {}
+  explicit PhysicalBackBuffer()                 = default;
   PhysicalBackBuffer(const PhysicalBackBuffer&) = delete;
   PhysicalBackBuffer(PhysicalBackBuffer&&)      = delete;
   ~PhysicalBackBuffer() override                = default;
@@ -334,10 +336,10 @@ class PhysicalStage : public RenderGraphObject {
   friend RenderGraph;
 
 public:
-  explicit PhysicalStage(const wr::Device& device) : device_(device) {}
+  explicit PhysicalStage()            = default;
   PhysicalStage(const PhysicalStage&) = delete;
   PhysicalStage(PhysicalStage&&)      = delete;
-  ~PhysicalStage() override;
+  ~PhysicalStage() override           = default;
 
   PhysicalStage& operator=(const PhysicalStage&) = delete;
   PhysicalStage& operator=(PhysicalStage&&)      = delete;
@@ -345,30 +347,29 @@ public:
   /// @brief Retrieve the pipeline layout of this physical stage.
   // TODO: This can be removed once descriptors are properly implemented in the
   // render graph.
-  [[nodiscard]] VkPipelineLayout pipelineLayout() const { return layout_; }
+  //   [[nodiscard]] VkPipelineLayout pipelineLayout() const
+  //   {
+  //     return pipeline_.layout();
+  //   }
 
-protected:
-  const wr::Device& device_;
-
-private:
-  VkPipelineLayout layout_{ VK_NULL_HANDLE };
-  VkPipeline       pipeline_{ VK_NULL_HANDLE };
+  // private:
+  //   wr::Pipeline pipeline_;
 };
 
 class PhysicalGraphicsStage : public PhysicalStage {
   friend RenderGraph;
 
 public:
-  explicit PhysicalGraphicsStage(const wr::Device& device);
+  explicit PhysicalGraphicsStage()                    = default;
   PhysicalGraphicsStage(const PhysicalGraphicsStage&) = delete;
   PhysicalGraphicsStage(PhysicalGraphicsStage&&)      = delete;
-  ~PhysicalGraphicsStage() override;
+  ~PhysicalGraphicsStage() override                   = default;
 
   PhysicalGraphicsStage& operator=(const PhysicalGraphicsStage&) = delete;
   PhysicalGraphicsStage& operator=(PhysicalGraphicsStage&&)      = delete;
 
 private:
-  VkRenderPass                 render_pass_{ VK_NULL_HANDLE };
+  wr::RenderPass               render_pass_;
   std::vector<wr::Framebuffer> framebuffers_;
 };
 
@@ -402,9 +403,9 @@ public:
   }
 
   void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
-  void buildPipelineLayout(const RenderStage*, PhysicalStage&) const;
-  void buildGraphicsPipeline(const GraphicsStage*,
-                             PhysicalGraphicsStage&) const;
+  // void buildPipelineLayout(const RenderStage*, PhysicalStage&) const;
+  // void buildGraphicsPipeline(const GraphicsStage*,
+  //                           PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
                            const wr::CommandBuffer& cb,
@@ -414,9 +415,9 @@ public:
   void render(uint32_t image_index, const wr::CommandBuffer& cb);
 
 private:
-  const wr::Device&    device_;
-  const wr::Swapchain& swapchain_;
-  Logger               log_{ requestLogger("render-graph") };
+  const wr::Device    device_;
+  const wr::Swapchain swapchain_;
+  Logger              log_{ requestLogger("render-graph") };
 
   std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;

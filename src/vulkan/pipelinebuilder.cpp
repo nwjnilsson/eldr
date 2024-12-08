@@ -19,8 +19,6 @@ void PipelineBuilder::reset()
   multisampling_.sType =
     VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 
-  pipeline_layout_ = {};
-
   depth_stencil_ = {};
   depth_stencil_.sType =
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -81,10 +79,25 @@ PipelineBuilder& PipelineBuilder::setCullMode(VkCullModeFlags mode,
 
 PipelineBuilder& PipelineBuilder::setMultisamplingNone()
 {
-  multisampling_.sampleShadingEnable = VK_FALSE;
   // multisampling defaulted to no multisampling (1 sample per pixel)
   multisampling_.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  multisampling_.sampleShadingEnable  = VK_FALSE;
   multisampling_.minSampleShading     = 1.0f;
+  multisampling_.pSampleMask          = nullptr;
+  // no alpha to coverage either
+  multisampling_.alphaToCoverageEnable = VK_FALSE;
+  multisampling_.alphaToOneEnable      = VK_FALSE;
+  return *this;
+}
+
+PipelineBuilder&
+PipelineBuilder::setMultisampling(VkSampleCountFlagBits sample_count,
+                                  float                 min_sample_shading)
+{
+  // multisampling defaulted to no multisampling (1 sample per pixel)
+  multisampling_.rasterizationSamples = sample_count;
+  multisampling_.sampleShadingEnable  = VK_TRUE;
+  multisampling_.minSampleShading     = min_sample_shading;
   multisampling_.pSampleMask          = nullptr;
   // no alpha to coverage either
   multisampling_.alphaToCoverageEnable = VK_FALSE;
@@ -182,7 +195,7 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
                                     std::string_view  name)
 {
   // Pipeline layout
-  const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
+  const VkPipelineLayoutCreateInfo pipeline_layout_ci{
     .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     .pNext          = nullptr,
     .flags          = 0,
@@ -193,12 +206,12 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pPushConstantRanges = push_constant_ranges_.data(),
   };
 
-  // Pipeline
+  // Use vertex pulling
   VkPipelineVertexInputStateCreateInfo vertex_input_info{};
   vertex_input_info.sType =
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-  const VkPipelineViewportStateCreateInfo viewport_state = {
+  const VkPipelineViewportStateCreateInfo viewport_state{
     .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
     .pNext         = nullptr,
     .flags         = 0,
@@ -208,7 +221,6 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pScissors     = nullptr, // dynamic scissor
   };
 
-  // dummy color blending
   const VkPipelineColorBlendStateCreateInfo color_blending{
     .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
     .pNext           = nullptr,
@@ -220,11 +232,10 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pAttachments    = &color_blend_attachment_,
   };
 
-  const std::vector<VkDynamicState> dynamic_states = {
-    VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
-  };
+  const std::vector<VkDynamicState> dynamic_states{ VK_DYNAMIC_STATE_VIEWPORT,
+                                                    VK_DYNAMIC_STATE_SCISSOR };
 
-  const VkPipelineDynamicStateCreateInfo dynamic_state = {
+  const VkPipelineDynamicStateCreateInfo dynamic_state{
     .sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
     .pNext             = nullptr,
     .flags             = 0,
@@ -232,27 +243,22 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pDynamicStates    = dynamic_states.data()
   };
 
-  const VkGraphicsPipelineCreateInfo pipeline_ci = {
-    .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .pNext               = nullptr,
-    .flags               = 0,
-    .stageCount          = static_cast<std::uint32_t>(shader_stages_.size()),
-    .pStages             = shader_stages_.data(),
-    .pVertexInputState   = &vertex_input_info,
-    .pInputAssemblyState = &input_assembly_,
-    .pTessellationState  = nullptr,
-    .pViewportState      = &viewport_state,
-    .pRasterizationState = &rasterizer_,
-    .pMultisampleState   = &multisampling_,
-    .pDepthStencilState  = &depth_stencil_,
-    .pColorBlendState    = &color_blending,
-    .pDynamicState       = &dynamic_state,
-    .layout              = pipeline_layout_,
-    .renderPass          = {}, // dynamic rendering
-    .subpass             = 0,
-    .basePipelineHandle  = VK_NULL_HANDLE,
-    .basePipelineIndex   = -1,
-  };
+  VkGraphicsPipelineCreateInfo pipeline_ci{};
+  pipeline_ci.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  pipeline_ci.pNext      = &render_info_; // dynamic rendering info
+  pipeline_ci.stageCount = static_cast<uint32_t>(shader_stages_.size());
+  pipeline_ci.pStages    = shader_stages_.data();
+  pipeline_ci.pVertexInputState   = &vertex_input_info;
+  pipeline_ci.pInputAssemblyState = &input_assembly_;
+  pipeline_ci.pViewportState      = &viewport_state;
+  pipeline_ci.pRasterizationState = &rasterizer_;
+  pipeline_ci.pMultisampleState   = &multisampling_;
+  pipeline_ci.pDepthStencilState  = &depth_stencil_;
+  pipeline_ci.pColorBlendState    = &color_blending;
+  pipeline_ci.pDynamicState       = &dynamic_state;
+  pipeline_ci.renderPass          = {}; // dynamic rendering
+  pipeline_ci.subpass             = 0;
+  pipeline_ci.basePipelineIndex   = -1;
 
   // TODO: decide whether pipeline should have name, and if so, name them
   // appropriately

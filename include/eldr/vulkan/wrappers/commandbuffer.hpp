@@ -17,6 +17,7 @@ public:
 
   const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
+  const CommandBuffer& beginRendering(const VkRenderingInfoKHR&) const;
   // const CommandBuffer&   beginSingleCommand() const;
   const CommandBuffer& drawIndexed(uint32_t index_count,
                                    uint32_t instance_count = 1,
@@ -24,6 +25,7 @@ public:
                                    int32_t  vertex_offset  = 0,
                                    uint32_t first_instance = 0) const;
   const CommandBuffer& endRenderPass() const;
+  const CommandBuffer& endRendering() const;
   const CommandBuffer& end() const;
   const CommandBuffer& submit(const VkSubmitInfo& submit_info) const;
   const CommandBuffer& submitAndWait(const VkSubmitInfo& submit_info) const;
@@ -104,9 +106,9 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const Buffer& createStagingBuffer(const void*      data,
-                                                  VkDeviceSize     buffer_size,
-                                                  std::string_view name) const;
+  [[nodiscard]] const Buffer&
+  createStagingBuffer(std::string_view name, const void* data,
+                      VkDeviceSize buffer_size) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
   [[nodiscard]] VkCommandBuffer    get() const;

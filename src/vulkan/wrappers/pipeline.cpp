@@ -8,16 +8,16 @@ namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
 class Pipeline::PipelineImpl {
 public:
-  PipelineImpl(const Device&                       device,
-               const VkPipelineLayoutCreateInfo&   layout_ci,
-               const VkGraphicsPipelineCreateInfo& pipeline_ci);
-  PipelineImpl(const Device&                      device,
-               const VkPipelineLayoutCreateInfo&  layout_ci,
-               const VkComputePipelineCreateInfo& pipeline_ci);
+  PipelineImpl(const Device&                     device,
+               const VkPipelineLayoutCreateInfo& layout_ci,
+               VkGraphicsPipelineCreateInfo&     pipeline_ci);
+  PipelineImpl(const Device&                     device,
+               const VkPipelineLayoutCreateInfo& layout_ci,
+               VkComputePipelineCreateInfo&      pipeline_ci);
   ~PipelineImpl();
 
   void createPipelineLayout(const VkPipelineLayoutCreateInfo& layout_ci);
-  const Device&    device_;
+  const Device     device_;
   VkPipeline       pipeline_{ VK_NULL_HANDLE };
   VkPipelineLayout pipeline_layout_{ VK_NULL_HANDLE };
 };
@@ -25,10 +25,11 @@ public:
 // Graphics Pipeline creation
 Pipeline::PipelineImpl::PipelineImpl(
   const Device& device, const VkPipelineLayoutCreateInfo& layout_ci,
-  const VkGraphicsPipelineCreateInfo& pipeline_ci)
+  VkGraphicsPipelineCreateInfo& pipeline_ci)
   : device_(device)
 {
   createPipelineLayout(layout_ci);
+  pipeline_ci.layout = pipeline_layout_;
   if (const auto result = vkCreateGraphicsPipelines(
         device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_);
       result != VK_SUCCESS)
@@ -38,10 +39,11 @@ Pipeline::PipelineImpl::PipelineImpl(
 // Compute Pipeline creation
 Pipeline::PipelineImpl::PipelineImpl(
   const Device& device, const VkPipelineLayoutCreateInfo& layout_ci,
-  const VkComputePipelineCreateInfo& pipeline_ci)
+  VkComputePipelineCreateInfo& pipeline_ci)
   : device_(device)
 {
   createPipelineLayout(layout_ci);
+  pipeline_ci.layout = pipeline_layout_;
   if (const auto result = vkCreateComputePipelines(
         device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_);
       result != VK_SUCCESS)
@@ -67,20 +69,21 @@ void Pipeline::PipelineImpl::createPipelineLayout(
 // Pipeline
 //------------------------------------------------------------------------------
 Pipeline::Pipeline(const Device& device, std::string_view name,
-                   const VkPipelineLayoutCreateInfo&   layout_ci,
-                   const VkGraphicsPipelineCreateInfo& pipeline_ci)
+                   const VkPipelineLayoutCreateInfo& layout_ci,
+                   VkGraphicsPipelineCreateInfo&     pipeline_ci)
   : name_(name),
     p_data_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 
 Pipeline::Pipeline(const Device& device, std::string_view name,
-                   const VkPipelineLayoutCreateInfo&  layout_ci,
-                   const VkComputePipelineCreateInfo& pipeline_ci)
+                   const VkPipelineLayoutCreateInfo& layout_ci,
+                   VkComputePipelineCreateInfo&      pipeline_ci)
   : name_(name),
     p_data_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 
-VkPipeline Pipeline::get() const { return p_data_->pipeline_; }
+VkPipeline       Pipeline::get() const { return p_data_->pipeline_; }
+VkPipelineLayout Pipeline::layout() const { return p_data_->pipeline_layout_; }
 } // namespace eldr::vk::wr

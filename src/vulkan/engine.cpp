@@ -227,15 +227,13 @@ void VulkanEngine::initDescriptors()
   DescriptorSetLayoutBuilder layout_builder;
   layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT |
                                        VK_SHADER_STAGE_FRAGMENT_BIT);
-  ed_->scene_data_descriptor_layout =
-    wr::DescriptorSetLayout{ layout_builder.build(ed_->device, 0) };
+  ed_->scene_data_descriptor_layout = layout_builder.build(ed_->device, 0);
 
   layout_builder.reset();
 
   layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
     .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
-  ed_->viking_model_descriptor_layout =
-    wr::DescriptorSetLayout{ layout_builder.build(ed_->device, 0) };
+  ed_->viking_model_descriptor_layout = layout_builder.build(ed_->device, 0);
 }
 
 void VulkanEngine::initDefaultData()
@@ -258,6 +256,8 @@ void VulkanEngine::initDefaultData()
                                                       Vec4f{ 1, 0.5, 0, 0 },
                                                       {} };
   material_resources.data_buffer.uploadData(&constants, sizeof(constants));
+
+  ed_->default_material_data
 }
 
 void VulkanEngine::buildBuffers()
@@ -452,6 +452,8 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
 
+    cb.bindPipeline(ed_->metal_rough_material.opaque_pipeline);
+
     const VkViewport viewports[] = { {
       .x        = 0.0f,
       .y        = 0.0f,
@@ -485,7 +487,8 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
   lambda();
   ImGui::EndFrame();
   ImGui::Render();
-  ed_->imgui_overlay->update(frame_index_);
+  ed_->imgui_overlay->update(frame_index_,
+                             ed_->frames_in_flight[frame_index_].descriptors);
 }
 
 // TODO: move this to where it is relevant
@@ -606,8 +609,7 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT)
     .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-  material.material_layout =
-    wr::DescriptorSetLayout{ layout_builder.build(device, 0) };
+  material.material_layout = layout_builder.build(device, 0);
 
   wr::Shader vert_shader{ device, "material vertex shader", "mesh.vert.spv",
                           VK_SHADER_STAGE_VERTEX_BIT };
@@ -638,15 +640,15 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
   // finally build the pipeline
   // TODO: pipeline names should ultimately be constructed from the material
   // information
-  material.opaque_pipeline = wr::Pipeline{ pipeline_builder.build(
-    device, "GltfMetallicRoughness opaque pipeline") };
+  material.opaque_pipeline =
+    pipeline_builder.build(device, "GltfMetallicRoughness opaque pipeline");
 
   // create the transparent variant
   pipeline_builder.enableBlendingAdditive().enableDepthtest(
     false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
-  material.transparent_pipeline = wr::Pipeline{ pipeline_builder.build(
-    device, "GltfMetallicRoughness transparent pipeline") };
+  material.transparent_pipeline = pipeline_builder.build(
+    device, "GltfMetallicRoughness transparent pipeline");
 }
 
 } // namespace eldr::vk

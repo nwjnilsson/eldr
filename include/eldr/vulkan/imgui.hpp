@@ -2,11 +2,13 @@
 
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/math.hpp>
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/wrappers/gputexture.hpp>
+#include <eldr/vulkan/wrappers/shader.hpp>
+#include <eldr/vulkan/wrappers/swapchain.hpp>
 
 #include <imgui.h>
-
-#include <memory>
 
 class GLFWwindow;
 namespace eldr::vk {
@@ -22,21 +24,23 @@ public:
   ImGuiOverlay(const ImGuiOverlay&) = delete;
   ~ImGuiOverlay();
 
-  void update(uint32_t frame_index);
+  void update(DescriptorAllocator& descriptors);
 
 private:
-  const wr::Device&    device_;
-  const wr::Swapchain& swapchain_;
-  Logger               log_{ requestLogger("imgui-overlay") };
-  float                scale_{ 1.0f };
+  const wr::Device    device_;
+  const wr::Swapchain swapchain_;
+  Logger              log_{ requestLogger("imgui-overlay") };
+  float               scale_{ 1.0f };
 
   BufferResource* index_buffer_{ nullptr };
   BufferResource* vertex_buffer_{ nullptr };
   GraphicsStage*  stage_{ nullptr };
 
-  std::unique_ptr<wr::GpuTexture> imgui_texture_;
-  std::unique_ptr<wr::Shader>     vertex_shader_;
-  std::unique_ptr<wr::Shader>     fragment_shader_;
+  wr::GpuTexture imgui_texture_;
+  wr::Shader     vertex_shader_;
+  wr::Shader     fragment_shader_;
+
+  wr::DescriptorSetLayout set_layout_;
 
   struct PushConstantBlock {
     Vec2f scale;

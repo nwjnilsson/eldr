@@ -62,7 +62,7 @@ class DebugUtilsMessenger::DebugUtilsMessengerImpl {
     const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);
   ~DebugUtilsMessengerImpl();
 
-  const Instance&          instance_;
+  const Instance           instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
 };
 

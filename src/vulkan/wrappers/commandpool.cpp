@@ -9,7 +9,7 @@ class CommandPool::CommandPoolImpl {
 public:
   CommandPoolImpl(const Device& device, const VkCommandPoolCreateInfo& pool_ci);
   ~CommandPoolImpl();
-  const Device& device_;
+  const Device  device_;
   VkCommandPool pool_{ VK_NULL_HANDLE };
 };
 

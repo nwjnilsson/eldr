@@ -12,8 +12,8 @@ class Surface::SurfaceImpl {
 public:
   SurfaceImpl(const Instance& instance, GLFWwindow* window);
   ~SurfaceImpl();
-  const Instance& instance_;
-  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
+  const Instance instance_;
+  VkSurfaceKHR   surface_{ VK_NULL_HANDLE };
 };
 
 Surface::SurfaceImpl::SurfaceImpl(const Instance& instance, GLFWwindow* window)

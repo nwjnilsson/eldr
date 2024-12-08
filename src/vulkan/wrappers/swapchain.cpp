@@ -66,7 +66,7 @@ public:
   SwapchainImpl(const Device&                   device,
                 const VkSwapchainCreateInfoKHR& swapchain_ci);
   ~SwapchainImpl();
-  const Device&  device_;
+  const Device   device_;
   VkSwapchainKHR swapchain_{ VK_NULL_HANDLE };
 };
 

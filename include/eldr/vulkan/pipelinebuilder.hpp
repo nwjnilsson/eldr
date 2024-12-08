@@ -31,13 +31,15 @@ public:
   PipelineBuilder& setPolygonMode(VkPolygonMode mode);
   PipelineBuilder& setCullMode(VkCullModeFlags mode, VkFrontFace front_face);
   PipelineBuilder& setMultisamplingNone();
+  PipelineBuilder& setMultisampling(VkSampleCountFlagBits sample_count,
+                                    float min_sample_shading = 0.2f);
   PipelineBuilder& disableBlending();
-  PipelineBuilder& disableDepthtest();
-  PipelineBuilder& enableDepthtest(bool depthWriteEnable, VkCompareOp op);
-  PipelineBuilder& setColorAttachmentFormat(VkFormat format);
-  PipelineBuilder& setDepthFormat(VkFormat format);
   PipelineBuilder& enableBlendingAdditive();
   PipelineBuilder& enableBlendingAlphaBlend();
+  PipelineBuilder& disableDepthtest();
+  PipelineBuilder& enableDepthtest(bool depthWriteEnable, VkCompareOp op);
+  PipelineBuilder& setDepthFormat(VkFormat format);
+  PipelineBuilder& setColorAttachmentFormat(VkFormat format);
 
   [[nodiscard]] wr::Pipeline build(const wr::Device& device,
                                    std::string_view  name);
@@ -49,13 +51,12 @@ private:
 
   // Pipeline stuff
   std::vector<VkPipelineShaderStageCreateInfo> shader_stages_;
-  VkPipelineInputAssemblyStateCreateInfo       input_assembly_{};
-  VkPipelineRasterizationStateCreateInfo       rasterizer_{};
-  VkPipelineColorBlendAttachmentState          color_blend_attachment_{};
-  VkPipelineMultisampleStateCreateInfo         multisampling_{};
-  VkPipelineLayout                             pipeline_layout_{};
-  VkPipelineDepthStencilStateCreateInfo        depth_stencil_{};
-  VkPipelineRenderingCreateInfo                render_info_{};
-  VkFormat                                     color_attachment_format_{};
+  VkPipelineInputAssemblyStateCreateInfo       input_assembly_;
+  VkPipelineRasterizationStateCreateInfo       rasterizer_;
+  VkPipelineColorBlendAttachmentState          color_blend_attachment_;
+  VkPipelineMultisampleStateCreateInfo         multisampling_;
+  VkPipelineDepthStencilStateCreateInfo        depth_stencil_;
+  VkPipelineRenderingCreateInfo                render_info_;
+  VkFormat color_attachment_format_{ VK_FORMAT_UNDEFINED };
 };
 } // namespace eldr::vk

@@ -15,7 +15,7 @@ public:
   CommandBufferImpl(const Device&                     device,
                     const VkCommandBufferAllocateInfo alloc_info);
   ~CommandBufferImpl();
-  const Device&   device_;
+  const Device    device_;
   VkCommandPool   command_pool_;
   VkCommandBuffer command_buffer_{ VK_NULL_HANDLE };
 };
@@ -138,6 +138,13 @@ const CommandBuffer& CommandBuffer::beginRenderPass(
   return *this;
 }
 
+const CommandBuffer&
+CommandBuffer::beginRendering(const VkRenderingInfoKHR& render_info) const
+{
+  vkCmdBeginRenderingKHR(cb_data_->command_buffer_, &render_info);
+  return *this;
+}
+
 const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
                                                 uint32_t inst_count,
                                                 uint32_t first_index,
@@ -152,6 +159,12 @@ const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
 const CommandBuffer& CommandBuffer::endRenderPass() const
 {
   vkCmdEndRenderPass(cb_data_->command_buffer_);
+  return *this;
+}
+
+const CommandBuffer& CommandBuffer::endRendering() const
+{
+  vkCmdEndRenderingKHR(cb_data_->command_buffer_);
   return *this;
 }
 
@@ -207,8 +220,8 @@ const CommandBuffer& CommandBuffer::reset() const
 }
 
 const CommandBuffer&
-CommandBuffer::blitImage(const GpuImage& src_image, VkImageLayout src_layout,
-                         const GpuImage& dst_image, VkImageLayout dst_layout,
+CommandBuffer::blitImage(const Image& src_image, VkImageLayout src_layout,
+                         const Image& dst_image, VkImageLayout dst_layout,
                          const VkImageBlit& blit, VkFilter filter) const
 {
   vkCmdBlitImage(cb_data_->command_buffer_, src_image.get(), src_layout,
@@ -216,9 +229,9 @@ CommandBuffer::blitImage(const GpuImage& src_image, VkImageLayout src_layout,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const GpuBuffer& buffer,
-                                                    VkIndexType      index_type,
-                                                    VkDeviceSize offset) const
+const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer& buffer,
+                                                    VkIndexType   index_type,
+                                                    VkDeviceSize  offset) const
 {
   assert(buffer.get());
   vkCmdBindIndexBuffer(cb_data_->command_buffer_, buffer.get(), offset,
@@ -267,7 +280,7 @@ CommandBuffer::bindPipeline(const Pipeline&     pipeline,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::generateMipmaps(const GpuImage& image,
+const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image,
                                                     uint32_t mip_levels) const
 {
   VkFormatProperties format_props{};
@@ -345,7 +358,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const GpuImage& image,
 }
 
 const CommandBuffer& CommandBuffer::transitionImageLayout(
-  const GpuImage& image, VkImageLayout old_layout, VkImageLayout new_layout,
+  const Image& image, VkImageLayout old_layout, VkImageLayout new_layout,
   uint32_t mip_levels) const
 {
   VkImageMemoryBarrier barrier{};
@@ -386,7 +399,7 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
 }
 
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const GpuBuffer& buffer, GpuImage& image,
+CommandBuffer::copyBufferToImage(const Buffer& buffer, Image& image,
                                  const VkBufferImageCopy& copy_region) const
 {
   vkCmdCopyBufferToImage(cb_data_->command_buffer_, buffer.get(), image.get(),
@@ -396,14 +409,14 @@ CommandBuffer::copyBufferToImage(const GpuBuffer& buffer, GpuImage& image,
 
 const CommandBuffer&
 CommandBuffer::copyBufferToImage(const void* data, VkDeviceSize buffer_size,
-                                 GpuImage&                image,
+                                 Image&                   image,
                                  const VkBufferImageCopy& copy_region) const
 {
 
   return copyBufferToImage(
     createStagingBuffer(
-      data, buffer_size,
-      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1)),
+      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data,
+      buffer_size),
     image, copy_region);
 }
 
@@ -421,13 +434,13 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const GpuBuffer& CommandBuffer::createStagingBuffer(const void*  data,
-                                                    VkDeviceSize buffer_size,
-                                                    std::string_view name) const
+const Buffer& CommandBuffer::createStagingBuffer(std::string_view name,
+                                                 const void*      data,
+                                                 VkDeviceSize buffer_size) const
 {
-  staging_buffers_.emplace_back(cb_data_->device_, data, buffer_size,
+  staging_buffers_.emplace_back(cb_data_->device_, name, data, buffer_size,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                VMA_MEMORY_USAGE_CPU_ONLY, name);
+                                VMA_MEMORY_USAGE_CPU_ONLY);
   return staging_buffers_.back();
 }
 

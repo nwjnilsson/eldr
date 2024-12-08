@@ -1,7 +1,8 @@
+#include <eldr/vulkan/descriptorallocator.hpp>
+#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/imgui.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
@@ -43,12 +44,11 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   // style.ScaleAllSizes(scale_);
 
   log_->trace("Loading ImGUI shaders");
-  vertex_shader_ =
-    std::make_unique<wr::Shader>(device_, VK_SHADER_STAGE_VERTEX_BIT,
-                                 "ImGUI vertex shader", "imgui.vert.spv");
+  vertex_shader_ = wr::Shader{ device_, "ImGUI vertex shader", "imgui.vert.spv",
+                               VK_SHADER_STAGE_VERTEX_BIT };
   fragment_shader_ =
-    std::make_unique<wr::Shader>(device_, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                 "ImGUI fragment shader", "imgui.frag.spv");
+    wr::Shader{ device_, "ImGUI fragment shader", "imgui.frag.spv",
+                VK_SHADER_STAGE_FRAGMENT_BIT };
 
   // Load font texture
   // TODO: Move this data into a container class; have container class also
@@ -76,7 +76,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   if (im_font == nullptr || font_texture_data == nullptr) {
     log_->error("Unable to load font {}.  Falling back to error texture",
                 font_file_path);
-    imgui_texture_ = std::make_unique<wr::GpuTexture>(device_, Bitmap{});
+    imgui_texture_ = wr::GpuTexture{ device_, Bitmap{} };
   }
   else {
     log_->trace("Creating ImGUI font texture");
@@ -90,20 +90,22 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                static_cast<VkDeviceSize>(font_texture_height) *
                                static_cast<VkDeviceSize>(font_texture_channels);
 
-    imgui_texture_ = std::make_unique<wr::GpuTexture>(
-      device_, font_texture_data, upload_size,
-      static_cast<uint32_t>(font_texture_width),
-      static_cast<uint32_t>(font_texture_height), font_texture_channels,
-      VK_FORMAT_R8G8B8A8_UNORM, font_mip_levels, "ImGUI font texture");
+    imgui_texture_ = wr::GpuTexture{ device_,
+                                     font_texture_data,
+                                     upload_size,
+                                     static_cast<uint32_t>(font_texture_width),
+                                     static_cast<uint32_t>(font_texture_height),
+                                     font_texture_channels,
+                                     VK_FORMAT_R8G8B8A8_UNORM,
+                                     font_mip_levels,
+                                     "ImGUI font texture" };
   }
 
-  wr::DescriptorBuilder descriptor_builder(device_);
+  DescriptorSetLayoutBuilder descriptor_builder;
   for (uint32_t i = 0; i < max_frames_in_flight; ++i) {
-    descriptor_builder.addCombinedImageSampler(imgui_texture_->sampler(),
-                                               imgui_texture_->imageView(), 0);
-    descriptors_.emplace_back(
-      descriptor_builder.build(fmt::format("ImGui (frame {})", i)));
+    descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
   }
+  set_layout_ = descriptor_builder.build(device, 0);
 
   index_buffer_  = render_graph->add<BufferResource>("imgui index buffer",
                                                      BufferUsage::IndexBuffer);
@@ -122,13 +124,11 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   stage_->readsFrom(index_buffer_);
   stage_->readsFrom(vertex_buffer_);
   stage_->bindBuffer(vertex_buffer_, 0);
-  stage_->usesShader(*vertex_shader_);
-  stage_->usesShader(*fragment_shader_);
+  stage_->usesShader(vertex_shader_);
+  stage_->usesShader(fragment_shader_);
   stage_->setCullMode(VK_CULL_MODE_NONE);
 
-  stage_->addDescriptorLayout(
-    descriptors_[0].descriptorSetLayout()); // Layout is the same for all frames
-                                            // in flight
+  stage_->addDescriptorLayout(set_layout_);
 
   // Setup push constant range for global translation and scale.
   stage_->addPushConstantRange({
@@ -138,21 +138,21 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   });
 
   // Setup blend attachment.
-  stage_->setBlendAttachment({
-    .blendEnable         = VK_TRUE,
-    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-    .colorBlendOp        = VK_BLEND_OP_ADD,
-    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-    .alphaBlendOp        = VK_BLEND_OP_ADD,
-    .colorWriteMask      = {},
-  });
+  // stage_->setBlendAttachment({
+  //   .blendEnable         = VK_TRUE,
+  //   .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+  //   .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+  //   .colorBlendOp        = VK_BLEND_OP_ADD,
+  //   .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+  //   .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+  //   .alphaBlendOp        = VK_BLEND_OP_ADD,
+  //   .colorWriteMask      = {},
+  // });
 }
 
 ImGuiOverlay::~ImGuiOverlay() { ImGui::DestroyContext(); }
 
-void ImGuiOverlay::update(uint32_t frame_index)
+void ImGuiOverlay::update(DescriptorAllocator& descriptors)
 {
   ImDrawData* imgui_draw_data = ImGui::GetDrawData();
   if (imgui_draw_data == nullptr) {
@@ -184,8 +184,8 @@ void ImGuiOverlay::update(uint32_t frame_index)
   }
   vertex_buffer_->uploadData<ImDrawVert>(vertex_data);
 
-  stage_->setOnRecord([frame_index, this](const PhysicalStage&     physical,
-                                          const wr::CommandBuffer& cb) {
+  stage_->setOnRecord([&](const PhysicalStage&     physical,
+                          const wr::CommandBuffer& cb) {
     ImDrawData* imgui_draw_data = ImGui::GetDrawData();
     if (imgui_draw_data == nullptr) {
       return;
@@ -195,8 +195,9 @@ void ImGuiOverlay::update(uint32_t frame_index)
     push_const_block_.scale =
       Vec2f(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
     push_const_block_.translate = Vec2f(-1.0f);
-    cb.bindDescriptorSets(descriptors_[frame_index].descriptorSets(),
-                          physical.pipelineLayout());
+    VkDescriptorSet im_descriptor[]{ descriptors.allocate(device_,
+                                                          set_layout_) };
+    cb.bindDescriptorSets(im_descriptor, physical.pipelineLayout());
     cb.pushConstants(physical.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,
                      sizeof(PushConstantBlock), &push_const_block_);
 

@@ -9,8 +9,8 @@ class Sampler::SamplerImpl {
 public:
   SamplerImpl(const Device& device, const VkSamplerCreateInfo& ci);
   ~SamplerImpl();
-  const Device& device_;
-  VkSampler     sampler_{ VK_NULL_HANDLE };
+  const Device device_;
+  VkSampler    sampler_{ VK_NULL_HANDLE };
 };
 
 Sampler::SamplerImpl::SamplerImpl(const Device&              device,
@@ -26,8 +26,7 @@ Sampler::SamplerImpl::SamplerImpl(const Device&              device,
 
 Sampler::SamplerImpl::~SamplerImpl()
 {
-  if (sampler_ != VK_NULL_HANDLE)
-    vkDestroySampler(device_.logical(), sampler_, nullptr);
+  vkDestroySampler(device_.logical(), sampler_, nullptr);
 }
 
 //------------------------------------------------------------------------------

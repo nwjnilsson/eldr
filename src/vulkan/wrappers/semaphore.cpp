@@ -10,8 +10,8 @@ public:
   SemaphoreImpl(const Device&                device,
                 const VkSemaphoreCreateInfo& semaphore_ci);
   ~SemaphoreImpl();
-  const Device& device_;
-  VkSemaphore   semaphore_{ VK_NULL_HANDLE };
+  const Device device_;
+  VkSemaphore  semaphore_{ VK_NULL_HANDLE };
 };
 
 Semaphore::SemaphoreImpl::SemaphoreImpl(

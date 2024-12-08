@@ -10,8 +10,8 @@ public:
   ImageViewImpl(const Device&                device,
                 const VkImageViewCreateInfo& image_view_ci);
   ~ImageViewImpl();
-  const Device& device_;
-  VkImageView   image_view_{ VK_NULL_HANDLE };
+  const Device device_;
+  VkImageView  image_view_{ VK_NULL_HANDLE };
 };
 
 ImageView::ImageViewImpl::ImageViewImpl(

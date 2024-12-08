@@ -25,16 +25,17 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
   // ---------------------------------------------------------------------------
   // Create image
   // ---------------------------------------------------------------------------
-  ImageInfo image_info{ .name        = name_,
-                        .extent      = { texture_width, texture_height },
-                        .format      = format,
-                        .tiling      = VK_IMAGE_TILING_OPTIMAL,
-                        .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                       VK_IMAGE_USAGE_SAMPLED_BIT,
-                        .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
-                        .sample_count = VK_SAMPLE_COUNT_1_BIT,
-                        .mip_levels   = mip_levels_ };
+  Image::ImageCreateInfo image_info{
+    .name        = name_,
+    .extent      = { texture_width, texture_height },
+    .format      = format,
+    .tiling      = VK_IMAGE_TILING_OPTIMAL,
+    .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
+    .sample_count = VK_SAMPLE_COUNT_1_BIT,
+    .mip_levels   = mip_levels_
+  };
 
   image_ = Image{ device, image_info };
 
@@ -59,7 +60,7 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
   device.execute([&](const CommandBuffer& cb) {
     cb.transitionImageLayout(image_, VK_IMAGE_LAYOUT_UNDEFINED,
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mip_levels_)
-      .copyBufferToImage(data, data_size, image_.get(), copy_region, name_)
+      .copyBufferToImage(data, data_size, image_, copy_region)
       // The transition below is not necessary when generating mipmaps using the
       // blit command, since each level will be transitioned to
       // VK_IMAGE_LAYOUT_SHADER_READ_ONLY after the blit command is finished.

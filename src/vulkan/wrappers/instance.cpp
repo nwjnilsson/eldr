@@ -59,7 +59,7 @@ bool isLayerSupported(const std::string& layer)
 //------------------------------------------------------------------------------
 class Instance::InstanceImpl {
 public:
-  InstanceImpl(const VkInstanceCreateInfo& fence_ci);
+  InstanceImpl(const VkInstanceCreateInfo& instance_ci);
   ~InstanceImpl();
   VkInstance instance_{ VK_NULL_HANDLE };
 };

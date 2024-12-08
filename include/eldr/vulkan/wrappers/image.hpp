@@ -12,7 +12,7 @@ class Image {
 public:
   // Info required for complete Image creation
   struct ImageCreateInfo {
-    std::string_view      name;
+    std::string           name;
     VkExtent2D            extent;
     VkFormat              format;
     VkImageTiling         tiling;

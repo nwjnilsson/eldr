@@ -1,13 +1,14 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
 
 // Misc Vulkan types
 
 namespace eldr::vk {
 
 struct GpuResourceAllocation {
-  const wr::Device& device_;
+  const wr::Device  device_;
   VmaAllocation     allocation_{ VK_NULL_HANDLE };
   VmaAllocationInfo alloc_info_{};
 };

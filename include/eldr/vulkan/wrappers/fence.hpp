@@ -10,9 +10,8 @@ public:
 
   [[nodiscard]] VkFence get() const;
 
-  VkResult reset();
-  [[nodiscard]] VkResult
-  wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
+  VkResult reset() const;
+  VkResult wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
 
 private:

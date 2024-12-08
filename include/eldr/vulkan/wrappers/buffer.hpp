@@ -23,7 +23,12 @@ public:
   /// @brief Returns the exact size requested upon buffer creation. The real
   /// size of the VMA allocation may be greater. See VMA allocation creation
   /// docs for more info.
+  /// @return VkDeviceSize The size requested upon buffer creation, in bytes.
   [[nodiscard]] VkDeviceSize size() const { return size_; }
+
+  /// @brief Returns whether the buffer is empty or not.
+  /// @return bool `true` if size_ == 0.
+  [[nodiscard]] bool empty() const { return size_ == 0; }
 
   /// @brief Copies the data pointed to by `data` to the mapped GPU memory.
   /// @param data Pointer to the data to copy to the GPU buffer.

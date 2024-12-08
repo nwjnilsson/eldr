@@ -41,6 +41,7 @@ class Buffer;
 class Image;
 class ImageView;
 class Framebuffer;
+class RenderPass;
 class CommandBuffer;
 class Semaphore;
 class Fence;

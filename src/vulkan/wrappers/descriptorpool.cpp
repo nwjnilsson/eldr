@@ -11,7 +11,7 @@ public:
   DescriptorPoolImpl(const Device&                     device,
                      const VkDescriptorPoolCreateInfo& ci);
   ~DescriptorPoolImpl();
-  const Device&    device_;
+  const Device     device_;
   VkDescriptorPool pool_{ VK_NULL_HANDLE };
 };
 
