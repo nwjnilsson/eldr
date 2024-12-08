@@ -25,7 +25,8 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
   // ---------------------------------------------------------------------------
   // Create image
   // ---------------------------------------------------------------------------
-  ImageInfo image_info{ .extent      = { texture_width, texture_height },
+  ImageInfo image_info{ .name        = name_,
+                        .extent      = { texture_width, texture_height },
                         .format      = format,
                         .tiling      = VK_IMAGE_TILING_OPTIMAL,
                         .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
@@ -35,18 +36,7 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
                         .sample_count = VK_SAMPLE_COUNT_1_BIT,
                         .mip_levels   = mip_levels_ };
 
-  const VmaAllocationCreateInfo alloc_ci{
-    .flags          = {},
-    .usage          = VMA_MEMORY_USAGE_GPU_ONLY,
-    .requiredFlags  = {},
-    .preferredFlags = {},
-    .memoryTypeBits = {},
-    .pool           = {},
-    .pUserData      = {},
-    .priority       = {},
-  };
-
-  image_ = GpuImage{ device, image_info, alloc_ci, name_ };
+  image_ = Image{ device, image_info };
 
   // ---------------------------------------------------------------------------
   // Copy data to image and transition layout
@@ -62,23 +52,23 @@ GpuTexture::GpuTexture(const Device& device, const uint8_t* data,
       .layerCount     = 1,
     },
     .imageOffset = { 0, 0, 0 },
-    .imageExtent = { .width  = image_->size().width,
-                     .height = image_->size().height,
+    .imageExtent = { .width  = image_.size().width,
+                     .height = image_.size().height,
                      .depth  = 1 },
   };
   device.execute([&](const CommandBuffer& cb) {
-    cb.transitionImageLayout(*image_, VK_IMAGE_LAYOUT_UNDEFINED,
+    cb.transitionImageLayout(image_, VK_IMAGE_LAYOUT_UNDEFINED,
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mip_levels_)
-      .copyBufferToImage(data, data_size, image_->get(), copy_region, name_)
+      .copyBufferToImage(data, data_size, image_.get(), copy_region, name_)
       // The transition below is not necessary when generating mipmaps using the
       // blit command, since each level will be transitioned to
       // VK_IMAGE_LAYOUT_SHADER_READ_ONLY after the blit command is finished.
-      //.transitionImageLayout(*image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      //.transitionImageLayout(image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       //                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
       // TODO: real-time generation of mipmaps like this is not common practice.
       // Add support for loading each mip level from disk (making the transition
       // above necessary again (I think)).
-      .generateMipmaps(*image_, mip_levels_);
+      .generateMipmaps(image_, mip_levels_);
   });
 }
 
@@ -89,9 +79,5 @@ GpuTexture::GpuTexture(const Device& device, const Bitmap& bitmap)
                0, bitmap.name())
 {
 }
-
-const GpuImage& GpuTexture::image() const { return *image_; }
-
-const Sampler& GpuTexture::sampler() const { return *sampler_; }
 
 } // namespace eldr::vk::wr

@@ -1,12 +1,16 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/fwd.hpp>
-#include <eldr/vulkan/fwd.hpp>
 
 #include <filesystem>
 #include <functional>
 #include <memory>
 #include <vector>
+
+// fwd
+namespace eldr::vk {
+class VulkanEngine;
+}
 
 namespace eldr {
 

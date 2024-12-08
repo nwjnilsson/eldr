@@ -7,6 +7,7 @@ namespace eldr::vk::wr {
 
 class DescriptorSetLayout {
 public:
+  DescriptorSetLayout() = default;
   DescriptorSetLayout(const Device&, std::span<VkDescriptorSetLayoutBinding>,
                       VkDescriptorSetLayoutCreateFlags flags);
 

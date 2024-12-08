@@ -1,5 +1,4 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
 
 // fwd
@@ -9,13 +8,13 @@ namespace eldr::vk::wr {
 
 class Surface {
 public:
+  Surface() = default;
   Surface(const Instance&, GLFWwindow*);
-  ~Surface();
 
-  VkSurfaceKHR get() const { return surface_; }
+  [[nodiscard]] VkSurfaceKHR get() const;
 
 private:
-  const Instance& instance_;
-  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
+  class SurfaceImpl;
+  std::shared_ptr<SurfaceImpl> s_data_;
 };
 } // namespace eldr::vk::wr

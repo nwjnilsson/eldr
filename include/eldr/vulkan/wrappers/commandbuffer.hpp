@@ -11,10 +11,9 @@ namespace eldr::vk::wr {
 
 class CommandBuffer {
 public:
+  CommandBuffer() = default;
   CommandBuffer(const Device& device_, const CommandPool& command_pool,
                 std::string_view name);
-
-  VkCommandBuffer get() const;
 
   const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
@@ -32,12 +31,12 @@ public:
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
   const CommandBuffer&
-  bindIndexBuffer(const GpuBuffer& buffer,
-                  VkIndexType      index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize     offset     = 0) const;
+  bindIndexBuffer(const Buffer& buffer,
+                  VkIndexType   index_type = VK_INDEX_TYPE_UINT32,
+                  VkDeviceSize  offset     = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
-  /// GpuBuffer, because the underlying call to vkCmdBindVertexBuffers expects
+  /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
   /// an array of VkBuffer.
   const CommandBuffer&
   bindVertexBuffers(std::span<const VkBuffer>, uint32_t first_binding = 0,
@@ -73,25 +72,23 @@ public:
                                   uint32_t first_scissor) const;
   const CommandBuffer& fullBarrier() const;
 
-  const CommandBuffer& transitionImageLayout(const GpuImage&,
+  const CommandBuffer& transitionImageLayout(const Image&,
                                              VkImageLayout old_layout,
                                              VkImageLayout new_layout,
                                              uint32_t      mip_levels) const;
 
   const CommandBuffer&
-  blitImage(const GpuImage& src_image, VkImageLayout src_layout,
-            const GpuImage& dst_image, VkImageLayout dst_layout,
+  blitImage(const Image& src_image, VkImageLayout src_layout,
+            const Image& dst_image, VkImageLayout dst_layout,
             const VkImageBlit& blit, VkFilter filter) const;
 
-  const CommandBuffer& generateMipmaps(const GpuImage& image,
-                                       uint32_t        mip_levels) const;
+  const CommandBuffer& generateMipmaps(const Image& image,
+                                       uint32_t     mip_levels) const;
 
-  const CommandBuffer& copyBufferToImage(const GpuBuffer& buffer,
-                                         GpuImage&        image,
+  const CommandBuffer& copyBufferToImage(const Buffer& buffer, Image& image,
                                          const VkBufferImageCopy&) const;
   const CommandBuffer& copyBufferToImage(const void*  data,
-                                         VkDeviceSize buffer_size,
-                                         GpuImage&    image,
+                                         VkDeviceSize buffer_size, Image& image,
                                          const VkBufferImageCopy&) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
@@ -107,11 +104,13 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const GpuBuffer&
-  createStagingBuffer(const void* data, VkDeviceSize buffer_size,
-                      std::string_view name) const;
+  [[nodiscard]] const Buffer& createStagingBuffer(const void*      data,
+                                                  VkDeviceSize     buffer_size,
+                                                  std::string_view name) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] VkCommandBuffer    get() const;
+  [[nodiscard]] VkCommandBuffer*   ptr() const;
   [[nodiscard]] VkResult           fenceStatus() const;
   void                             resetFence() const;
   void                             waitFence() const;
@@ -122,7 +121,7 @@ private:
   class CommandBufferImpl;
   std::shared_ptr<CommandBufferImpl> cb_data_;
 
-  Fence                          wait_fence_;
-  mutable std::vector<GpuBuffer> staging_buffers_;
+  Fence                       wait_fence_;
+  mutable std::vector<Buffer> staging_buffers_;
 };
 } // namespace eldr::vk::wr

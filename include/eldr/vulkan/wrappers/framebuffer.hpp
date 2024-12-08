@@ -1,7 +1,5 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/fwd.hpp>
 
 #include <vector>
 
@@ -9,6 +7,7 @@ namespace eldr::vk::wr {
 
 class Framebuffer {
 public:
+  Framebuffer() = default;
   Framebuffer(const Device& device, VkRenderPass render_pass,
               const std::vector<VkImageView>& attachments,
               const Swapchain&                swapchain);

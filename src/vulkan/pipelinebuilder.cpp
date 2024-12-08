@@ -3,7 +3,7 @@
 #include <eldr/vulkan/wrappers/shader.hpp>
 
 namespace eldr::vk {
-void PipelineBuilder::clear()
+void PipelineBuilder::reset()
 {
   input_assembly_ = {};
   input_assembly_.sType =
@@ -178,7 +178,8 @@ PipelineBuilder& PipelineBuilder::enableDepthtest(bool depth_write_enable,
   return *this;
 }
 
-wr::GraphicsPipeline PipelineBuilder::build(const wr::Device& device)
+wr::Pipeline PipelineBuilder::build(const wr::Device& device,
+                                    std::string_view  name)
 {
   // Pipeline layout
   const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
@@ -255,8 +256,6 @@ wr::GraphicsPipeline PipelineBuilder::build(const wr::Device& device)
 
   // TODO: decide whether pipeline should have name, and if so, name them
   // appropriately
-  wr::GraphicsPipeline pipeline{ device, "generated pipeline",
-                                 pipeline_layout_ci, pipeline_ci };
-  return pipeline;
+  return wr::Pipeline{ device, name, pipeline_layout_ci, pipeline_ci };
 }
 } // namespace eldr::vk

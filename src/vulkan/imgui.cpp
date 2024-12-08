@@ -1,8 +1,7 @@
 #include <eldr/vulkan/imgui.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/descriptor.hpp>
-#include <eldr/vulkan/wrappers/descriptorbuilder.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>

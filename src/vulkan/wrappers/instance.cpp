@@ -1,10 +1,84 @@
 #include <eldr/vulkan/vktools/format.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <engine_config.hpp>
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 
 namespace eldr::vk::wr {
+//------------------------------------------------------------------------------
+// Instance helpers
+//------------------------------------------------------------------------------
+namespace {
+bool isExtensionAvailable(const std::string& extension)
+{
+  uint32_t                           extensions_count;
+  std::vector<VkExtensionProperties> extensions;
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, nullptr);
+  extensions.resize(extensions_count);
+
+  if (const auto result = vkEnumerateInstanceExtensionProperties(
+        nullptr, &extensions_count, extensions.data());
+      result != VK_SUCCESS)
+    ThrowVk(result, "vkEnumerateInstanceExtensionProperties(): ");
+
+  if (extensions_count == 0) {
+    spdlog::info("No Vulkan instance extensions available!");
+    return false;
+  }
+  for (const VkExtensionProperties& p : extensions)
+    if (strcmp(p.extensionName, extension.c_str()) == 0)
+      return true;
+  return false;
+}
+
+bool isLayerSupported(const std::string& layer)
+{
+  uint32_t layer_count;
+  vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+
+  std::vector<VkLayerProperties> available_layers(layer_count);
+  vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+
+  if (layer_count == 0) {
+    spdlog::info("No Vulkan instance layers supported!");
+    return false;
+  }
+
+  for (const auto& layer_properties : available_layers) {
+    if (strcmp(layer.c_str(), layer_properties.layerName) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
+//------------------------------------------------------------------------------
+// InstanceImpl
+//------------------------------------------------------------------------------
+class Instance::InstanceImpl {
+public:
+  InstanceImpl(const VkInstanceCreateInfo& fence_ci);
+  ~InstanceImpl();
+  VkInstance instance_{ VK_NULL_HANDLE };
+};
+
+Instance::InstanceImpl::InstanceImpl(const VkInstanceCreateInfo& instance_ci)
+{
+  if (const auto result = vkCreateInstance(&instance_ci, nullptr, &instance_);
+      result != VK_SUCCESS)
+    ThrowVk(result, "vkCreateInstance(): ");
+}
+
+Instance::InstanceImpl::~InstanceImpl()
+{
+  vkDestroyInstance(instance_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// Instance
+//------------------------------------------------------------------------------
 Instance::Instance(const VkApplicationInfo&   app_info,
                    std::vector<const char*>&& extensions)
 {
@@ -56,9 +130,9 @@ Instance::Instance(const VkApplicationInfo&   app_info,
     ThrowVk(VkResult{}, "{}", exception_message);
   }
 
-  VkInstanceCreateInfo create_info{};
-  create_info.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  create_info.pApplicationInfo = &app_info;
+  VkInstanceCreateInfo instance_ci{};
+  instance_ci.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  instance_ci.pApplicationInfo = &app_info;
 
   if (isExtensionAvailable(
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
@@ -68,7 +142,7 @@ Instance::Instance(const VkApplicationInfo&   app_info,
 #ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
   if (isExtensionAvailable(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
     extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    instance_ci.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
   }
 #endif
 
@@ -83,66 +157,18 @@ Instance::Instance(const VkApplicationInfo&   app_info,
               layer);
     }
   }
-  create_info.enabledLayerCount =
+  instance_ci.enabledLayerCount =
     static_cast<uint32_t>(validation_layers.size());
-  create_info.ppEnabledLayerNames = validation_layers.data();
+  instance_ci.ppEnabledLayerNames = validation_layers.data();
   extensions.push_back(VK_EXT_DEBUG_UTILS_NAME);
 #endif
 
-  create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-  create_info.ppEnabledExtensionNames = extensions.data();
+  instance_ci.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+  instance_ci.ppEnabledExtensionNames = extensions.data();
 
-  if (const auto result = vkCreateInstance(&create_info, nullptr, &instance_);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateInstance(): ");
+  // Create instance
+  i_data_ = std::make_shared<InstanceImpl>(instance_ci);
 }
 
-Instance::~Instance()
-{
-  if (instance_ != VK_NULL_HANDLE)
-    vkDestroyInstance(instance_, nullptr);
-}
-
-bool Instance::isExtensionAvailable(const std::string& extension)
-{
-  uint32_t                           extensions_count;
-  std::vector<VkExtensionProperties> extensions;
-  vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, nullptr);
-  extensions.resize(extensions_count);
-
-  if (const auto result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &extensions_count, extensions.data());
-      result != VK_SUCCESS)
-    ThrowVk(result, "vkEnumerateInstanceExtensionProperties(): ");
-
-  if (extensions_count == 0) {
-    spdlog::info("No Vulkan instance extensions available!");
-    return false;
-  }
-  for (const VkExtensionProperties& p : extensions)
-    if (strcmp(p.extensionName, extension.c_str()) == 0)
-      return true;
-  return false;
-}
-
-bool Instance::isLayerSupported(const std::string& layer)
-{
-  uint32_t layer_count;
-  vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-
-  std::vector<VkLayerProperties> available_layers(layer_count);
-  vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
-
-  if (layer_count == 0) {
-    spdlog::info("No Vulkan instance layers supported!");
-    return false;
-  }
-
-  for (const auto& layer_properties : available_layers) {
-    if (strcmp(layer.c_str(), layer_properties.layerName) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
+VkInstance Instance::get() const { return i_data_->instance_; }
 } // namespace eldr::vk::wr

@@ -2,39 +2,28 @@
 #include <eldr/vulkan/common.hpp>
 
 namespace eldr::vk::wr {
+/// @brief VkPipeline wrapper class. Pipeline manages both VkPipeline and
+/// VkPipelineLayout.
+///
+/// TODO: might make sense to have a ComputePipeline and GraphicsPipeline that
+/// inherit from Pipeline
 class Pipeline {
 public:
-  Pipeline()                = delete;
-  Pipeline(const Pipeline&) = delete;
-  virtual ~Pipeline();
-
-  [[nodiscard]] VkPipeline get() const { return pipeline_; }
-
-protected:
-  Pipeline(Pipeline&&) noexcept;
+  Pipeline() = default;
   Pipeline(const Device& device, std::string_view name,
-           const VkPipelineLayoutCreateInfo& pipeline_layout_ci);
+           const VkPipelineLayoutCreateInfo&   layout_ci,
+           const VkGraphicsPipelineCreateInfo& pipeline_ci);
+  Pipeline(const Device& device, std::string_view name,
+           const VkPipelineLayoutCreateInfo&  layout_ci,
+           const VkComputePipelineCreateInfo& pipeline_ci);
+
+  [[nodiscard]] VkPipeline get() const;
 
 protected:
-  const Device& device_;
-  std::string   name_;
-
-  VkPipeline       pipeline_{ VK_NULL_HANDLE };
-  VkPipelineLayout pipeline_layout_{ VK_NULL_HANDLE };
-};
-
-class GraphicsPipeline final : public Pipeline {
-public:
-  GraphicsPipeline()                = delete;
-  GraphicsPipeline(const Pipeline&) = delete;
-  inline GraphicsPipeline(GraphicsPipeline&& other) noexcept
-    : Pipeline(std::move(other))
-  {
-  }
-  GraphicsPipeline(const Device& device, std::string_view name,
-                   const VkPipelineLayoutCreateInfo&   pipeline_layout_ci,
-                   const VkGraphicsPipelineCreateInfo& pipeline_ci);
-  ~GraphicsPipeline() override = default;
+protected:
+  std::string name_;
+  class PipelineImpl;
+  std::shared_ptr<PipelineImpl> p_data_;
 };
 
 // Support for compute pipelines can be added if needed

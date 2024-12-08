@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 
 #include <vector>
@@ -10,13 +11,13 @@ namespace eldr::vk {
 /// and pipeline into the same object
 class PipelineBuilder {
 public:
-  PipelineBuilder() { clear(); }
+  PipelineBuilder() { reset(); }
 
-  void clear();
+  void reset();
 
-  PipelineBuilder& addDescriptorSetLayout(VkDescriptorSetLayout layout)
+  PipelineBuilder& addDescriptorSetLayout(wr::DescriptorSetLayout layout)
   {
-    descriptor_layouts_.push_back(layout);
+    descriptor_layouts_.push_back(layout.get());
     return *this;
   }
   PipelineBuilder& addPushConstantRange(VkPushConstantRange pcr)
@@ -38,7 +39,8 @@ public:
   PipelineBuilder& enableBlendingAdditive();
   PipelineBuilder& enableBlendingAlphaBlend();
 
-  [[nodiscard]] wr::GraphicsPipeline build(const wr::Device& device);
+  [[nodiscard]] wr::Pipeline build(const wr::Device& device,
+                                   std::string_view  name);
 
 private:
   // Pipeline layout stuff

@@ -1,3 +1,4 @@
+#include <eldr/core/platform.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
@@ -57,36 +58,53 @@ VkExtent2D selectSwapExtent(VkExtent2D                      requested_extent,
 }
 } // namespace
 
+//------------------------------------------------------------------------------
+// SwapchainImpl
+//------------------------------------------------------------------------------
+class Swapchain::SwapchainImpl {
+public:
+  SwapchainImpl(const Device&                   device,
+                const VkSwapchainCreateInfoKHR& swapchain_ci);
+  ~SwapchainImpl();
+  const Device&  device_;
+  VkSwapchainKHR swapchain_{ VK_NULL_HANDLE };
+};
+
+Swapchain::SwapchainImpl::SwapchainImpl(
+  const Device& device, const VkSwapchainCreateInfoKHR& swapchain_ci)
+  : device_(device)
+{
+  if (const VkResult result = vkCreateSwapchainKHR(
+        device_.logical(), &swapchain_ci, nullptr, &swapchain_);
+      result != VK_SUCCESS) {
+    ThrowVk(result, "vkCreateSwapchainKHR(): ");
+  }
+}
+
+Swapchain::SwapchainImpl::~SwapchainImpl()
+{
+  vkDestroySwapchainKHR(device_.logical(), swapchain_, nullptr);
+}
+
 // -----------------------------------------------------------------------------
 // Swapchain
 // -----------------------------------------------------------------------------
 Swapchain::Swapchain(const Device& device, const Surface& surface,
                      VkExtent2D extent)
-  : device_(device), surface_(surface)
 {
-  setupSwapchain(extent);
+  setupSwapchain(device, surface, extent);
   // Create sync objects
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
-    image_available_sem_.emplace_back(device_);
-    render_finished_sem_.emplace_back(device_);
+    image_available_sem_.emplace_back(device);
+    render_finished_sem_.emplace_back(device);
   }
 }
 
-Swapchain::~Swapchain()
-{
-  if (swapchain_ != VK_NULL_HANDLE)
-    vkDestroySwapchainKHR(device_.logical(), swapchain_, nullptr);
-
-  while (!image_views_.empty()) {
-    vkDestroyImageView(device_.logical(), image_views_.back(), nullptr);
-    image_views_.pop_back();
-  }
-}
-
-void Swapchain::setupSwapchain(VkExtent2D requested_extent)
+void Swapchain::setupSwapchain(const Device& device, const Surface& surface,
+                               VkExtent2D requested_extent)
 {
   const SwapchainSupportDetails& support_details{
-    device_.swapchainSupportDetails(surface_.get())
+    device.swapchainSupportDetails(surface.get())
   };
   extent_ = selectSwapExtent(requested_extent, support_details.capabilities);
   surface_format_ = selectSwapSurfaceFormat(support_details.formats);
@@ -101,12 +119,14 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
       std::min(min_image_count, support_details.capabilities.maxImageCount);
   }
 
-  const VkSwapchainKHR     old_swapchain{ swapchain_ };
+  VkSwapchainKHR old_swapchain{ VK_NULL_HANDLE };
+  if (likely(sc_data_ != nullptr))
+    old_swapchain = sc_data_->swapchain_;
   VkSwapchainCreateInfoKHR swapchain_ci{
     .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .pNext                 = {},
     .flags                 = {},
-    .surface               = surface_.get(),
+    .surface               = surface.get(),
     .minImageCount         = min_image_count,
     .imageFormat           = surface_format_.format,
     .imageColorSpace       = surface_format_.colorSpace,
@@ -123,7 +143,7 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
     .oldSwapchain = old_swapchain,
   };
 
-  const QueueFamilyIndices& indices{ device_.queueFamilyIndices() };
+  const QueueFamilyIndices& indices{ device.queueFamilyIndices() };
   uint32_t queueFamilyIndices[]{ indices.graphics_family.value(),
                                  indices.present_family.value() };
 
@@ -138,62 +158,34 @@ void Swapchain::setupSwapchain(VkExtent2D requested_extent)
     swapchain_ci.pQueueFamilyIndices   = nullptr; // Optional
   }
 
-  requestLogger("vulkan-engine")->trace("Creating swapchain...");
-  if (const VkResult result = vkCreateSwapchainKHR(
-        device_.logical(), &swapchain_ci, nullptr, &swapchain_);
-      result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateSwapchainKHR(): ");
-  }
+  device.logger()->trace("Creating swapchain...");
+  sc_data_ = std::make_shared<SwapchainImpl>(device, surface);
 
-  // Destroy old swapchain if it exists
-  if (old_swapchain != VK_NULL_HANDLE) {
-    while (!image_views_.empty()) {
-      vkDestroyImageView(device_.logical(), image_views_.back(), nullptr);
-      image_views_.pop_back();
-    }
-    images_.clear();
-    vkDestroySwapchainKHR(device_.logical(), old_swapchain, nullptr);
-  }
+  // Clear data from old swapchain
+  image_views_.clear();
+  images_.clear();
 
-  // Get swapchain images
+  // Get new swapchain images
   uint32_t image_count;
-  if (const auto result = vkGetSwapchainImagesKHR(device_.logical(), swapchain_,
-                                                  &image_count, nullptr);
+  if (const auto result = vkGetSwapchainImagesKHR(
+        device.logical(), sc_data_->swapchain_, &image_count, nullptr);
       result != VK_SUCCESS)
     ThrowVk(result, "vkGetSwapchainImagesKHR(): ");
 
   images_.resize(image_count);
 
-  if (const auto result = vkGetSwapchainImagesKHR(device_.logical(), swapchain_,
-                                                  &image_count, images_.data());
+  if (const auto result = vkGetSwapchainImagesKHR(
+        device.logical(), sc_data_->swapchain_, &image_count, images_.data());
       result != VK_SUCCESS)
     ThrowVk(result, "vkGetSwapchainImagesKHR(): ");
 
   //----------------------------------------------------------------------------
   // Create image views
   //----------------------------------------------------------------------------
-  VkImageViewCreateInfo image_view_ci{
-    .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-    .pNext            = {},
-    .flags            = {},
-    .image            = {},
-    .viewType         = VK_IMAGE_VIEW_TYPE_2D,
-    .format           = surface_format_.format,
-    .components       = { VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY },
-    .subresourceRange = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-                          .baseMipLevel   = 0,
-                          .levelCount     = 1,
-                          .baseArrayLayer = 0,
-                          .layerCount     = 1 }
-  };
-  image_views_.resize(image_count);
-  for (size_t i = 0; i < images_.size(); i++) {
-    image_view_ci.image = images_[i];
-    device_.createImageView(image_view_ci, &image_views_[i],
-                            "swapchain image view");
+  image_views_.reserve(image_count);
+  for (const VkImage& image : images_) {
+    image_views_.emplace_back(ImageView::createSwapchainImageView(
+      device, image, surface_format_.format));
   }
 }
 
@@ -208,11 +200,11 @@ const VkSemaphore* Swapchain::renderFinishedSemaphore(uint32_t index) const
 }
 
 uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
-                                     bool&    invalidate_swapchain)
+                                     bool&    invalidate_swapchain) const
 {
   uint32_t   image_index{ 0 };
   const auto result{ vkAcquireNextImageKHR(
-    device_.logical(), swapchain_, UINT64_MAX,
+    sc_data_->device_.logical(), sc_data_->swapchain_, UINT64_MAX,
     image_available_sem_[frame_index].get(), VK_NULL_HANDLE, &image_index) };
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -225,9 +217,10 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 }
 
 void Swapchain::present(const VkPresentInfoKHR& present_info,
-                        bool&                   invalidate_swapchain)
+                        bool&                   invalidate_swapchain) const
 {
-  const auto result = vkQueuePresentKHR(device_.presentQueue(), &present_info);
+  const auto result =
+    vkQueuePresentKHR(sc_data_->device_.presentQueue(), &present_info);
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     invalidate_swapchain = true;
   }
@@ -236,4 +229,6 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
   }
 }
 
+VkSwapchainKHR  Swapchain::get() const { return sc_data_->swapchain_; }
+VkSwapchainKHR* Swapchain::ptr() const { return &sc_data_->swapchain_; }
 } // namespace eldr::vk::wr

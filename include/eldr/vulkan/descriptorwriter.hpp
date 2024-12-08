@@ -1,44 +1,41 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
+#include <eldr/vulkan/wrappers/gputexture.hpp>
 
 #include <deque>
 
 namespace eldr::vk {
-
 class DescriptorWriter {
 public:
   void reset();
 
   template <typename T>
-  DescriptorWriter& writeUniformBuffer(uint32_t             binding,
-                                       const wr::GpuBuffer& buffer,
-                                       size_t               offset);
+  DescriptorWriter& writeUniformBuffer(uint32_t          binding,
+                                       const wr::Buffer& buffer, size_t offset);
   template <typename T>
-  DescriptorWriter& writeStorageBuffer(uint32_t             binding,
-                                       const wr::GpuBuffer& buffer,
-                                       size_t               offset);
+  DescriptorWriter& writeStorageBuffer(uint32_t          binding,
+                                       const wr::Buffer& buffer, size_t offset);
 
   DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
 
-  DescriptorWriter& writeSampledImage(uint32_t            binding,
-                                      const wr::GpuImage& image,
-                                      VkImageLayout       layout);
+  DescriptorWriter& writeSampledImage(uint32_t             binding,
+                                      const wr::ImageView& image,
+                                      VkImageLayout        layout);
 
   DescriptorWriter& writeCombinedImageSampler(
     uint32_t binding, const wr::GpuTexture& texture,
     VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  DescriptorWriter& writeStorageImage(uint32_t            binding,
-                                      const wr::GpuImage& image,
-                                      VkImageLayout       layout);
+  DescriptorWriter& writeStorageImage(uint32_t             binding,
+                                      const wr::ImageView& image,
+                                      VkImageLayout        layout);
 
   void updateSet(const wr::Device& device, VkDescriptorSet set);
 
 private:
   template <typename T>
-  DescriptorWriter& writeBuffer(uint32_t binding, const wr::GpuBuffer& buffer,
+  DescriptorWriter& writeBuffer(uint32_t binding, const wr::Buffer& buffer,
                                 size_t offset, VkDescriptorType type);
   DescriptorWriter&
   writeImage(uint32_t binding, VkImageView image, VkSampler sampler,
@@ -53,7 +50,7 @@ private:
 
 template <typename T>
 DescriptorWriter&
-DescriptorWriter::writeBuffer(uint32_t binding, const wr::GpuBuffer& buffer,
+DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer& buffer,
                               VkDeviceSize offset, VkDescriptorType type)
 {
   buffer_infos_.push_back({
@@ -79,18 +76,18 @@ DescriptorWriter::writeBuffer(uint32_t binding, const wr::GpuBuffer& buffer,
 }
 
 template <typename T>
-DescriptorWriter&
-DescriptorWriter::writeUniformBuffer(uint32_t             binding,
-                                     const wr::GpuBuffer& buffer, size_t offset)
+DescriptorWriter& DescriptorWriter::writeUniformBuffer(uint32_t binding,
+                                                       const wr::Buffer& buffer,
+                                                       size_t            offset)
 {
   return writeBuffer<T>(binding, buffer, offset,
                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 
 template <typename T>
-DescriptorWriter&
-DescriptorWriter::writeStorageBuffer(uint32_t             binding,
-                                     const wr::GpuBuffer& buffer, size_t offset)
+DescriptorWriter& DescriptorWriter::writeStorageBuffer(uint32_t binding,
+                                                       const wr::Buffer& buffer,
+                                                       size_t            offset)
 {
   return writeBuffer<T>(binding, buffer, offset,
                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);

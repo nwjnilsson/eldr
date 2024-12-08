@@ -46,26 +46,24 @@ DescriptorWriter& DescriptorWriter::writeSampler(uint32_t           binding,
                     VK_DESCRIPTOR_TYPE_SAMPLER, {});
 }
 
-DescriptorWriter& DescriptorWriter::writeSampledImage(uint32_t binding,
-                                                      const wr::GpuImage& image,
-                                                      VkImageLayout layout)
+DescriptorWriter& DescriptorWriter::writeSampledImage(
+  uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
-  return writeImage(binding, image.view(), VK_NULL_HANDLE,
+  return writeImage(binding, image.get(), VK_NULL_HANDLE,
                     VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, layout);
 }
 
 DescriptorWriter& DescriptorWriter::writeCombinedImageSampler(
   uint32_t binding, const wr::GpuTexture& texture, VkImageLayout layout)
 {
-  return writeImage(binding, texture.image().view(), texture.sampler().get(),
+  return writeImage(binding, texture.imageView().get(), texture.sampler().get(),
                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, layout);
 }
 
-DescriptorWriter& DescriptorWriter::writeStorageImage(uint32_t binding,
-                                                      const wr::GpuImage& image,
-                                                      VkImageLayout layout)
+DescriptorWriter& DescriptorWriter::writeStorageImage(
+  uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
-  return writeImage(binding, image.view(), VK_NULL_HANDLE,
+  return writeImage(binding, image.get(), VK_NULL_HANDLE,
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, layout);
 }
 

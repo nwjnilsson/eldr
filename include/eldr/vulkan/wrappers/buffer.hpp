@@ -1,19 +1,21 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/fwd.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 
 namespace eldr::vk::wr {
-class GpuBuffer {
+class Buffer {
 public:
-  GpuBuffer(const Device& device, std::string_view name,
-            VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
-            VmaMemoryUsage           memory_usage,
-            VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT);
-  GpuBuffer(const Device&, std::string_view name, const void* data,
-            VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
-            VmaMemoryUsage           memory_usage,
-            VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT);
+  Buffer() = default;
+  Buffer(
+    const Device& device, std::string_view name, VkDeviceSize buffer_size,
+    VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
+    VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT);
+
+  Buffer(
+    const Device&, std::string_view name, const void* data,
+    VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
+    VmaMemoryUsage           memory_usage,
+    VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT);
 
   // VkDeviceSize    size() const { return size_; }
   [[nodiscard]] const std::string& name() const { return name_; }
@@ -23,14 +25,16 @@ public:
   /// docs for more info.
   [[nodiscard]] VkDeviceSize size() const { return size_; }
 
-  // More ways of uploading data? Templated maybe
-  void uploadData(const void* data, size_t data_size);
+  /// @brief Copies the data pointed to by `data` to the mapped GPU memory.
+  /// @param data Pointer to the data to copy to the GPU buffer.
+  /// @param data_size The size, in bytes, to copy.
+  void uploadData(const void* data, size_t data_size) const;
   // void copyFromBuffer(const GpuBuffer&, const CommandPool&);
 
 private:
-  std::string name_{ "unknown" };
-  class GpuBufferImpl;
-  std::shared_ptr<GpuBufferImpl> buffer_data_;
-  VkDeviceSize                   size_{ 0 };
+  std::string name_;
+  class BufferImpl;
+  std::shared_ptr<BufferImpl> buffer_data_;
+  VkDeviceSize                size_{ 0 };
 };
 } // namespace eldr::vk::wr

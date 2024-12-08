@@ -333,7 +333,7 @@ CommandPool& Device::threadGraphicsPool() const
   return *thread_graphics_pool;
 }
 
-const CommandBuffer& Device::requestCommandBuffer()
+const CommandBuffer& Device::requestCommandBuffer() const
 {
   return threadGraphicsPool().requestCommandBuffer();
 }

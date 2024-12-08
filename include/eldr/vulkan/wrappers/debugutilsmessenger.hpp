@@ -5,6 +5,7 @@
 namespace eldr::vk::wr {
 class DebugUtilsMessenger {
 public:
+  DebugUtilsMessenger() = default;
   DebugUtilsMessenger(const Instance& instance);
 
 private:

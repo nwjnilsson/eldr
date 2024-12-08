@@ -2,6 +2,7 @@
 #define VMA_IMPLEMENTATION
 #include <eldr/app/window.hpp>
 #include <eldr/core/exceptions.hpp>
+#include <eldr/core/hash.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/platform.hpp>
 #include <eldr/core/stopwatch.hpp>
@@ -28,6 +29,9 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 #include <engine_config.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
@@ -35,19 +39,59 @@
 #include <string>
 
 namespace eldr::vk {
+// -----------------------------------------------------------------------------
+// Engine types
+// -----------------------------------------------------------------------------
+struct FrameData {
+  DescriptorAllocator      descriptors;
+  wr::Buffer               scene_data_buffer;
+  wr::Buffer               model_data_buffer;
+  const wr::CommandBuffer* cmd_buf;
+};
+
 struct GpuModelData {
   ELDR_IMPORT_CORE_TYPES()
   Mat4f model_mat;
 };
 
+// TODO: is this even used
 struct GpuMeshBuffers {
-  BufferResource* index_buffer;
-  BufferResource* vertex_buffer;
+  BufferResource* index_buffer_;
+  BufferResource* vertex_buffer_;
   VkDeviceAddress vertex_buffer_address;
 };
 
+struct VulkanEngine::EngineData {
+  wr::Instance            instance;
+  wr::DebugUtilsMessenger debug_messenger;
+  wr::Surface             surface;
+  wr::Device              device;
+  wr::Swapchain           swapchain;
+
+  std::unique_ptr<RenderGraph>  render_graph;
+  std::unique_ptr<ImGuiOverlay> imgui_overlay;
+  std::vector<wr::GpuTexture>   textures;
+  std::vector<wr::Shader>       shaders; // shader module is not needed after
+                                   // building pipeline so check if this can be
+                                   // rearranged
+  std::vector<FrameData> frames_in_flight;
+
+  // The data below is experimental, default data
+  wr::DescriptorSetLayout scene_data_descriptor_layout;
+  wr::DescriptorSetLayout viking_model_descriptor_layout;
+  GltfMetallicRoughness   metal_rough_material;
+  MaterialInstance        default_material_data;
+
+  wr::GpuTexture default_texture;
+  wr::GpuTexture viking_texture;
+};
+
+// -----------------------------------------------------------------------------
+// Engine
+// -----------------------------------------------------------------------------
 VulkanEngine::VulkanEngine(const Window& window)
-  : window_(window), log_(requestLogger("vulkan-engine"))
+  : window_(window), log_(requestLogger("vulkan-engine")),
+    ed_(std::make_unique<EngineData>())
 {
   // ---------------------------------------------------------------------------
   // Create instance
@@ -64,19 +108,18 @@ VulkanEngine::VulkanEngine(const Window& window)
     .apiVersion    = VK_API_VERSION_1_3,
   };
 
-  instance_ =
-    std::make_unique<wr::Instance>(app_info, window_.instanceExtensions());
+  ed_->instance = wr::Instance{ app_info, window_.instanceExtensions() };
 
   // ---------------------------------------------------------------------------
   // Create debug messenger
   // ---------------------------------------------------------------------------
 #ifdef ELDR_VULKAN_DEBUG_REPORT
-  debug_messenger_ = std::make_unique<wr::DebugUtilsMessenger>(*instance_);
+  ed_->debug_messenger = wr::DebugUtilsMessenger{ ed_->instance };
 #endif
   // ---------------------------------------------------------------------------
   // Create surface
   // ---------------------------------------------------------------------------
-  surface_ = std::make_unique<wr::Surface>(*instance_, window_.glfwWindow());
+  ed_->surface = wr::Surface{ ed_->instance, window_.glfwWindow() };
   // ---------------------------------------------------------------------------
   // Create device
   // ---------------------------------------------------------------------------
@@ -87,14 +130,14 @@ VulkanEngine::VulkanEngine(const Window& window)
 #endif
   // Pass log_ pointer to device so that all wrapper objects that have a
   // reference to the device can access the same logger
-  device_ = std::make_unique<wr::Device>(*instance_, *surface_,
-                                         device_extensions, log_);
+  ed_->device =
+    wr::Device{ ed_->instance, ed_->surface, device_extensions, log_ };
 
   // ---------------------------------------------------------------------------
   // Create swapchain
   // ---------------------------------------------------------------------------
-  swapchain_ = std::make_unique<wr::Swapchain>(
-    *device_, *surface_, VkExtent2D{ window_.width(), window_.height() });
+  ed_->swapchain = wr::Swapchain(
+    ed_->device, ed_->surface, VkExtent2D{ window_.width(), window_.height() });
   // ---------------------------------------------------------------------------
   // Load textures and shaders
   // ---------------------------------------------------------------------------
@@ -107,15 +150,18 @@ VulkanEngine::VulkanEngine(const Window& window)
   setupFrameData();
   initDescriptors();
 
+  // ---------------------------------------------------------------------------
+  // Init default data
+  // ---------------------------------------------------------------------------
   initDefaultData();
-  buildMaterialPipelines(metal_rough_material_);
+  buildMaterialPipelines(ed_->metal_rough_material);
   //  ---------------------------------------------------------------------------
   //  Create render graph
   //  ---------------------------------------------------------------------------
   recreateSwapchain();
 }
 
-VulkanEngine::~VulkanEngine() { device_->waitIdle(); }
+VulkanEngine::~VulkanEngine() { ed_->device.waitIdle(); }
 
 void VulkanEngine::loadTextures()
 {
@@ -132,36 +178,46 @@ void VulkanEngine::loadTextures()
   Bitmap bitmap(filepath);
   if (bitmap.pixelFormat() != Bitmap::PixelFormat::RGBA)
     bitmap.rgbToRgba();
-  textures_.emplace_back(*device_, bitmap);
+  ed_->textures.emplace_back(ed_->device, bitmap);
 }
 
 void VulkanEngine::loadShaders()
 {
   // TODO: get a list of shaders to load from config or something and load all
-  // of them into shaders_ vector
-  shaders_.emplace_back(*device_, VK_SHADER_STAGE_VERTEX_BIT,
-                        "default vertex shader", "main.vert.spv");
-  shaders_.emplace_back(*device_, VK_SHADER_STAGE_FRAGMENT_BIT,
-                        "default frag shader", "main.frag.spv");
+  // of them into shaders vector
+  ed_->shaders.emplace_back(ed_->device, "default vertex shader",
+                            "main.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+  ed_->shaders.emplace_back(ed_->device, "default frag shader", "main.frag.spv",
+                            VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void VulkanEngine::setupFrameData()
 {
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
+
+    // TODO: I will need to come back to this eventually and understand how to
+    // set this dynamically, I can't thik atm
     std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes{
       { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
       { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 }
     };
-    frames_in_flight_.push_back(
-      { .descriptors =
-          std::make_unique<DescriptorAllocator>(*device_, 1000, frame_sizes),
-        .scene_data_buffer = std::make_unique<wr::GpuBuffer>(
-          *device_, sizeof(GpuSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-          VMA_MEMORY_USAGE_CPU_TO_GPU, "Scene data uniform buffer"),
-        .model_data_buffer = std::make_unique<wr::GpuBuffer>(
-          *device_, sizeof(GpuModelData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-          VMA_MEMORY_USAGE_CPU_TO_GPU, "Model data uniform buffer"),
-        .cmd_buf = nullptr });
+
+    ed_->frames_in_flight.push_back({
+      .descriptors = DescriptorAllocator{ 1000, frame_sizes },
+      .scene_data_buffer =
+        wr::Buffer{
+          ed_->device,
+          "Scene data uniform buffer",
+          sizeof(GpuSceneData),
+          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+          VMA_MEMORY_USAGE_CPU_TO_GPU,
+        },
+      .model_data_buffer =
+        wr::Buffer{ ed_->device, "Model data uniform buffer",
+                    sizeof(GpuModelData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    VMA_MEMORY_USAGE_CPU_TO_GPU },
+      .cmd_buf = nullptr, // Set later when drawing frames
+    });
   }
 }
 
@@ -171,35 +227,37 @@ void VulkanEngine::initDescriptors()
   DescriptorSetLayoutBuilder layout_builder;
   layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT |
                                        VK_SHADER_STAGE_FRAGMENT_BIT);
-  gpu_scene_data_descriptor_layout_ = std::make_unique<wr::DescriptorSetLayout>(
-    layout_builder.build(*device_, 0));
+  ed_->scene_data_descriptor_layout =
+    wr::DescriptorSetLayout{ layout_builder.build(ed_->device, 0) };
 
   layout_builder.reset();
 
   layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
     .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
-  viking_model_descriptor_layout_ = std::make_unique<wr::DescriptorSetLayout>(
-    layout_builder.build(*device_, 0));
+  ed_->viking_model_descriptor_layout =
+    wr::DescriptorSetLayout{ layout_builder.build(ed_->device, 0) };
 }
 
 void VulkanEngine::initDefaultData()
 {
-  default_texture_sampler_linear_ =
-    std::make_unique<wr::GpuTexture>(*device_, Bitmap{});
-
-  GltfMetallicRoughness::MaterialResources material_resources{
-    .color_texture       = default_texture_sampler_linear_.get(),
-    .metal_rough_texture = default_texture_sampler_linear_.get(),
-    .data_buffer         = std::make_unique<wr::GpuBuffer>(
-      *device_, sizeof(GltfMetallicRoughness::MaterialConstants),
-      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU,
-      "GLTF metallic roughness constants"),
+  ed_->default_texture = wr::GpuTexture{ ed_->device, Bitmap{} };
+  const GltfMetallicRoughness::MaterialResources material_resources{
+    .color_texture       = &ed_->default_texture,
+    .metal_rough_texture = &ed_->default_texture,
+    .data_buffer =
+      wr::Buffer{
+        ed_->device,
+        "GLTF metallic roughness constants",
+        sizeof(GltfMetallicRoughness::MaterialConstants),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VMA_MEMORY_USAGE_CPU_TO_GPU,
+      },
     .data_buffer_offset = 0,
   };
   GltfMetallicRoughness::MaterialConstants constants{ Vec4f{ 1, 1, 1, 1 },
                                                       Vec4f{ 1, 0.5, 0, 0 },
                                                       {} };
-  material_resources.data_buffer->uploadData(&constants, sizeof(constants));
+  material_resources.data_buffer.uploadData(&constants, sizeof(constants));
 }
 
 void VulkanEngine::buildBuffers()
@@ -211,13 +269,15 @@ void VulkanEngine::buildBuffers()
   // Vertex deduplication
   size_t total_vtx_count{ 0 };
   for (auto& node : scene_nodes_) {
-    if (auto* mesh_node{ dynamic_cast<MeshNode*>(node.get()) }) {
+    if (const auto& mesh_node{ dynamic_pointer_cast<MeshNode>(node) }) {
       const auto&  mesh{ mesh_node->mesh };
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
       for (uint32_t i = 0; i < vtx_count; ++i) {
-        GpuVertex v{ mesh->vtxPositions()[i], mesh->vtxTexCoords()[i],
-                     mesh->vtxColors()[i], mesh->vtxNormals()[i] };
+        float     uv_x{ mesh->vtxTexCoords()[i].x };
+        float     uv_y{ mesh->vtxTexCoords()[i].y };
+        GpuVertex v{ mesh->vtxPositions()[i], uv_x, mesh->vtxNormals()[i], uv_y,
+                     mesh->vtxColors()[i] };
         if (unique_vertices.count(v) == 0) {
           unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
           vertices_.push_back(v);
@@ -240,39 +300,45 @@ void VulkanEngine::setupRenderGraph()
   // TODO: may want to be more flexible when setting sample count.
   // Note that the sample count used for the depth and color buffer must match
   // `.rasterizationSamples` in VkPipelineMultisampleStateCreateInfo.
-  const VkSampleCountFlagBits sample_count = device_->findMaxMsaaSampleCount();
+  const VkSampleCountFlagBits sample_count{
+    ed_->device.findMaxMsaaSampleCount()
+  };
 
-  msaa_buffer_ = render_graph_->add<TextureResource>(
-    "MSAA color buffer", TextureUsage::ColorBuffer, swapchain_->imageFormat(),
-    sample_count);
+  VkFormat color_format{ ed_->swapchain.imageFormat() };
+  msaa_buffer_ = ed_->render_graph->add<TextureResource>(
+    "MSAA color buffer", TextureUsage::ColorBuffer, color_format, sample_count);
 
-  auto* depth_buffer = render_graph_->add<TextureResource>(
+  auto* depth_buf{ ed_->render_graph->add<TextureResource>(
     "depth buffer", TextureUsage::DepthStencilBuffer,
-    device_->findDepthFormat(), sample_count);
+    ed_->device.findDepthFormat(), sample_count) };
 
   // TODO: handle resolve buffers implicitly in render graph
-  back_buffer_ = render_graph_->add<TextureResource>(
-    "back buffer", TextureUsage::BackBuffer, swapchain_->imageFormat());
+  back_buffer_ = ed_->render_graph->add<TextureResource>(
+    "back buffer", TextureUsage::BackBuffer, color_format);
 
-  index_buffer_ = render_graph_->add<BufferResource>("index buffer",
-                                                     BufferUsage::IndexBuffer);
+  index_buffer_ = ed_->render_graph->add<BufferResource>(
+    "index buffer", BufferUsage::IndexBuffer);
   index_buffer_->uploadData<uint32_t>(indices_);
 
-  vertex_buffer_ = render_graph_->add<BufferResource>(
+  vertex_buffer_ = ed_->render_graph->add<BufferResource>(
     "vertex buffer", BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
-                                     offsetof(GpuVertex, uv));
+  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
+                                     offsetof(GpuVertex, uv_x));
+  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
+                                     offsetof(GpuVertex, normal));
+  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
+                                     offsetof(GpuVertex, uv_y));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
                                      offsetof(GpuVertex, color));
   vertex_buffer_->setElementSize(sizeof(GpuVertex));
   vertex_buffer_->uploadData<GpuVertex>(vertices_);
 
-  auto* main_stage = render_graph_->add<GraphicsStage>("main stage");
+  auto* main_stage = ed_->render_graph->add<GraphicsStage>("main stage");
   // Write order matters here (for now)
   main_stage->writesTo(msaa_buffer_); // clear value index 0 is clear color
-  main_stage->writesTo(depth_buffer); // clear value index 1 is depth stencil
+  main_stage->writesTo(depth_buf);    // clear value index 1 is depth stencil
   main_stage->writesTo(back_buffer_);
   main_stage->readsFrom(index_buffer_);
   main_stage->readsFrom(vertex_buffer_);
@@ -284,7 +350,7 @@ void VulkanEngine::setupRenderGraph()
       drawGeometry(physical, cb);
     });
 
-  for (const auto& shader : shaders_) {
+  for (const auto& shader : ed_->shaders) {
     main_stage->usesShader(shader);
   }
 
@@ -294,24 +360,26 @@ void VulkanEngine::setupRenderGraph()
   // is (for now) okay to only add a single layout for each resource descriptor
   // that applies to all frames.
   // for (const auto& descriptor : descriptors_)
-  main_stage->addDescriptorLayout(gpu_scene_data_descriptor_layout_->get());
+  main_stage->addDescriptorLayout(ed_->scene_data_descriptor_layout);
 }
 
 void VulkanEngine::recreateSwapchain()
 {
   window_.waitForFocus();
-  device_->waitIdle();
-  swapchain_->setupSwapchain(VkExtent2D{ window_.width(), window_.height() });
+  ed_->device.waitIdle();
+  ed_->swapchain.setupSwapchain(
+    ed_->device, ed_->surface, VkExtent2D{ window_.width(), window_.height() });
   // TODO: experiment with render graph creation/compilation. It is not
   // necessary to rebuild the whole thing on every swapchain invalidation.
-  render_graph_.reset();
-  render_graph_ = std::make_unique<RenderGraph>(*device_, *swapchain_);
+  ed_->render_graph.reset();
+  ed_->render_graph =
+    std::make_unique<RenderGraph>(ed_->device, ed_->swapchain);
   setupRenderGraph();
   // Reset first to destroy ImGui context
-  imgui_overlay_.reset();
-  imgui_overlay_ = std::make_unique<ImGuiOverlay>(
-    *device_, *swapchain_, render_graph_.get(), back_buffer_);
-  render_graph_->compile();
+  ed_->imgui_overlay.reset();
+  ed_->imgui_overlay = std::make_unique<ImGuiOverlay>(
+    ed_->device, ed_->swapchain, ed_->render_graph.get(), back_buffer_);
+  ed_->render_graph->compile();
 }
 
 void VulkanEngine::updateScene(uint32_t current_image)
@@ -335,10 +403,11 @@ void VulkanEngine::updateScene(uint32_t current_image)
                            Vec3f(0.0f, 0.0f, 1.0f)) };
   Mat4f view{ glm::lookAt(Vec3f(2.0f, 2.0f, 2.0f), Vec3f(0.0f, 0.0f, 0.0f),
                           Vec3f(0.0f, 0.0f, 1.0f)) };
-  Mat4f proj{ glm::perspective(glm::radians(45.0f),
-                               swapchain_->extent().width /
-                                 (float) swapchain_->extent().height,
-                               0.1f, 10.0f) };
+  Mat4f proj{ glm::perspective(
+    glm::radians(45.0f),
+    ed_->swapchain.extent().width /
+      static_cast<float>(ed_->swapchain.extent().height),
+    0.1f, 10.0f) };
   GpuModelData model_data{ .model_mat = model };
   proj[1][1] *= -1;
   scene_data_.proj               = proj;
@@ -347,36 +416,38 @@ void VulkanEngine::updateScene(uint32_t current_image)
   scene_data_.ambient_color      = {};
   scene_data_.sunlight_color     = {};
   scene_data_.sunlight_direction = {};
-  frames_in_flight_[current_image].scene_data_buffer->uploadData(
+  ed_->frames_in_flight[current_image].scene_data_buffer.uploadData(
     &scene_data_, sizeof(scene_data_));
-  frames_in_flight_[current_image].model_data_buffer->uploadData(
+  ed_->frames_in_flight[current_image].model_data_buffer.uploadData(
     &model_data, sizeof(model_data));
 }
 
 void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
                                 const wr::CommandBuffer& cb)
 {
-  // for (const RenderObject& draw : main_draw_context_.opaque_surfaces) {
+  const auto& swapchain{ ed_->swapchain };
+  const auto& device{ ed_->device };
+
   const size_t surface_count{ main_draw_context_.opaque_surfaces.size() };
   size_t       idx_offset{ 0 };
   for (size_t i = 0; i < surface_count; ++i) {
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
     // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
     //                       physical.pipelineLayout());
-    FrameData&      frame{ frames_in_flight_[frame_index_] };
-    VkDescriptorSet global_descriptor{ frame.descriptors->allocate(
-      *gpu_scene_data_descriptor_layout_) };
-    VkDescriptorSet viking_descriptor{ frame.descriptors->allocate(
-      *viking_model_descriptor_layout_) };
+    FrameData&      frame{ ed_->frames_in_flight[frame_index_] };
+    VkDescriptorSet global_descriptor{ frame.descriptors.allocate(
+      device, ed_->scene_data_descriptor_layout) };
+    VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
+      device, ed_->viking_model_descriptor_layout) };
 
     DescriptorWriter writer;
-    writer.writeUniformBuffer<GpuSceneData>(0, *frame.scene_data_buffer, 0)
-      .updateSet(*device_, global_descriptor);
+    writer.writeUniformBuffer<GpuSceneData>(0, frame.scene_data_buffer, 0)
+      .updateSet(device, global_descriptor);
     writer.reset();
 
-    writer.writeUniformBuffer<GpuModelData>(0, *frame.model_data_buffer, 0)
-      .writeCombinedImageSampler(1, *viking_texture_)
-      .updateSet(*device_, viking_descriptor);
+    writer.writeUniformBuffer<GpuModelData>(0, frame.model_data_buffer, 0)
+      .writeCombinedImageSampler(1, ed_->viking_texture)
+      .updateSet(device, viking_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
@@ -384,8 +455,8 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     const VkViewport viewports[] = { {
       .x        = 0.0f,
       .y        = 0.0f,
-      .width    = static_cast<float>(swapchain_->extent().width),
-      .height   = static_cast<float>(swapchain_->extent().height),
+      .width    = static_cast<float>(swapchain.extent().width),
+      .height   = static_cast<float>(swapchain.extent().height),
       .minDepth = 0.0f,
       .maxDepth = 1.0f,
     } };
@@ -393,7 +464,7 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
 
     const VkRect2D scissors[] = { {
       .offset = { 0, 0 },
-      .extent = swapchain_->extent(),
+      .extent = swapchain.extent(),
     } };
     cb.setScissor(scissors, 0);
 
@@ -407,49 +478,52 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
 void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 {
   ImGuiIO& io    = ImGui::GetIO();
-  io.DisplaySize = ImVec2(static_cast<float>(swapchain_->extent().width),
-                          static_cast<float>(swapchain_->extent().height));
+  io.DisplaySize = ImVec2(static_cast<float>(ed_->swapchain.extent().width),
+                          static_cast<float>(ed_->swapchain.extent().height));
   io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
   ImGui::NewFrame();
   lambda();
   ImGui::EndFrame();
   ImGui::Render();
-  imgui_overlay_->update(frame_index_);
+  ed_->imgui_overlay->update(frame_index_);
 }
 
 // TODO: move this to where it is relevant
-void VulkanEngine::uploadMesh(std::span<const Point3f> positions,
-                              std::span<const Vec2f>   texcoords,
-                              std::span<const Color4f> colors,
-                              std::span<const Vec3f>   normals)
-{
-  vertices_.clear();
-  indices_.clear();
-
-  // TODO:
-  // De-duplication should be taken care of earlier, e.g when loading mesh
-  // uploadMesh should look up the mesh's vertex/index buffer resource and do
-  // resource->uploadData<GpuVertex>(vertices) (though this requires a vector of
-  // GpuVertex...)
-  std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
-  // Vertex deduplication
-  for (uint32_t i = 0; i < positions.size(); ++i) {
-    GpuVertex v{ positions[i], texcoords[i], colors[i], normals[i] };
-    if (unique_vertices.count(v) == 0) {
-      unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
-      vertices_.push_back(v);
-    }
-    indices_.push_back(unique_vertices[v]);
-  }
-  log_->debug("Vertex deduplication before and after {} -> {}",
-              positions.size(), vertices_.size());
-  // Recreate swapchain to trigger recompilation of render graph with new
-  // vertex/index buffers. TODO: improve
-  recreateSwapchain();
-}
+// void VulkanEngine::uploadMesh(std::span<const Point3f> positions,
+//                               std::span<const Vec2f>   texcoords,
+//                               std::span<const Color4f> colors,
+//                               std::span<const Vec3f>   normals)
+// {
+//   vertices_.clear();
+//   indices_.clear();
+//
+//   // TODO:
+//   // De-duplication should be taken care of earlier, e.g when loading mesh
+//   // uploadMesh should look up the mesh's vertex/index buffer resource and do
+//   // resource->uploadData<GpuVertex>(vertices) (though this requires a vector
+//   of
+//   // GpuVertex...)
+//   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
+//   // Vertex deduplication
+//   for (uint32_t i = 0; i < positions.size(); ++i) {
+//     GpuVertex v{ positions[i], texcoords[i], colors[i], normals[i] };
+//     if (unique_vertices.count(v) == 0) {
+//       unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
+//       vertices_.push_back(v);
+//     }
+//     indices_.push_back(unique_vertices[v]);
+//   }
+//   log_->debug("Vertex deduplication before and after {} -> {}",
+//               positions.size(), vertices_.size());
+//   // Recreate swapchain to trigger recompilation of render graph with new
+//   // vertex/index buffers. TODO: improve
+//   recreateSwapchain();
+// }
 
 void VulkanEngine::drawFrame()
 {
+  const auto& swapchain{ ed_->swapchain };
+  const auto& device{ ed_->device };
   if (swapchain_invalidated_) {
     recreateSwapchain();
     swapchain_invalidated_ = false;
@@ -458,25 +532,25 @@ void VulkanEngine::drawFrame()
 
   updateScene(frame_index_); // move
 
-  FrameData& frame{ frames_in_flight_[frame_index_] };
+  FrameData& frame{ ed_->frames_in_flight[frame_index_] };
 
   // Wait until the previous command buffer with the current frame index
   // has finished executing
   if (likely(frame.cmd_buf != nullptr))
     frame.cmd_buf->waitFence();
 
-  frame.descriptors->resetPools();
+  frame.descriptors.resetPools();
 
-  const uint32_t image_index{ swapchain_->acquireNextImage(
+  const uint32_t image_index{ swapchain.acquireNextImage(
     frame_index_, swapchain_invalidated_) };
   if (swapchain_invalidated_) {
     // Skip rendering, swapchain is recreated on next call
     return;
   }
 
-  const auto& cb{ device_->requestCommandBuffer() };
+  const auto& cb{ device.requestCommandBuffer() };
   frame.cmd_buf = &cb;
-  render_graph_->render(image_index, cb);
+  ed_->render_graph->render(image_index, cb);
 
   VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -486,38 +560,39 @@ void VulkanEngine::drawFrame()
     .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
     .pNext                = {},
     .waitSemaphoreCount   = 1,
-    .pWaitSemaphores      = swapchain_->imageAvailableSemaphore(frame_index_),
+    .pWaitSemaphores      = swapchain.imageAvailableSemaphore(frame_index_),
     .pWaitDstStageMask    = wait_stages,
     .commandBufferCount   = 1,
-    .pCommandBuffers      = &cb.get(),
+    .pCommandBuffers      = cb.ptr(),
     .signalSemaphoreCount = 1,
-    .pSignalSemaphores    = swapchain_->renderFinishedSemaphore(frame_index_),
+    .pSignalSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
   };
 
   // Submit without waiting (we wait at the beginning of this function)
   cb.submit(submit_info);
 
-  VkSwapchainKHR         swapchains[]{ swapchain_->get() };
   const VkPresentInfoKHR present_info{
     .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
     .pNext              = {},
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores    = swapchain_->renderFinishedSemaphore(frame_index_),
+    .pWaitSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
     .swapchainCount     = 1,
-    .pSwapchains        = swapchains,
+    .pSwapchains        = swapchain.ptr(),
     .pImageIndices      = &image_index,
     .pResults           = {},
   };
 
-  swapchain_->present(present_info, swapchain_invalidated_);
+  swapchain.present(present_info, swapchain_invalidated_);
 
   frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
 
-std::string VulkanEngine::deviceName() const { return device_->name(); }
+std::string VulkanEngine::deviceName() const { return ed_->device.name(); }
 
 void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
 {
+  const auto& device{ ed_->device };
+
   const VkPushConstantRange matrix_range{
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
     .offset     = 0,
@@ -531,17 +606,16 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT)
     .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-  material.material_layout = std::make_unique<wr::DescriptorSetLayout>(
-    layout_builder.build(*device_, 0));
+  material.material_layout =
+    wr::DescriptorSetLayout{ layout_builder.build(device, 0) };
 
-  wr::Shader      vert_shader{ *device_, VK_SHADER_STAGE_VERTEX_BIT,
-                          "material vertex shader", "mesh.vert.spv" };
-  wr::Shader      frag_shader{ *device_, VK_SHADER_STAGE_FRAGMENT_BIT,
-                          "material fragment shader", "mesh.frag.spv" };
+  wr::Shader vert_shader{ device, "material vertex shader", "mesh.vert.spv",
+                          VK_SHADER_STAGE_VERTEX_BIT };
+  wr::Shader frag_shader{ device, "material fragment shader", "mesh.frag.spv",
+                          VK_SHADER_STAGE_FRAGMENT_BIT };
   PipelineBuilder pipeline_builder;
-  pipeline_builder
-    .addDescriptorSetLayout(gpu_scene_data_descriptor_layout_->get())
-    .addDescriptorSetLayout(material.material_layout->get())
+  pipeline_builder.addDescriptorSetLayout(ed_->scene_data_descriptor_layout)
+    .addDescriptorSetLayout(material.material_layout)
     .addPushConstantRange(matrix_range)
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
@@ -558,19 +632,33 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     //.setDepthFormat(depth_buffer->format_);
 
     // TODO: THE FORMATS SHOULD BE SET FROM TEXTURE RESOURCE
-    .setColorAttachmentFormat(swapchain_->imageFormat())
-    .setDepthFormat(device_->findDepthFormat());
+    .setColorAttachmentFormat(ed_->swapchain.imageFormat())
+    .setDepthFormat(device.findDepthFormat());
 
   // finally build the pipeline
-  material.opaque_pipeline =
-    std::make_unique<wr::GraphicsPipeline>(pipeline_builder.build(*device_));
+  // TODO: pipeline names should ultimately be constructed from the material
+  // information
+  material.opaque_pipeline = wr::Pipeline{ pipeline_builder.build(
+    device, "GltfMetallicRoughness opaque pipeline") };
 
   // create the transparent variant
   pipeline_builder.enableBlendingAdditive().enableDepthtest(
     false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
-  material.transparent_pipeline =
-    std::make_unique<wr::GraphicsPipeline>(pipeline_builder.build(*device_));
+  material.transparent_pipeline = wr::Pipeline{ pipeline_builder.build(
+    device, "GltfMetallicRoughness transparent pipeline") };
 }
 
 } // namespace eldr::vk
+namespace std {
+size_t
+hash<eldr::vk::GpuVertex>::operator()(eldr::vk::GpuVertex const& vertex) const
+{
+  size_t value{ hash<Point3f>()(vertex.pos) };
+  value = eldr::hashCombine(value, hash<float>()(vertex.uv_x));
+  value = eldr::hashCombine(value, hash<Vec3f>()(vertex.normal));
+  value = eldr::hashCombine(value, hash<float>()(vertex.uv_y));
+  value = eldr::hashCombine(value, hash<Color4f>()(vertex.color));
+  return value;
+};
+} // namespace std

@@ -4,19 +4,19 @@
 
 namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
-// GpuBufferImpl
+// BufferImpl
 //------------------------------------------------------------------------------
-class GpuBuffer::GpuBufferImpl : public GpuResourceAllocation {
+class Buffer::BufferImpl : public GpuResourceAllocation {
 public:
-  GpuBufferImpl(const Device& device, const VkBufferCreateInfo& buffer_ci,
-                const VmaAllocationCreateInfo& alloc_ci);
-  ~GpuBufferImpl();
+  BufferImpl(const Device& device, const VkBufferCreateInfo& buffer_ci,
+             const VmaAllocationCreateInfo& alloc_ci);
+  ~BufferImpl();
   VkBuffer buffer_{ VK_NULL_HANDLE };
 };
 
-GpuBuffer::GpuBufferImpl::GpuBufferImpl(const Device&             device,
-                                        const VkBufferCreateInfo& buffer_ci,
-                                        const VmaAllocationCreateInfo& alloc_ci)
+Buffer::BufferImpl::BufferImpl(const Device&                  device,
+                               const VkBufferCreateInfo&      buffer_ci,
+                               const VmaAllocationCreateInfo& alloc_ci)
   : GpuResourceAllocation(device)
 {
   if (const VkResult result =
@@ -26,18 +26,18 @@ GpuBuffer::GpuBufferImpl::GpuBufferImpl(const Device&             device,
     ThrowVk(result, "vmaCreateBuffer(): ");
 }
 
-GpuBuffer::GpuBufferImpl::~GpuBufferImpl()
+Buffer::BufferImpl::~BufferImpl()
 {
   vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
 }
 
 //------------------------------------------------------------------------------
-// GpuBuffer
+// Buffer
 //------------------------------------------------------------------------------
-GpuBuffer::GpuBuffer(const Device& device, std::string_view name,
-                     VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
-                     VmaMemoryUsage           memory_usage,
-                     VmaAllocationCreateFlags flags)
+Buffer::Buffer(const Device& device, std::string_view name,
+               VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
+               VmaMemoryUsage           memory_usage,
+               VmaAllocationCreateFlags alloc_flags)
   : size_(buffer_size)
 {
   assert(buffer_size > 0);
@@ -53,7 +53,7 @@ GpuBuffer::GpuBuffer(const Device& device, std::string_view name,
   };
 
   const VmaAllocationCreateInfo alloc_ci{
-    .flags          = flags,
+    .flags          = alloc_flags,
     .usage          = memory_usage,
     .requiredFlags  = {},
     .preferredFlags = {},
@@ -63,22 +63,23 @@ GpuBuffer::GpuBuffer(const Device& device, std::string_view name,
     .priority       = {},
   };
   buffer_data_ =
-    std::make_shared<GpuBufferImpl>(device, buffer_ci, alloc_ci, name);
+    std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci, name);
   vmaSetAllocationName(device.allocator(), buffer_data_->allocation_,
                        fmt::format("{} allocation", name).c_str());
 }
 
-GpuBuffer::GpuBuffer(const Device& device, const void* data,
-                     VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
-                     VmaMemoryUsage memory_usage, const std::string& name)
-  : GpuBuffer(device, data_size, buffer_usage, memory_usage, name)
+Buffer::Buffer(const Device& device, std::string_view name, const void* data,
+               VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
+               VmaMemoryUsage           memory_usage,
+               VmaAllocationCreateFlags alloc_flags)
+  : Buffer(device, name, data_size, buffer_usage, memory_usage, alloc_flags)
 {
   assert(data_size > 0);
   assert(data);
   uploadData(data, data_size);
 }
 
-void GpuBuffer::uploadData(const void* data, size_t data_size)
+void Buffer::uploadData(const void* data, size_t data_size)
 {
   assert(data_size > 0);
   assert(static_cast<VkDeviceSize>(data_size) <= size_);
@@ -86,5 +87,5 @@ void GpuBuffer::uploadData(const void* data, size_t data_size)
   std::memcpy(buffer_data_->alloc_info_.pMappedData, data, data_size);
 }
 
-VkBuffer GpuBuffer::get() const { return buffer_data_->buffer_; }
+VkBuffer Buffer::get() const { return buffer_data_->buffer_; }
 } // namespace eldr::vk::wr

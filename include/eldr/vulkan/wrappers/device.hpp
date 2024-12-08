@@ -24,6 +24,7 @@ struct QueueFamilyIndices {
 
 class Device {
 public:
+  Device() = default;
   Device(const Instance&, const Surface&,
          std::vector<const char*>& required_extensions, Logger logger);
 
@@ -41,7 +42,7 @@ public:
   [[nodiscard]] uint32_t findMemoryType(uint32_t              type_filter,
                                         VkMemoryPropertyFlags properties) const;
 
-  [[nodiscard]] const CommandBuffer& requestCommandBuffer();
+  [[nodiscard]] const CommandBuffer& requestCommandBuffer() const;
 
   // Accessors
   [[nodiscard]] VkSampleCountFlagBits     findMaxMsaaSampleCount() const;

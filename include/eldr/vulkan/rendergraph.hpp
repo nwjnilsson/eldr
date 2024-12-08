@@ -1,6 +1,7 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 
 #include <functional>
 #include <memory>
@@ -163,9 +164,9 @@ public:
   /// @note This function will be removed in the near future, as we are aiming
   /// for users of the API to not have to deal with descriptors at all.
   // TODO: Refactor descriptor management in the render graph
-  void addDescriptorLayout(VkDescriptorSetLayout layout)
+  void addDescriptorLayout(wr::DescriptorSetLayout& layout)
   {
-    descriptor_layouts_.push_back(layout);
+    descriptor_layouts_.push_back(layout.get());
   }
 
   /// @brief Add a push constant range to this render stage.
@@ -297,7 +298,7 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  std::unique_ptr<wr::GpuBuffer> buffer_{};
+  wr::Buffer buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -313,7 +314,7 @@ public:
   PhysicalImage& operator=(PhysicalImage&&)      = delete;
 
 private:
-  std::unique_ptr<wr::GpuImage> image_{};
+  wr::Image image_;
 };
 
 class PhysicalBackBuffer : public PhysicalResource {

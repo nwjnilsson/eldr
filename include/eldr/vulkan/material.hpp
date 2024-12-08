@@ -2,6 +2,8 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/pipeline.hpp>
 
 namespace eldr::vk {
 
@@ -15,10 +17,10 @@ struct MaterialInstance {
 
 struct GltfMetallicRoughness {
   ELDR_IMPORT_CORE_TYPES()
-  std::unique_ptr<wr::Pipeline> opaque_pipeline;
-  std::unique_ptr<wr::Pipeline> transparent_pipeline;
+  wr::Pipeline opaque_pipeline;
+  wr::Pipeline transparent_pipeline;
 
-  std::unique_ptr<wr::DescriptorSetLayout> material_layout;
+  wr::DescriptorSetLayout material_layout;
 
   struct MaterialConstants {
     Vec4f color_factors;
@@ -28,10 +30,10 @@ struct GltfMetallicRoughness {
   };
 
   struct MaterialResources {
-    wr::GpuTexture*                color_texture;
-    wr::GpuTexture*                metal_rough_texture;
-    std::unique_ptr<wr::GpuBuffer> data_buffer;
-    size_t                         data_buffer_offset;
+    wr::GpuTexture* color_texture;
+    wr::GpuTexture* metal_rough_texture;
+    wr::Buffer      data_buffer;
+    size_t          data_buffer_offset;
   };
 
   MaterialInstance writeMaterial(const wr::Device& device, MaterialPass pass,

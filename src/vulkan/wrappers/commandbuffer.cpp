@@ -443,4 +443,10 @@ void     CommandBuffer::waitFence() const
 
 void CommandBuffer::resetFence() const { wait_fence_.reset(); }
 
+VkCommandBuffer CommandBuffer::get() const { return cb_data_->command_buffer_; }
+
+VkCommandBuffer* CommandBuffer::ptr() const
+{
+  return &cb_data_->command_buffer_;
+}
 } // namespace eldr::vk::wr

@@ -1,13 +1,12 @@
 #pragma once
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/common.hpp>
 
 namespace eldr::vk::wr {
 
 class Fence {
 public:
-  Fence(const Device&);
-  Fence(Fence&&);
-  ~Fence();
+  Fence() = default;
+  Fence(const Device& device);
 
   [[nodiscard]] VkFence get() const;
 

@@ -5,44 +5,10 @@
 namespace eldr::vk::wr {
 
 //------------------------------------------------------------------------------
-// DebugUtilsMessengerImpl
+// Debug report callback
 //------------------------------------------------------------------------------
-class DebugUtilsMessenger::DebugUtilsMessengerImpl {
-  DebugUtilsMessengerImpl(
-    const Instance&                           instance,
-    const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);
-  ~DebugUtilsMessengerImpl();
-
-  const Instance&          instance_;
-  VkDebugUtilsMessengerEXT debug_messenger_;
-};
-
-DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
-  const Instance&                           instance,
-  const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci)
-  : instance_(instance)
-{
-  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance.get(), "vkCreateDebugUtilsMessengerEXT");
-  assert(func != nullptr);
-  VkResult err =
-    func(instance.get(), &debug_report_ci, nullptr, &debug_messenger_);
-  if (err != VK_SUCCESS)
-    ThrowVk(err, "Failed to create debug utils messenger: ");
-}
-
-DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()
-{
-  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance_.get(), "vkDestroyDebugUtilsMessengerEXT");
-  if (func != nullptr)
-    func(instance_.get(), debug_messenger_, nullptr);
-}
-
-//------------------------------------------------------------------------------
-// DebugUtilsMessenger
-//------------------------------------------------------------------------------
-static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
+namespace {
+VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
   VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
   VkDebugUtilsMessageTypeFlagsEXT             messageType,
   const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -86,7 +52,45 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
   }
   return VK_FALSE;
 }
+} // namespace
+//------------------------------------------------------------------------------
+// DebugUtilsMessengerImpl
+//------------------------------------------------------------------------------
+class DebugUtilsMessenger::DebugUtilsMessengerImpl {
+  DebugUtilsMessengerImpl(
+    const Instance&                           instance,
+    const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);
+  ~DebugUtilsMessengerImpl();
 
+  const Instance&          instance_;
+  VkDebugUtilsMessengerEXT debug_messenger_;
+};
+
+DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
+  const Instance&                           instance,
+  const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci)
+  : instance_(instance)
+{
+  auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance.get(), "vkCreateDebugUtilsMessengerEXT");
+  assert(func != nullptr);
+  VkResult err =
+    func(instance.get(), &debug_report_ci, nullptr, &debug_messenger_);
+  if (err != VK_SUCCESS)
+    ThrowVk(err, "Failed to create debug utils messenger: ");
+}
+
+DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()
+{
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    instance_.get(), "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr)
+    func(instance_.get(), debug_messenger_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// DebugUtilsMessenger
+//------------------------------------------------------------------------------
 DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
 {
   const VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{

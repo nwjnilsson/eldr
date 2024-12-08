@@ -1,4 +1,3 @@
-#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
@@ -10,7 +9,8 @@ namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
 class Image::ImageImpl : public GpuResourceAllocation {
 public:
-  ImageImpl(const Device& device, const VkImageCreateInfo& image_ci);
+  ImageImpl(const Device& device, const VkImageCreateInfo& image_ci,
+            const VmaAllocationCreateInfo& alloc_ci);
   ~ImageImpl();
   VkImage image_{ VK_NULL_HANDLE };
 };
@@ -35,9 +35,8 @@ Image::ImageImpl::~ImageImpl()
 //------------------------------------------------------------------------------
 // Image
 //------------------------------------------------------------------------------
-Image::Image(const Device& device, std::string_view name,
-             const ImageInfo& image_info, VmaMemoryUsage memory_usage)
-  : name_(name), format_(image_info.format), size_(image_info.extent)
+Image::Image(const Device& device, const ImageCreateInfo& image_info)
+  : name_(image_info.name), format_(image_info.format), size_(image_info.extent)
 {
   // ---------------------------------------------------------------------------
   // Create image view
@@ -62,7 +61,7 @@ Image::Image(const Device& device, std::string_view name,
 
   const VmaAllocationCreateInfo alloc_ci{
     .flags          = {},
-    .usage          = memory_usage,
+    .usage          = image_info.memory_usage,
     .requiredFlags  = {},
     .preferredFlags = {},
     .memoryTypeBits = {},
@@ -71,6 +70,9 @@ Image::Image(const Device& device, std::string_view name,
     .priority       = {},
   };
   i_data_ = std::make_shared<ImageImpl>(device, image_ci, alloc_ci);
+
+  image_view_ = ImageView{ device, *this, image_info.aspect_flags };
 }
 
+VkImage Image::get() const { return i_data_->image_; }
 } // namespace eldr::vk::wr

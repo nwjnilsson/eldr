@@ -5,8 +5,18 @@
 
 namespace eldr::vk::wr {
 
-// Create surface
-Surface::Surface(const Instance& instance, GLFWwindow* window)
+//------------------------------------------------------------------------------
+// SurfaceImpl
+//------------------------------------------------------------------------------
+class Surface::SurfaceImpl {
+public:
+  SurfaceImpl(const Instance& instance, GLFWwindow* window);
+  ~SurfaceImpl();
+  const Instance& instance_;
+  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
+};
+
+Surface::SurfaceImpl::SurfaceImpl(const Instance& instance, GLFWwindow* window)
   : instance_(instance)
 {
   if (const auto result =
@@ -15,10 +25,18 @@ Surface::Surface(const Instance& instance, GLFWwindow* window)
     ThrowVk(result, "glfwCreateWindowSurface(): ");
 }
 
-Surface::~Surface()
+Surface::SurfaceImpl::~SurfaceImpl()
 {
-  if (surface_ != VK_NULL_HANDLE)
-    vkDestroySurfaceKHR(instance_.get(), surface_, nullptr);
+  vkDestroySurfaceKHR(instance_.get(), surface_, nullptr);
 }
 
+//------------------------------------------------------------------------------
+// Surface
+//------------------------------------------------------------------------------
+Surface::Surface(const Instance& instance, GLFWwindow* window)
+  : s_data_(std::make_shared<SurfaceImpl>(instance, window))
+{
+}
+
+VkSurfaceKHR Surface::get() const { return s_data_->surface_; }
 } // namespace eldr::vk::wr

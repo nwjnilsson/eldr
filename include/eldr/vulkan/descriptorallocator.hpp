@@ -1,6 +1,6 @@
 #pragma once
-
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/descriptorpool.hpp>
 
 #include <span>
 
@@ -12,26 +12,21 @@ public:
     float            ratio;
   };
 
-  DescriptorAllocator()                           = delete;
-  DescriptorAllocator(const DescriptorAllocator&) = delete;
-  DescriptorAllocator(DescriptorAllocator&&)      = delete;
-  DescriptorAllocator(const wr::Device& device, uint32_t max_sets,
-                      std::span<PoolSizeRatio> ratios);
-  ~DescriptorAllocator();
+  DescriptorAllocator() = default;
+  DescriptorAllocator(uint32_t max_sets, std::span<PoolSizeRatio> ratios);
 
   void            resetPools();
   void            destroyPools();
-  VkDescriptorSet allocate(const wr::DescriptorSetLayout& layout,
+  VkDescriptorSet allocate(const wr::Device&              device,
+                           const wr::DescriptorSetLayout& layout,
                            void*                          pNext = nullptr);
 
 private:
-  wr::DescriptorPool getPool();
-  wr::DescriptorPool createPool();
+  wr::DescriptorPool getPool(const wr::Device& device);
+  wr::DescriptorPool createPool(const wr::Device& device);
 
 private:
   static constexpr uint32_t max_sets_limit{ 4092 };
-
-  const wr::Device& device_;
 
   std::vector<PoolSizeRatio>      ratios_;
   std::vector<wr::DescriptorPool> full_pools_;
