@@ -4,7 +4,6 @@
 #include <eldr/render/shape.hpp>
 
 #include <filesystem>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,11 +16,10 @@ enum class MaterialType : uint8_t {
   Metallic,
 };
 
-
 struct GeoSurface {
-  uint32_t     start_index;
-  uint32_t     count;
-  MaterialType material;
+  uint32_t                  start_index;
+  uint32_t                  count;
+  std::shared_ptr<Material> material;
 };
 
 class Mesh final : public Shape {
@@ -63,13 +61,6 @@ public:
     return surfaces_;
   }
 
-  [[nodiscard]] static std::optional<std::vector<std::shared_ptr<Mesh>>>
-  loadGltfMeshes(std::filesystem::path file_path);
-
-  //  template <typename T>
-  [[nodiscard]]
-  static std::optional<std::vector<std::shared_ptr<Mesh>>>
-  loadObjMeshes(std::filesystem::path file_path);
 
 protected:
   std::vector<Point3f>    vtx_positions_;

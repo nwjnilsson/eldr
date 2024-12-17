@@ -11,9 +11,6 @@ namespace eldr {
 class EldrApp;
 class Window;
 } // namespace eldr
-namespace eldr::vk {
-class VulkanEngine;
-} // namespace eldr::vk
 
 // TODO: move Vulkan Engine to eldr:: namespace?
 namespace eldr::vk {
@@ -37,10 +34,16 @@ public:
   VulkanEngine(const Window& window);
   ~VulkanEngine();
 
-  void addSceneNode(std::shared_ptr<SceneNode> node)
+  const wr::Device& device() const;
+  void addScene(const std::string& name, std::shared_ptr<Scene>& scene)
   {
-    scene_nodes_.push_back(node);
-  }
+    loaded_scenes[name] = scene;
+  };
+
+  GltfMetallicRoughness& metalRoughMaterial() const;
+  const wr::Image&       whiteImage() const;
+  const wr::Image&       errorImage() const;
+  const wr::Sampler&     defaultSamplerLinear() const;
 
   void updateImGui(std::function<void()> const& lambda);
 
@@ -70,6 +73,7 @@ private:
 private:
   const Window& window_;
   Logger        log_{ requestLogger("vulkan-engine") };
+  const Scene*  scene_;
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
@@ -82,6 +86,8 @@ private:
   TextureResource* msaa_buffer_;
   BufferResource*  vertex_buffer_;
   BufferResource*  index_buffer_;
+
+  std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes;
 
   // Hide vulkan implementation details to avoid pulling in every single vulkan
   // related type when including engine.hpp
@@ -99,8 +105,7 @@ private:
   } scene_data_;
 
   // TODO: decide whether these go in EngineData
-  DrawContext                             main_draw_context_;
-  std::vector<std::shared_ptr<SceneNode>> scene_nodes_;
+  DrawContext main_draw_context_;
 
   // std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
 };

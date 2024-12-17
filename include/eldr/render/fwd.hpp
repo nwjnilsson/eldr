@@ -18,7 +18,7 @@ enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;
-class Scene;
+struct Scene;
 // class Sensor;
 // class PhaseFunction;
 // class ProjectiveCamera;

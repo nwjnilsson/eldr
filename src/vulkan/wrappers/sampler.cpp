@@ -32,7 +32,8 @@ Sampler::SamplerImpl::~SamplerImpl()
 //------------------------------------------------------------------------------
 // Sampler
 //------------------------------------------------------------------------------
-Sampler::Sampler(const Device& device, VkFilter filter, uint32_t mip_levels)
+Sampler::Sampler(const Device& device, VkFilter mag_filter, VkFilter min_filter,
+                 VkSamplerMipmapMode mipmap_mode, uint32_t mip_levels)
 {
   VkPhysicalDeviceProperties props{};
   vkGetPhysicalDeviceProperties(device.physical(), &props);
@@ -41,9 +42,9 @@ Sampler::Sampler(const Device& device, VkFilter filter, uint32_t mip_levels)
     .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
     .pNext                   = {},
     .flags                   = {},
-    .magFilter               = filter,
-    .minFilter               = filter,
-    .mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+    .magFilter               = mag_filter,
+    .minFilter               = min_filter,
+    .mipmapMode              = mipmap_mode,
     .addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
     .addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT,
     .addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT,

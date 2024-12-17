@@ -116,6 +116,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     //   .clearValueCount = static_cast<uint32_t>(clear_values.size()),
     //   .pClearValues    = clear_values.data(),
     // };
+
     const VkRenderingInfoKHR render_info{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
       .pNext = nullptr,
@@ -127,8 +128,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
       .layerCount           = 0,
       .viewMask             = 0,
       .colorAttachmentCount = 1,
-      .pColorAttachments    = VK_NULL_HANDLE,
-      .pDepthAttachment     = VK_NULL_HANDLE,
+      .pColorAttachments    = VK_NULL_HANDLE, // FIXME
+      .pDepthAttachment     = VK_NULL_HANDLE, // FIXME
       .pStencilAttachment   = VK_NULL_HANDLE,
     };
     cb.beginRendering(render_info);

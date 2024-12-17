@@ -21,7 +21,7 @@ class KeyboardMouseInput;
 namespace eldr {
 class EldrApp {
   ELDR_IMPORT_CORE_TYPES();
-  const std::filesystem::path model_path = "assets/models/viking_room.obj";
+  const std::filesystem::path model_path = "assets/models/Suzanne.gltf";
 
 public:
   EldrApp();

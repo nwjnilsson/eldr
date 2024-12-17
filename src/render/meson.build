@@ -1,4 +1,7 @@
-src = ['scene.cpp', 'mesh.cpp']
+src = [
+  'scene.cpp',
+  'mesh.cpp'
+  ]
 eldr_render = library(
   'eldr-render',
   sources : src,
@@ -6,6 +9,7 @@ eldr_render = library(
   dependencies : [
     glfw_dep,
     vulkan_dep,
+    vma_dep,
     spdlog_dep,
     fastgltf_dep,
     ],

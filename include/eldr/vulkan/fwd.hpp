@@ -1,14 +1,18 @@
 #pragma once
+namespace eldr {
+// Material
+struct GltfMetallicRoughness;
+struct MaterialInstance;
+struct Material;
+} // namespace eldr
 
 namespace eldr::vk {
 class VulkanEngine;
+struct SceneData;
 struct GpuVertex;
 class ImGuiOverlay;
 // EXPERIMENTAL
 struct GpuMeshBuffers;
-
-// Material
-struct GltfMetallicRoughness;
 
 // RenderGraph types
 class RenderGraph;

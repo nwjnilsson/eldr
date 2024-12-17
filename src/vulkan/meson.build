@@ -3,8 +3,6 @@ src = [
   'wrappers/commandbuffer.cpp',
   'wrappers/commandpool.cpp',
   'wrappers/debugutilsmessenger.cpp',
-  'wrappers/descriptorwriter.cpp',
-  'wrappers/descriptorbuilder.cpp',
   'wrappers/descriptorpool.cpp',
   'wrappers/descriptorsetlayout.cpp',
   'wrappers/device.cpp',
@@ -18,11 +16,12 @@ src = [
   'wrappers/shader.cpp',
   'wrappers/surface.cpp',
   'wrappers/swapchain.cpp',
+  'descriptorwriter.cpp',
+  'descriptorsetlayoutbuilder.cpp',
   'vktools/format.cpp',
   'engine.cpp',
   'imgui.cpp',
-  'rendergraph.cpp',
-  'vktypes.cpp'
+  'rendergraph.cpp'
   ]
 
 configure_file(

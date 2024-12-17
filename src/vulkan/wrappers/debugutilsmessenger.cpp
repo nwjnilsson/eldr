@@ -57,6 +57,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
 // DebugUtilsMessengerImpl
 //------------------------------------------------------------------------------
 class DebugUtilsMessenger::DebugUtilsMessengerImpl {
+public:
   DebugUtilsMessengerImpl(
     const Instance&                           instance,
     const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);

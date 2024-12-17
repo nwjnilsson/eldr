@@ -5,22 +5,24 @@
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 
-namespace eldr::vk {
-
 enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 
+namespace eldr {
 struct MaterialInstance {
-  wr::Pipeline*   pipeline;
-  VkDescriptorSet material_set;
-  MaterialPass    pass_type;
+  vk::wr::Pipeline* pipeline;
+  VkDescriptorSet   descriptor_set;
+  MaterialPass      pass_type;
+};
+
+struct Material {
+  MaterialInstance data;
 };
 
 struct GltfMetallicRoughness {
   ELDR_IMPORT_CORE_TYPES()
-  wr::Pipeline opaque_pipeline;
-  wr::Pipeline transparent_pipeline;
-
-  wr::DescriptorSetLayout material_layout;
+  vk::wr::Pipeline            opaque_pipeline;
+  vk::wr::Pipeline            transparent_pipeline;
+  vk::wr::DescriptorSetLayout material_layout;
 
   struct MaterialConstants {
     Vec4f color_factors;
@@ -30,18 +32,21 @@ struct GltfMetallicRoughness {
   };
 
   struct MaterialResources {
-    wr::GpuTexture* color_texture;
-    wr::GpuTexture* metal_rough_texture;
-    wr::Buffer      data_buffer;
+    vk::wr::Image   color_image;
+    vk::wr::Sampler color_sampler;
+    vk::wr::Image   metal_rough_image;
+    vk::wr::Sampler metal_rough_sampler;
+    vk::wr::Buffer  data_buffer;
     size_t          data_buffer_offset;
   };
 
-  MaterialInstance writeMaterial(const wr::Device& device, MaterialPass pass,
+  MaterialInstance writeMaterial(const vk::wr::Device&    device,
+                                 MaterialPass             pass,
                                  const MaterialResources& resources,
-                                 DescriptorAllocator&     descriptor_allocator);
+                                 vk::DescriptorAllocator& descriptor_allocator);
 
 private:
-  DescriptorWriter writer;
+  vk::DescriptorWriter writer;
 };
 
-} // namespace eldr::vk
+} // namespace eldr

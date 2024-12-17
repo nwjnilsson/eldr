@@ -37,7 +37,6 @@
 
 #include <memory>
 #include <string>
-
 namespace eldr::vk {
 // -----------------------------------------------------------------------------
 // Engine types
@@ -67,6 +66,7 @@ struct VulkanEngine::EngineData {
   wr::Surface             surface;
   wr::Device              device;
   wr::Swapchain           swapchain;
+  DescriptorAllocator     global_descriptor_allocator;
 
   std::unique_ptr<RenderGraph>  render_graph;
   std::unique_ptr<ImGuiOverlay> imgui_overlay;
@@ -82,7 +82,10 @@ struct VulkanEngine::EngineData {
   GltfMetallicRoughness   metal_rough_material;
   MaterialInstance        default_material_data;
 
-  wr::GpuTexture default_texture;
+  wr::Image   white_image;
+  wr::Image   error_image;
+  wr::Sampler default_sampler_linear;
+
   wr::GpuTexture viking_texture;
 };
 
@@ -162,6 +165,19 @@ VulkanEngine::VulkanEngine(const Window& window)
 }
 
 VulkanEngine::~VulkanEngine() { ed_->device.waitIdle(); }
+
+// TODO: This is cursed and needs to be refactored
+GltfMetallicRoughness& VulkanEngine::metalRoughMaterial() const
+{
+  return ed_->metal_rough_material;
+}
+const wr::Image&   VulkanEngine::whiteImage() const { return ed_->white_image; }
+const wr::Image&   VulkanEngine::errorImage() const { return ed_->error_image; }
+const wr::Sampler& VulkanEngine::defaultSamplerLinear() const
+{
+  return ed_->default_sampler_linear;
+}
+// -----------------------------------------------------
 
 void VulkanEngine::loadTextures()
 {
@@ -257,7 +273,9 @@ void VulkanEngine::initDefaultData()
                                                       {} };
   material_resources.data_buffer.uploadData(&constants, sizeof(constants));
 
-  ed_->default_material_data
+  ed_->default_material_data = ed_->metal_rough_material.writeMaterial(
+    ed_->device, MaterialPass::MainColor, material_resources,
+    ed_->global_descriptor_allocator);
 }
 
 void VulkanEngine::buildBuffers()
@@ -268,21 +286,24 @@ void VulkanEngine::buildBuffers()
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   size_t total_vtx_count{ 0 };
-  for (auto& node : scene_nodes_) {
-    if (const auto& mesh_node{ dynamic_pointer_cast<MeshNode>(node) }) {
-      const auto&  mesh{ mesh_node->mesh };
-      const size_t vtx_count{ mesh->vtxPositions().size() };
-      total_vtx_count += vtx_count;
-      for (uint32_t i = 0; i < vtx_count; ++i) {
-        float     uv_x{ mesh->vtxTexCoords()[i].x };
-        float     uv_y{ mesh->vtxTexCoords()[i].y };
-        GpuVertex v{ mesh->vtxPositions()[i], uv_x, mesh->vtxNormals()[i], uv_y,
-                     mesh->vtxColors()[i] };
-        if (unique_vertices.count(v) == 0) {
-          unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
-          vertices_.push_back(v);
+  for (auto& es : loaded_scenes) {
+    for (auto& en : es.second->nodes) {
+      if (const auto& mesh_node{
+            dynamic_cast<const MeshNode*>(en.second.get()) }) {
+        const auto&  mesh{ mesh_node->mesh };
+        const size_t vtx_count{ mesh->vtxPositions().size() };
+        total_vtx_count += vtx_count;
+        for (uint32_t i = 0; i < vtx_count; ++i) {
+          float     uv_x{ mesh->vtxTexCoords()[i].x };
+          float     uv_y{ mesh->vtxTexCoords()[i].y };
+          GpuVertex v{ mesh->vtxPositions()[i], uv_x, mesh->vtxNormals()[i],
+                       uv_y, mesh->vtxColors()[i] };
+          if (unique_vertices.count(v) == 0) {
+            unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
+            vertices_.push_back(v);
+          }
+          indices_.push_back(unique_vertices[v]);
         }
-        indices_.push_back(unique_vertices[v]);
       }
     }
   }
@@ -356,10 +377,10 @@ void VulkanEngine::setupRenderGraph()
 
   // TODO: Only one descriptor set is currently allocated for any given
   // ResourceDescriptor. Additionally, for each frame in flight, the
-  // descriptor set bound is identical to the previous frame.This means that it
-  // is (for now) okay to only add a single layout for each resource descriptor
-  // that applies to all frames.
-  // for (const auto& descriptor : descriptors_)
+  // descriptor set bound is identical to the previous frame.This means that
+  // it is (for now) okay to only add a single layout for each resource
+  // descriptor that applies to all frames. for (const auto& descriptor :
+  // descriptors_)
   main_stage->addDescriptorLayout(ed_->scene_data_descriptor_layout);
 }
 
@@ -386,15 +407,13 @@ void VulkanEngine::updateScene(uint32_t current_image)
 {
   // TODO: if scene has changed, rebuild vertices/indices
   static size_t last_scene_node_count{ 0 };
-  if (scene_nodes_.size() != last_scene_node_count) {
+  if (loaded_scenes.size() != last_scene_node_count) {
     buildBuffers();
-    last_scene_node_count = scene_nodes_.size();
+    last_scene_node_count = loaded_scenes.size();
   }
 
   main_draw_context_.opaque_surfaces.clear();
-  for (auto& node : scene_nodes_) {
-    node->draw(Mat4f{ 1.f }, main_draw_context_);
-  }
+  loaded_scenes["Suzanne"]->draw(Mat4f{ 1.f }, main_draw_context_);
 
   static StopWatch stop_watch;
   float            time{ stop_watch.seconds(false) };
@@ -435,14 +454,14 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
     //                       physical.pipelineLayout());
     FrameData&      frame{ ed_->frames_in_flight[frame_index_] };
-    VkDescriptorSet global_descriptor{ frame.descriptors.allocate(
+    VkDescriptorSet frame_descriptor{ frame.descriptors.allocate(
       device, ed_->scene_data_descriptor_layout) };
     VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
       device, ed_->viking_model_descriptor_layout) };
 
     DescriptorWriter writer;
     writer.writeUniformBuffer<GpuSceneData>(0, frame.scene_data_buffer, 0)
-      .updateSet(device, global_descriptor);
+      .updateSet(device, frame_descriptor);
     writer.reset();
 
     writer.writeUniformBuffer<GpuModelData>(0, frame.model_data_buffer, 0)
@@ -452,7 +471,12 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
 
-    cb.bindPipeline(ed_->metal_rough_material.opaque_pipeline);
+    cb.bindPipeline(*draw.material->data.pipeline);
+    std::vector<VkDescriptorSet> descriptor_sets{
+      frame_descriptor, draw.material->data.descriptor_set
+    };
+    cb.bindDescriptorSets(descriptor_sets,
+                          draw.material->data.pipeline->layout());
 
     const VkViewport viewports[] = { {
       .x        = 0.0f,
@@ -477,6 +501,11 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
   }
 }
 
+// std::shared_ptr<Material> VulkanEngine::getDefaultMaterialData() const
+// {
+//   return std::make_shared<Material>(ed_->default_material_data);
+// }
+
 void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 {
   ImGuiIO& io    = ImGui::GetIO();
@@ -487,8 +516,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
   lambda();
   ImGui::EndFrame();
   ImGui::Render();
-  ed_->imgui_overlay->update(frame_index_,
-                             ed_->frames_in_flight[frame_index_].descriptors);
+  ed_->imgui_overlay->update(ed_->frames_in_flight[frame_index_].descriptors);
 }
 
 // TODO: move this to where it is relevant
@@ -502,9 +530,10 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 //
 //   // TODO:
 //   // De-duplication should be taken care of earlier, e.g when loading mesh
-//   // uploadMesh should look up the mesh's vertex/index buffer resource and do
-//   // resource->uploadData<GpuVertex>(vertices) (though this requires a vector
-//   of
+//   // uploadMesh should look up the mesh's vertex/index buffer resource and
+//   do
+//   // resource->uploadData<GpuVertex>(vertices) (though this requires a
+//   vector of
 //   // GpuVertex...)
 //   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
 //   // Vertex deduplication
@@ -626,8 +655,8 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .setMultisamplingNone()
     .disableBlending()
     .enableDepthtest(
-      true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op as
-                                            // i used in rendergraph
+      true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op
+                                            // as i used in rendergraph
 
     // render format
     //.setColorAttachmentFormat(back_buffer_->format_)

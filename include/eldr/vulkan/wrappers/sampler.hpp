@@ -7,7 +7,8 @@ class Sampler {
 
 public:
   Sampler() = default;
-  Sampler(const Device&, VkFilter filter, uint32_t mip_levels);
+  Sampler(const Device&, VkFilter mag_filter, VkFilter min_filter,
+          VkSamplerMipmapMode mipmap_mode, uint32_t mip_levels);
 
   [[nodiscard]] VkSampler get() const;
 

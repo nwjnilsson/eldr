@@ -1,27 +1,23 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/fwd.hpp>
+#include <eldr/vulkan/fwd.hpp>
 
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
-// fwd
-namespace eldr::vk {
-class VulkanEngine;
-}
-
 namespace eldr {
-
 struct RenderObject {
   uint32_t index_count;
   uint32_t first_index;
   // vk::BufferResource* index_buffer;
 
-  MaterialType material;
+  Material* material;
 
-  glm::mat4 transform;
+  CoreAliases<Float>::Mat4f transform;
   // VkDeviceAddress vertexBufferAddress; // render graph?
 };
 
@@ -29,12 +25,12 @@ struct DrawContext {
   std::vector<RenderObject> opaque_surfaces;
 };
 
-class IRenderable {
+class Renderable {
   using Mat4f = typename CoreAliases<Float>::Mat4f;
   virtual void draw(const Mat4f& top_matrix, DrawContext& ctx) const = 0;
 };
 
-struct SceneNode : public IRenderable {
+struct SceneNode : public Renderable {
   using Mat4f = typename CoreAliases<Float>::Mat4f;
 
   virtual ~SceneNode() = default;
@@ -58,24 +54,34 @@ struct MeshNode final : public SceneNode {
   void draw(const Mat4f& top_matrix, DrawContext& ctx) const override;
 };
 
-class Scene {
+struct Scene : public Renderable {
   ELDR_IMPORT_CORE_TYPES();
   struct SceneInfo {
     const std::filesystem::path model_path;
   };
 
-public:
-  Scene()  = default;
-  ~Scene() = default;
+  virtual void draw(const Mat4f& top_matrix, DrawContext& ctx) const override;
 
-  //[[nodiscard]] std::vector<Shape*> shapes() const { return shapes_; }
-  //[[nodiscard]] const std::vector<SceneNode>& nodes() const { return nodes_; }
+  [[nodiscard]] static std::optional<std::shared_ptr<Scene>>
+  loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path);
 
-  static void loadGeometry(vk::VulkanEngine* engine, const SceneInfo&);
+  [[nodiscard]]
+  static std::optional<std::shared_ptr<Scene>>
+  loadObj(std::filesystem::path file_path);
 
-private:
+  [[nodiscard]]
+  static std::shared_ptr<Scene> load(const vk::VulkanEngine& engine,
+                                     const SceneInfo&);
+
+  std::unordered_map<std::string, std::shared_ptr<Mesh>>      meshes;
+  std::unordered_map<std::string, std::shared_ptr<Material>>  materials;
+  std::unordered_map<std::string, std::shared_ptr<SceneNode>> nodes;
+
+  std::vector<std::shared_ptr<SceneNode>> top_nodes;
+
+  std::shared_ptr<vk::SceneData> vk_scene_data;
+
   // std::vector<Emitter> emitters_;
-  // std::vector<SceneNode> nodes_;
   // std::vector<SceneNode> scene_;
   //  std::vector<Sensor> sensors_;
 };

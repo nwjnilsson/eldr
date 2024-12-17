@@ -5,32 +5,33 @@
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-namespace eldr::vk {
+namespace eldr {
 MaterialInstance GltfMetallicRoughness::writeMaterial(
-  const wr::Device& device, MaterialPass pass,
-  const MaterialResources& resources, DescriptorAllocator& descriptor_allocator)
+  const vk::wr::Device& device, MaterialPass pass,
+  const MaterialResources& resources,
+  vk::DescriptorAllocator& descriptor_allocator)
 {
   MaterialInstance mat_data;
   mat_data.pass_type = pass;
   if (pass == MaterialPass::Transparent) {
-    mat_data.pipeline = transparent_pipeline.get();
+    mat_data.pipeline = &transparent_pipeline;
   }
   else {
-    mat_data.pipeline = opaque_pipeline.get();
+    mat_data.pipeline = &opaque_pipeline;
   }
 
-  mat_data.material_set = descriptor_allocator.allocate(material_layout->get());
+  mat_data.descriptor_set =
+    descriptor_allocator.allocate(device, material_layout);
 
   writer.reset();
-  writer.writeUniformBuffer<MaterialConstants>(0, *resources.data_buffer,
+  writer.writeUniformBuffer<MaterialConstants>(0, resources.data_buffer,
                                                resources.data_buffer_offset);
   writer.writeCombinedImageSampler(1, *resources.color_texture,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   writer.writeCombinedImageSampler(2, *resources.metal_rough_texture,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-  writer.updateSet(device, mat_data.material_set);
+  writer.updateSet(device, mat_data.descriptor_set);
 
   return mat_data;
 }
-} // namespace eldr::vk
+} // namespace eldr

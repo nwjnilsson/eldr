@@ -77,7 +77,7 @@ Shader::Shader(const Device& device, std::string_view name,
     .codeSize = bytecode.size(),
     .pCode    = reinterpret_cast<const uint32_t*>(bytecode.data()),
   };
-  s_data_ = std::make_shared<ShaderImpl>(device, shader_module_ci, filename);
+  s_data_ = std::make_shared<ShaderImpl>(device, filename, shader_module_ci);
 }
 
 VkShaderModule Shader::module() const { return s_data_->shader_module_; }
