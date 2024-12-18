@@ -35,7 +35,7 @@ public:
   ~VulkanEngine();
 
   const wr::Device& device() const;
-  void addScene(const std::string& name, std::shared_ptr<Scene>& scene)
+  void addScene(const std::string& name, const std::shared_ptr<Scene>& scene)
   {
     loaded_scenes[name] = scene;
   };

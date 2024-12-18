@@ -32,12 +32,12 @@ struct GltfMetallicRoughness {
   };
 
   struct MaterialResources {
-    vk::wr::Image   color_image;
-    vk::wr::Sampler color_sampler;
-    vk::wr::Image   metal_rough_image;
-    vk::wr::Sampler metal_rough_sampler;
-    vk::wr::Buffer  data_buffer;
-    size_t          data_buffer_offset;
+    vk::wr::Texture* color_texture;
+    vk::wr::Sampler* color_sampler;
+    vk::wr::Texture* metal_rough_texture;
+    vk::wr::Sampler* metal_rough_sampler;
+    vk::wr::Buffer   data_buffer;
+    size_t           data_buffer_offset;
   };
 
   MaterialInstance writeMaterial(const vk::wr::Device&    device,

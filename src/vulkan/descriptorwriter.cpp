@@ -54,9 +54,10 @@ DescriptorWriter& DescriptorWriter::writeSampledImage(
 }
 
 DescriptorWriter& DescriptorWriter::writeCombinedImageSampler(
-  uint32_t binding, const wr::GpuTexture& texture, VkImageLayout layout)
+  uint32_t binding, const wr::Image& image, const wr::Sampler& sampler,
+  VkImageLayout layout)
 {
-  return writeImage(binding, texture.imageView().get(), texture.sampler().get(),
+  return writeImage(binding, image.view().get(), sampler.get(),
                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, layout);
 }
 

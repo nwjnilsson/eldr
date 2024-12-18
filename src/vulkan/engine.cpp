@@ -22,11 +22,11 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
+#include <eldr/vulkan/wrappers/texture.hpp>
 #include <engine_config.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -70,7 +70,7 @@ struct VulkanEngine::EngineData {
 
   std::unique_ptr<RenderGraph>  render_graph;
   std::unique_ptr<ImGuiOverlay> imgui_overlay;
-  std::vector<wr::GpuTexture>   textures;
+  std::vector<wr::Texture>      textures;
   std::vector<wr::Shader>       shaders; // shader module is not needed after
                                    // building pipeline so check if this can be
                                    // rearranged
@@ -82,11 +82,11 @@ struct VulkanEngine::EngineData {
   GltfMetallicRoughness   metal_rough_material;
   MaterialInstance        default_material_data;
 
-  wr::Image   white_image;
-  wr::Image   error_image;
-  wr::Sampler default_sampler_linear;
+  wr::Image white_image;
+  wr::Image error_image;
 
-  wr::GpuTexture viking_texture;
+  wr::Image   viking_texture;
+  wr::Sampler default_sampler_linear;
 };
 
 // -----------------------------------------------------------------------------
@@ -171,8 +171,8 @@ GltfMetallicRoughness& VulkanEngine::metalRoughMaterial() const
 {
   return ed_->metal_rough_material;
 }
-const wr::Image&   VulkanEngine::whiteImage() const { return ed_->white_image; }
-const wr::Image&   VulkanEngine::errorImage() const { return ed_->error_image; }
+const wr::Texture& VulkanEngine::whiteImage() const { return ed_->white_image; }
+const wr::Texture& VulkanEngine::errorImage() const { return ed_->error_image; }
 const wr::Sampler& VulkanEngine::defaultSamplerLinear() const
 {
   return ed_->default_sampler_linear;
@@ -254,10 +254,16 @@ void VulkanEngine::initDescriptors()
 
 void VulkanEngine::initDefaultData()
 {
-  ed_->default_texture = wr::GpuTexture{ ed_->device, Bitmap{} };
+  ed_->white_image = ; // TODO;
+  ed_->default_sampler_linear =
+    wr::Sampler{ ed_->device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+                 VK_SAMPLER_MIPMAP_MODE_LINEAR, ed_->white_image.mipLevels() };
+  ed_->error_image = wr::Image::createTextureImage(ed_->device, Bitmap{});
   const GltfMetallicRoughness::MaterialResources material_resources{
-    .color_texture       = &ed_->default_texture,
-    .metal_rough_texture = &ed_->default_texture,
+    .color_texture       = &ed_->white_image,
+    .color_sampler       = &ed_->default_sampler_linear,
+    .metal_rough_texture = &ed_->white_image,
+    .metal_rough_sampler = &ed_->default_sampler_linear,
     .data_buffer =
       wr::Buffer{
         ed_->device,
@@ -465,7 +471,8 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     writer.reset();
 
     writer.writeUniformBuffer<GpuModelData>(0, frame.model_data_buffer, 0)
-      .writeCombinedImageSampler(1, ed_->viking_texture)
+      .writeCombinedImageSampler(1, ed_->viking_texture,
+                                 ed_->default_sampler_linear)
       .updateSet(device, viking_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),

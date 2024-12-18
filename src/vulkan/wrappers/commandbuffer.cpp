@@ -280,8 +280,7 @@ CommandBuffer::bindPipeline(const Pipeline&     pipeline,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image,
-                                                    uint32_t mip_levels) const
+const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
 {
   VkFormatProperties format_props{};
   vkGetPhysicalDeviceFormatProperties(cb_data_->device_.physical(),
@@ -307,7 +306,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image,
   int32_t mip_width  = image.size().width;
   int32_t mip_height = image.size().height;
 
-  for (uint32_t i = 1; i < mip_levels; ++i) {
+  for (uint32_t i = 1; i < image.mipLevels(); ++i) {
     barrier.subresourceRange.baseMipLevel = i - 1;
     barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -358,8 +357,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image,
 }
 
 const CommandBuffer& CommandBuffer::transitionImageLayout(
-  const Image& image, VkImageLayout old_layout, VkImageLayout new_layout,
-  uint32_t mip_levels) const
+  const Image& image, VkImageLayout old_layout, VkImageLayout new_layout) const
 {
   VkImageMemoryBarrier barrier{};
   barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -370,7 +368,7 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
   barrier.image                       = image.get();
   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = mip_levels;
+  barrier.subresourceRange.levelCount     = image.mipLevels();
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = 1;
 

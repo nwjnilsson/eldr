@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/gputexture.hpp>
+#include <eldr/vulkan/wrappers/texture.hpp>
 
 #include <deque>
 
@@ -24,7 +24,7 @@ public:
                                       VkImageLayout        layout);
 
   DescriptorWriter& writeCombinedImageSampler(
-    uint32_t binding, const wr::GpuTexture& texture,
+    uint32_t binding, const wr::Image& image, const wr::Sampler& sampler,
     VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   DescriptorWriter& writeStorageImage(uint32_t             binding,

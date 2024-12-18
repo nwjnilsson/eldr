@@ -8,7 +8,7 @@ src = [
   'wrappers/device.cpp',
   'wrappers/fence.cpp',
   'wrappers/framebuffer.cpp',
-  'wrappers/gputexture.cpp',
+  'wrappers/texture.cpp',
   'wrappers/image.cpp',
   'wrappers/instance.cpp',
   'wrappers/sampler.cpp',

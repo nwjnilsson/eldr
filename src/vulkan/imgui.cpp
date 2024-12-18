@@ -73,32 +73,34 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   io.Fonts->GetTexDataAsRGBA32(&font_texture_data, &font_texture_width,
                                &font_texture_height);
 
+  // Our font textures always have 4 channels and a single mip level by
+  // definition.
+  constexpr uint32_t font_texture_channels{ 4 };
+  constexpr uint32_t font_mip_levels{ 1 };
+
   if (im_font == nullptr || font_texture_data == nullptr) {
     log_->error("Unable to load font {}.  Falling back to error texture",
                 font_file_path);
-    imgui_texture_ = wr::GpuTexture{ device_, Bitmap{} };
+    imgui_texture_ = wr::GpuTexture{ device_, Bitmap{}, font_mip_levels };
   }
   else {
     log_->trace("Creating ImGUI font texture");
-
-    // Our font textures always have 4 channels and a single mip level by
-    // definition.
-    constexpr uint32_t font_texture_channels{ 4 };
-    constexpr uint32_t font_mip_levels{ 1 };
 
     VkDeviceSize upload_size = static_cast<VkDeviceSize>(font_texture_width) *
                                static_cast<VkDeviceSize>(font_texture_height) *
                                static_cast<VkDeviceSize>(font_texture_channels);
 
-    imgui_texture_ = wr::GpuTexture{ device_,
-                                     font_texture_data,
-                                     upload_size,
-                                     static_cast<uint32_t>(font_texture_width),
-                                     static_cast<uint32_t>(font_texture_height),
-                                     font_texture_channels,
-                                     VK_FORMAT_R8G8B8A8_UNORM,
-                                     font_mip_levels,
-                                     "ImGUI font texture" };
+    imgui_texture_ = wr::GpuTexture{
+      device_,
+      "ImGUI font texture",
+      font_texture_data,
+      upload_size,
+      VkExtent2D{ static_cast<uint32_t>(font_texture_width),
+                  static_cast<uint32_t>(font_texture_height) },
+      font_texture_channels,
+      VK_FORMAT_R8G8B8A8_UNORM,
+      font_mip_levels,
+    };
   }
 
   DescriptorSetLayoutBuilder descriptor_builder;

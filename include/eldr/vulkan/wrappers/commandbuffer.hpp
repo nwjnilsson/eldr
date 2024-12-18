@@ -76,16 +76,14 @@ public:
 
   const CommandBuffer& transitionImageLayout(const Image&,
                                              VkImageLayout old_layout,
-                                             VkImageLayout new_layout,
-                                             uint32_t      mip_levels) const;
+                                             VkImageLayout new_layout) const;
 
   const CommandBuffer&
   blitImage(const Image& src_image, VkImageLayout src_layout,
             const Image& dst_image, VkImageLayout dst_layout,
             const VkImageBlit& blit, VkFilter filter) const;
 
-  const CommandBuffer& generateMipmaps(const Image& image,
-                                       uint32_t     mip_levels) const;
+  const CommandBuffer& generateMipmaps(const Image& image) const;
 
   const CommandBuffer& copyBufferToImage(const Buffer& buffer, Image& image,
                                          const VkBufferImageCopy&) const;
