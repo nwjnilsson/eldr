@@ -229,13 +229,16 @@ CommandBuffer::blitImage(const Image& src_image, VkImageLayout src_layout,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer& buffer,
-                                                    VkIndexType   index_type,
-                                                    VkDeviceSize  offset) const
+const CommandBuffer&
+CommandBuffer::bindIndexBuffer(const Buffer<uint32_t>& buffer,
+                               /* VkIndexType             index_type, */
+                               VkDeviceSize offset) const
 {
   assert(buffer.get());
+  // vkCmdBindIndexBuffer(cb_data_->command_buffer_, buffer.get(), offset,
+  //                      index_type);
   vkCmdBindIndexBuffer(cb_data_->command_buffer_, buffer.get(), offset,
-                       index_type);
+                       VK_INDEX_TYPE_UINT32);
   return *this;
 }
 
@@ -345,7 +348,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
       mip_height /= 2;
   }
 
-  barrier.subresourceRange.baseMipLevel = mip_levels - 1;
+  barrier.subresourceRange.baseMipLevel = image.mipLevels() - 1;
   barrier.oldLayout                     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -396,8 +399,9 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
   return pipelineImageMemoryBarrier(source_stage, destination_stage, barrier);
 }
 
+template <typename T>
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const Buffer& buffer, Image& image,
+CommandBuffer::copyBufferToImage(const Buffer<T>& buffer, Image& image,
                                  const VkBufferImageCopy& copy_region) const
 {
   vkCmdCopyBufferToImage(cb_data_->command_buffer_, buffer.get(), image.get(),
@@ -406,11 +410,10 @@ CommandBuffer::copyBufferToImage(const Buffer& buffer, Image& image,
 }
 
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const void* data, VkDeviceSize buffer_size,
-                                 Image&                   image,
-                                 const VkBufferImageCopy& copy_region) const
+CommandBuffer::copyDataToImage(const uint8_t* data, VkDeviceSize buffer_size,
+                               Image&                   image,
+                               const VkBufferImageCopy& copy_region) const
 {
-
   return copyBufferToImage(
     createStagingBuffer(
       fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data,
@@ -432,9 +435,9 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const Buffer& CommandBuffer::createStagingBuffer(std::string_view name,
-                                                 const void*      data,
-                                                 VkDeviceSize buffer_size) const
+const Buffer<uint8_t>&
+CommandBuffer::createStagingBuffer(std::string_view name, const uint8_t* data,
+                                   VkDeviceSize buffer_size) const
 {
   staging_buffers_.emplace_back(cb_data_->device_, name, data, buffer_size,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,

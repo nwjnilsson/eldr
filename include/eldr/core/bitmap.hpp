@@ -44,11 +44,8 @@ public:
     Unknown
   };
 
-  // Creates default checker tile texture
-  Bitmap();
-  Bitmap(PixelFormat px_format, Struct::Type component_format,
-         const Vec2u& size, size_t channel_count,
-         const std::string&              name          = "undefined",
+  Bitmap(std::string_view name, PixelFormat px_format,
+         Struct::Type component_format, Vec2u size, size_t channel_count,
          const std::vector<std::string>& channel_names = {},
          uint8_t*                        data          = nullptr);
 
@@ -96,11 +93,15 @@ public:
   size_t pixelCount() const { return static_cast<size_t>(size_.x * size_.y); }
   size_t bytesPerPixel() const;
   size_t bufferSize() const;
-  static FileFormat detectFileFormat(Stream* stream);
-
   // Convert RGB to RGBA, adding an opaque alpha channel.
   // This is useful for creating Vulkan images, which require RGBA.
-  void rgbToRgba();
+  void              rgbToRgba();
+  static FileFormat detectFileFormat(Stream* stream);
+
+  // Creates default checker tile texture
+  static Bitmap createCheckerboard();
+  // Creates default white texture
+  static Bitmap createDefaultWhite();
 
 protected:
   void rebuildStruct(size_t                          channel_count = 0,

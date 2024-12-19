@@ -1,6 +1,6 @@
 #include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/gputexture.hpp>
+#include <eldr/vulkan/wrappers/sampler.hpp>
 
 namespace eldr::vk {
 
@@ -57,7 +57,7 @@ DescriptorWriter& DescriptorWriter::writeCombinedImageSampler(
   uint32_t binding, const wr::Image& image, const wr::Sampler& sampler,
   VkImageLayout layout)
 {
-  return writeImage(binding, image.view().get(), sampler.get(),
+  return writeImage(binding, image.imageView().get(), sampler.get(),
                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, layout);
 }
 

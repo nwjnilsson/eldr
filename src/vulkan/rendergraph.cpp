@@ -568,9 +568,9 @@ void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
               assert(false);
           }
           physical.buffer_ =
-            wr::Buffer{ device_, "render graph buffer",
-                        buffer_resource->data_size_, buffer_usage,
-                        VMA_MEMORY_USAGE_CPU_TO_GPU };
+            wr::Buffer<uint8_t>{ device_, "render graph buffer",
+                                 buffer_resource->data_size_, buffer_usage,
+                                 VMA_MEMORY_USAGE_CPU_TO_GPU };
         }
         // Upload data
         physical.buffer_.uploadData(buffer_resource->data_.get(),

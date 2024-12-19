@@ -24,11 +24,13 @@ MaterialInstance GltfMetallicRoughness::writeMaterial(
     descriptor_allocator.allocate(device, material_layout);
 
   writer.reset();
-  writer.writeUniformBuffer<MaterialConstants>(0, resources.data_buffer,
+  writer.writeUniformBuffer<MaterialConstants>(0, data_buffer,
                                                resources.data_buffer_offset);
   writer.writeCombinedImageSampler(1, *resources.color_texture,
+                                   *resources.color_sampler,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   writer.writeCombinedImageSampler(2, *resources.metal_rough_texture,
+                                   *resources.metal_rough_sampler,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   writer.updateSet(device, mat_data.descriptor_set);
 

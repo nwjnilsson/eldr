@@ -1,6 +1,7 @@
 // Ensure that vma implementation is included
 #define VMA_IMPLEMENTATION
 #include <eldr/app/window.hpp>
+#include <eldr/core/bitmap.hpp>
 #include <eldr/core/exceptions.hpp>
 #include <eldr/core/hash.hpp>
 #include <eldr/core/math.hpp>
@@ -23,6 +24,7 @@
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
+#include <eldr/vulkan/wrappers/sampler.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
@@ -43,14 +45,9 @@ namespace eldr::vk {
 // -----------------------------------------------------------------------------
 struct FrameData {
   DescriptorAllocator      descriptors;
-  wr::Buffer               scene_data_buffer;
-  wr::Buffer               model_data_buffer;
+  wr::Buffer<GpuSceneData> scene_data_buffer;
+  wr::Buffer<GpuModelData> model_data_buffer;
   const wr::CommandBuffer* cmd_buf;
-};
-
-struct GpuModelData {
-  ELDR_IMPORT_CORE_TYPES()
-  Mat4f model_mat;
 };
 
 // TODO: is this even used
@@ -82,10 +79,10 @@ struct VulkanEngine::EngineData {
   GltfMetallicRoughness   metal_rough_material;
   MaterialInstance        default_material_data;
 
-  wr::Image white_image;
-  wr::Image error_image;
+  wr::Texture white_texture;
+  wr::Texture error_texture;
 
-  wr::Image   viking_texture;
+  wr::Texture viking_texture;
   wr::Sampler default_sampler_linear;
 };
 
@@ -171,8 +168,14 @@ GltfMetallicRoughness& VulkanEngine::metalRoughMaterial() const
 {
   return ed_->metal_rough_material;
 }
-const wr::Texture& VulkanEngine::whiteImage() const { return ed_->white_image; }
-const wr::Texture& VulkanEngine::errorImage() const { return ed_->error_image; }
+const wr::Texture& VulkanEngine::whiteImage() const
+{
+  return ed_->white_texture;
+}
+const wr::Texture& VulkanEngine::errorImage() const
+{
+  return ed_->error_texture;
+}
 const wr::Sampler& VulkanEngine::defaultSamplerLinear() const
 {
   return ed_->default_sampler_linear;
@@ -221,17 +224,17 @@ void VulkanEngine::setupFrameData()
     ed_->frames_in_flight.push_back({
       .descriptors = DescriptorAllocator{ 1000, frame_sizes },
       .scene_data_buffer =
-        wr::Buffer{
+        wr::Buffer<GpuSceneData>{
           ed_->device,
           "Scene data uniform buffer",
-          sizeof(GpuSceneData),
+          1,
           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
           VMA_MEMORY_USAGE_CPU_TO_GPU,
         },
       .model_data_buffer =
-        wr::Buffer{ ed_->device, "Model data uniform buffer",
-                    sizeof(GpuModelData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    VMA_MEMORY_USAGE_CPU_TO_GPU },
+        wr::Buffer<GpuModelData>{ ed_->device, "Model data uniform buffer", 1,
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_MEMORY_USAGE_CPU_TO_GPU },
       .cmd_buf = nullptr, // Set later when drawing frames
     });
   }
@@ -254,34 +257,18 @@ void VulkanEngine::initDescriptors()
 
 void VulkanEngine::initDefaultData()
 {
-  ed_->white_image = ; // TODO;
-  ed_->default_sampler_linear =
-    wr::Sampler{ ed_->device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-                 VK_SAMPLER_MIPMAP_MODE_LINEAR, ed_->white_image.mipLevels() };
-  ed_->error_image = wr::Image::createTextureImage(ed_->device, Bitmap{});
-  const GltfMetallicRoughness::MaterialResources material_resources{
-    .color_texture       = &ed_->white_image,
-    .color_sampler       = &ed_->default_sampler_linear,
-    .metal_rough_texture = &ed_->white_image,
-    .metal_rough_sampler = &ed_->default_sampler_linear,
-    .data_buffer =
-      wr::Buffer{
-        ed_->device,
-        "GLTF metallic roughness constants",
-        sizeof(GltfMetallicRoughness::MaterialConstants),
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VMA_MEMORY_USAGE_CPU_TO_GPU,
-      },
-    .data_buffer_offset = 0,
-  };
-  GltfMetallicRoughness::MaterialConstants constants{ Vec4f{ 1, 1, 1, 1 },
-                                                      Vec4f{ 1, 0.5, 0, 0 },
-                                                      {} };
-  material_resources.data_buffer.uploadData(&constants, sizeof(constants));
+  const wr::Device& device{ ed_->device };
+  // Create default white texture
+  ed_->white_texture = wr::Texture{ device, Bitmap::createDefaultWhite() };
 
-  ed_->default_material_data = ed_->metal_rough_material.writeMaterial(
-    ed_->device, MaterialPass::MainColor, material_resources,
-    ed_->global_descriptor_allocator);
+  // Create default checkerboard error texture
+  ed_->error_texture = wr::Texture{ device, Bitmap::createCheckerboard() };
+
+  // Create default linear sampler
+  ed_->default_sampler_linear =
+    wr::Sampler{ device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+                 VK_SAMPLER_MIPMAP_MODE_LINEAR,
+                 ed_->white_texture.mipLevels() };
 }
 
 void VulkanEngine::buildBuffers()
@@ -343,11 +330,11 @@ void VulkanEngine::setupRenderGraph()
   back_buffer_ = ed_->render_graph->add<TextureResource>(
     "back buffer", TextureUsage::BackBuffer, color_format);
 
-  index_buffer_ = ed_->render_graph->add<BufferResource>(
+  index_buffer_ = ed_->render_graph->add<BufferResource<uint32_t>>(
     "index buffer", BufferUsage::IndexBuffer);
   index_buffer_->uploadData<uint32_t>(indices_);
 
-  vertex_buffer_ = ed_->render_graph->add<BufferResource>(
+  vertex_buffer_ = ed_->render_graph->add<BufferResource<GpuVertex>>(
     "vertex buffer", BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
@@ -433,7 +420,7 @@ void VulkanEngine::updateScene(uint32_t current_image)
     ed_->swapchain.extent().width /
       static_cast<float>(ed_->swapchain.extent().height),
     0.1f, 10.0f) };
-  GpuModelData model_data{ .model_mat = model };
+  GpuModelData model_data[]{ { .model_mat = model } };
   proj[1][1] *= -1;
   scene_data_.proj               = proj;
   scene_data_.view               = view;
@@ -441,10 +428,9 @@ void VulkanEngine::updateScene(uint32_t current_image)
   scene_data_.ambient_color      = {};
   scene_data_.sunlight_color     = {};
   scene_data_.sunlight_direction = {};
-  ed_->frames_in_flight[current_image].scene_data_buffer.uploadData(
-    &scene_data_, sizeof(scene_data_));
-  ed_->frames_in_flight[current_image].model_data_buffer.uploadData(
-    &model_data, sizeof(model_data));
+  GpuSceneData scene_data[]{ scene_data_ };
+  ed_->frames_in_flight[current_image].scene_data_buffer.uploadData(scene_data);
+  ed_->frames_in_flight[current_image].model_data_buffer.uploadData(model_data);
 }
 
 void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
@@ -466,11 +452,11 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
       device, ed_->viking_model_descriptor_layout) };
 
     DescriptorWriter writer;
-    writer.writeUniformBuffer<GpuSceneData>(0, frame.scene_data_buffer, 0)
+    writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
       .updateSet(device, frame_descriptor);
     writer.reset();
 
-    writer.writeUniformBuffer<GpuModelData>(0, frame.model_data_buffer, 0)
+    writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
       .writeCombinedImageSampler(1, ed_->viking_texture,
                                  ed_->default_sampler_linear)
       .updateSet(device, viking_descriptor);

@@ -6,7 +6,8 @@ namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
 // BufferImpl
 //------------------------------------------------------------------------------
-class Buffer::BufferImpl : public GpuResourceAllocation {
+template <typename T>
+class Buffer<T>::BufferImpl : public GpuResourceAllocation {
 public:
   BufferImpl(const Device& device, const VkBufferCreateInfo& buffer_ci,
              const VmaAllocationCreateInfo& alloc_ci);
@@ -14,9 +15,10 @@ public:
   VkBuffer buffer_{ VK_NULL_HANDLE };
 };
 
-Buffer::BufferImpl::BufferImpl(const Device&                  device,
-                               const VkBufferCreateInfo&      buffer_ci,
-                               const VmaAllocationCreateInfo& alloc_ci)
+template <typename T>
+Buffer<T>::BufferImpl::BufferImpl(const Device&                  device,
+                                  const VkBufferCreateInfo&      buffer_ci,
+                                  const VmaAllocationCreateInfo& alloc_ci)
   : GpuResourceAllocation(device)
 {
   if (const VkResult result =
@@ -26,7 +28,7 @@ Buffer::BufferImpl::BufferImpl(const Device&                  device,
     ThrowVk(result, "vmaCreateBuffer(): ");
 }
 
-Buffer::BufferImpl::~BufferImpl()
+template <typename T> Buffer<T>::BufferImpl::~BufferImpl()
 {
   vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
 }
@@ -34,18 +36,19 @@ Buffer::BufferImpl::~BufferImpl()
 //------------------------------------------------------------------------------
 // Buffer
 //------------------------------------------------------------------------------
-Buffer::Buffer(const Device& device, std::string_view name,
-               VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
-               VmaMemoryUsage           memory_usage,
-               VmaAllocationCreateFlags alloc_flags)
-  : size_(buffer_size)
+template <typename T>
+Buffer<T>::Buffer(const Device& device, std::string_view name,
+                  size_t element_count, VkBufferUsageFlags buffer_usage,
+                  VmaMemoryUsage           memory_usage,
+                  VmaAllocationCreateFlags alloc_flags)
+  : size_(element_count), size_bytes_(size_ * sizeof(T))
 {
-  assert(buffer_size > 0);
+  assert(size_bytes_ > 0);
   const VkBufferCreateInfo buffer_ci{
     .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .pNext                 = {},
     .flags                 = {},
-    .size                  = size_,
+    .size                  = size_bytes_,
     .usage                 = buffer_usage,
     .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
     .queueFamilyIndexCount = {},
@@ -68,24 +71,27 @@ Buffer::Buffer(const Device& device, std::string_view name,
                        fmt::format("{} allocation", name).c_str());
 }
 
-Buffer::Buffer(const Device& device, std::string_view name, const void* data,
-               VkDeviceSize data_size, VkBufferUsageFlags buffer_usage,
-               VmaMemoryUsage           memory_usage,
-               VmaAllocationCreateFlags alloc_flags)
-  : Buffer(device, name, data_size, buffer_usage, memory_usage, alloc_flags)
+template <typename T>
+Buffer<T>::Buffer(const Device& device, std::string_view name,
+                  std::span<T> data, VkBufferUsageFlags buffer_usage,
+                  VmaMemoryUsage           memory_usage,
+                  VmaAllocationCreateFlags alloc_flags)
+  : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
 {
-  assert(data_size > 0);
-  assert(data);
-  uploadData(data, data_size);
+  uploadData(data);
 }
 
-void Buffer::uploadData(const void* data, size_t data_size)
+template <typename T> void Buffer<T>::uploadData(std::span<T> data) const
 {
-  assert(data_size > 0);
-  assert(static_cast<VkDeviceSize>(data_size) <= size_);
+  assert(data.size() > 0);
+  assert(data.size_bytes() <= size_bytes_);
   assert(buffer_data_->alloc_info_.pMappedData != nullptr);
-  std::memcpy(buffer_data_->alloc_info_.pMappedData, data, data_size);
+  std::memcpy(buffer_data_->alloc_info_.pMappedData, data.data(),
+              data.size_bytes());
 }
 
-VkBuffer Buffer::get() const { return buffer_data_->buffer_; }
+template <typename T> VkBuffer Buffer<T>::get() const
+{
+  return buffer_data_->buffer_;
+}
 } // namespace eldr::vk::wr

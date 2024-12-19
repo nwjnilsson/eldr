@@ -4,9 +4,9 @@
 #include <eldr/core/math.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
-#include <eldr/vulkan/wrappers/texture.hpp>
 
 #include <imgui.h>
 
@@ -36,9 +36,9 @@ private:
   BufferResource* vertex_buffer_{ nullptr };
   GraphicsStage*  stage_{ nullptr };
 
-  wr::Texture imgui_texture_;
-  wr::Shader  vertex_shader_;
-  wr::Shader  fragment_shader_;
+  wr::Image  imgui_texture_;
+  wr::Shader vertex_shader_;
+  wr::Shader fragment_shader_;
 
   wr::DescriptorSetLayout set_layout_;
 

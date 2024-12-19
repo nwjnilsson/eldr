@@ -4,6 +4,7 @@
 #include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <eldr/vulkan/wrappers/texture.hpp>
 
 enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 
@@ -19,6 +20,7 @@ struct Material {
 };
 
 struct GltfMetallicRoughness {
+  // TODO: import vulkan types with some namespace aliasing
   ELDR_IMPORT_CORE_TYPES()
   vk::wr::Pipeline            opaque_pipeline;
   vk::wr::Pipeline            transparent_pipeline;
@@ -32,12 +34,12 @@ struct GltfMetallicRoughness {
   };
 
   struct MaterialResources {
-    vk::wr::Texture* color_texture;
-    vk::wr::Sampler* color_sampler;
-    vk::wr::Texture* metal_rough_texture;
-    vk::wr::Sampler* metal_rough_sampler;
-    vk::wr::Buffer   data_buffer;
-    size_t           data_buffer_offset;
+    const vk::wr::Texture*                   color_texture;
+    const vk::wr::Sampler*                   color_sampler;
+    const vk::wr::Texture*                   metal_rough_texture;
+    const vk::wr::Sampler*                   metal_rough_sampler;
+    const vk::wr::Buffer<MaterialConstants>* data_buffer;
+    size_t                                   data_buffer_offset;
   };
 
   MaterialInstance writeMaterial(const vk::wr::Device&    device,

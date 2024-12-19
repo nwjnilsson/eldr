@@ -19,48 +19,11 @@ extern "C" {
 
 namespace eldr {
 
-Bitmap::Bitmap()
-  : pixel_format_(PixelFormat::RGBA), component_format_(Struct::Type::UInt8),
-    size_({ 512, 512 }), srgb_gamma_(true)
-{
-  rebuildStruct();
-
-  assert(!data_);
-  data_ = std::make_unique<uint8_t[]>(bufferSize());
-  // data_      = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
-  owns_data_ = true;
-
-  constexpr uint32_t n_channels = 4;
-  // Create an 8x8 checkerboard pattern of squares.
-  constexpr uint32_t square_dimension{ 64 };
-  // pink, purple
-  constexpr std::array<std::array<unsigned char, 4>, 2> colors{
-    { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
-  };
-
-  const auto getColor = [](uint32_t x, uint32_t y, uint32_t square_dimension,
-                           size_t colors) -> int {
-    return static_cast<int>((static_cast<std::size_t>(x / square_dimension) +
-                             static_cast<std::size_t>(y / square_dimension)) %
-                            colors);
-  };
-
-  // Performance could be improved by copying complete rows after one or two
-  // rows are created with the loops.
-  for (uint32_t y = 0; y < height(); y++) {
-    for (uint32_t x = 0; x < width(); x++) {
-      const int color_id = getColor(x, y, square_dimension, colors.size());
-      std::memcpy(data_.get(), &colors[color_id][0],
-                  n_channels * sizeof(colors[color_id][0]));
-    }
-  }
-}
-
-Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
-               const Vec2u& size, size_t channel_count, const std::string& name,
+Bitmap::Bitmap(std::string_view name, PixelFormat px_format,
+               Struct::Type component_format, Vec2u size, size_t channel_count,
                const std::vector<std::string>& channel_names, uint8_t* data)
   : name_(name), pixel_format_(px_format), component_format_(component_format),
-    size_(size), data_(data)
+    size_(size), data_(data), owns_data_(false)
 
 {
   if (component_format_ == Struct::Type::UInt8)
@@ -68,9 +31,12 @@ Bitmap::Bitmap(PixelFormat px_format, Struct::Type component_format,
   else
     srgb_gamma_ = false;
 
+  premultiplied_alpha_ = true;
+
+  rebuildStruct(channel_count, channel_names);
+
   if (!data_) {
-    data_ = std::make_unique<uint8_t[]>(bufferSize());
-    // data_      = std::unique_ptr<uint8_t[]>(new uint8_t[bufferSize()]);
+    data_      = std::make_unique<uint8_t[]>(bufferSize());
     owns_data_ = true;
   }
 }
@@ -82,8 +48,8 @@ Bitmap::Bitmap(const Bitmap& bitmap)
     srgb_gamma_(bitmap.srgb_gamma_),
     premultiplied_alpha_(bitmap.premultiplied_alpha_), owns_data_(true)
 {
-  size_t size = bufferSize();
-  data_       = std::make_unique<uint8_t[]>(size);
+  const size_t size{ bufferSize() };
+  data_ = std::make_unique<uint8_t[]>(size);
   memcpy(data_.get(), bitmap.data_.get(), size);
 }
 
@@ -138,7 +104,7 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
           channels.push_back(fmt::format("ch%i", i));
       }
       else {
-        std::vector<std::string> channels_sorted = channel_names;
+        std::vector<std::string> channels_sorted{ channel_names };
         std::sort(channels_sorted.begin(), channels_sorted.end());
         for (size_t i = 1; i < channels_sorted.size(); ++i) {
           if (channels_sorted[i] == channels_sorted[i - 1])
@@ -154,7 +120,7 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
   }
 
   if (channel_count != 0 && channel_count != channels.size())
-    Throw("Bitmap::rebuild_struct(): channel count (%i) does not match pixel "
+    Throw("Bitmap::rebuildStruct(): channel count (%i) does not match pixel "
           "format (%s)!",
           channel_count, (uint32_t) pixel_format_);
 
@@ -711,6 +677,57 @@ void Bitmap::rgbToRgba()
     }
     data_ = std::move(tmp);
   }
+}
+
+Bitmap Bitmap::createCheckerboard()
+{
+  constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
+  constexpr auto   component_format{ Struct::Type::UInt8 };
+  constexpr Vec2f  size{ 512, 512 };
+  constexpr size_t channel_count{ 4 };
+  // 8x8 checkerboard pattern of squares.
+  constexpr uint32_t square_dimension{ 64 };
+  // pink, purple
+  constexpr std::array<std::array<unsigned char, 4>, 2> colors{
+    { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
+  };
+
+  const auto getColor = [](uint32_t x, uint32_t y, uint32_t square_dimension,
+                           size_t colors) -> int {
+    return static_cast<int>((static_cast<std::size_t>(x / square_dimension) +
+                             static_cast<std::size_t>(y / square_dimension)) %
+                            colors);
+  };
+
+  // Performance could be improved by copying complete rows after one or two
+  // rows are created with the loops.
+  Bitmap checkerboard{ "Checkerboard", pixel_format, component_format, size,
+                       channel_count };
+  for (uint32_t y = 0; y < checkerboard.height(); y++) {
+    for (uint32_t x = 0; x < checkerboard.width(); x++) {
+      const int color_id = getColor(x, y, square_dimension, colors.size());
+      std::memcpy(checkerboard.uint8Data(), &colors[color_id][0],
+                  channel_count * sizeof(colors[color_id][0]));
+    }
+  }
+  return checkerboard;
+}
+
+Bitmap Bitmap::createDefaultWhite()
+{
+  constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
+  constexpr auto   component_format{ Struct::Type::UInt8 };
+  constexpr Vec2f  size{ 512, 512 };
+  constexpr size_t channel_count{ 4 };
+
+  // Performance could be improved by copying complete rows after one or two
+  // rows are created with the loops.
+  Bitmap default_white{ "Default white", pixel_format, component_format, size,
+                        channel_count };
+  std::vector<uint8_t> solid_white(default_white.bufferSize(), 0xFF);
+  std::memcpy(default_white.uint8Data(), solid_white.data(),
+              default_white.bufferSize());
+  return default_white;
 }
 
 std::ostream& operator<<(std::ostream& os, const Bitmap::PixelFormat& value)

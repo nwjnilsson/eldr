@@ -64,6 +64,7 @@ VkSamplerMipmapMode extractMipmapMode(fastgltf::Filter filter)
 } // namespace
 
 namespace eldr::vk {
+// TODO: move
 struct SceneData {
   std::vector<vk::wr::Sampler> samplers;
   vk::DescriptorAllocator      descriptors;
@@ -200,7 +201,7 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
 
   std::vector<std::shared_ptr<Mesh>>      meshes;
   std::vector<std::shared_ptr<SceneNode>> nodes;
-  std::vector<vk::wr::Image>              images;
+  std::vector<vk::wr::Texture>            images;
   std::vector<std::shared_ptr<Material>>  materials;
 
   images.resize(gltf.images.size(), engine.errorImage());
@@ -242,17 +243,18 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
       pass_type = MaterialPass::Transparent;
     }
 
-    GltfMetallicRoughness::MaterialResources material_resources;
-    // default the material textures
-    material_resources.color_image         = engine.whiteImage();
-    material_resources.color_sampler       = engine.defaultSamplerLinear();
-    material_resources.metal_rough_image   = engine.whiteImage();
-    material_resources.metal_rough_sampler = engine.defaultSamplerLinear();
+    GltfMetallicRoughness::MaterialResources material_resources{
+      // default the material textures
+      .color_texture       = &engine.whiteImage(),
+      .color_sampler       = &engine.defaultSamplerLinear(),
+      .metal_rough_texture = &engine.whiteImage(),
+      .metal_rough_sampler = &engine.defaultSamplerLinear(),
 
-    // set the uniform buffer for the material data
-    material_resources.data_buffer = scene.vk_scene_data->material_buffer;
-    material_resources.data_buffer_offset =
-      data_index * sizeof(GltfMetallicRoughness::MaterialConstants);
+      // set the uniform buffer for the material data
+      .data_buffer = &scene.vk_scene_data->material_buffer,
+      .data_buffer_offset =
+        data_index * sizeof(GltfMetallicRoughness::MaterialConstants),
+    };
     // grab textures from gltf file
     if (mat.pbrData.baseColorTexture.has_value()) {
       size_t img =
@@ -262,8 +264,9 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
         gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
           .samplerIndex.value();
 
-      material_resources.color_image   = images[img];
-      material_resources.color_sampler = scene.vk_scene_data->samplers[sampler];
+      material_resources.color_texture = &images[img];
+      material_resources.color_sampler =
+        &scene.vk_scene_data->samplers[sampler];
     }
     // build material
     material->data = engine.metalRoughMaterial().writeMaterial(
@@ -272,10 +275,10 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
 
     data_index++;
   }
-  scene.vk_scene_data->material_buffer.uploadData(
-    scene_material_constants.data(),
-    sizeof(GltfMetallicRoughness::MaterialConstants) *
-      scene_material_constants.size());
+
+  scene.vk_scene_data->material_buffer
+    .uploadData<GltfMetallicRoughness::MaterialConstants>(
+      scene_material_constants);
 
   //----------------------------------------------------------------------------
   // Load meshes

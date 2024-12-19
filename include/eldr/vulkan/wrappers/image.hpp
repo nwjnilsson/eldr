@@ -27,23 +27,16 @@ public:
 
   Image() = default;
   Image(const Device&, const ImageCreateInfo&);
-
-  /// Constructs an Image and copies the data from `bitmap` and transitions the
-  /// layout to `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL`. Convenient when creating
-  /// images that are sampled from using separate samplers, instead of using
-  /// `Texture`.
-  static Image
-  createTextureImage(const Device&, const Bitmap& bitmap,
-                     std::optional<uint32_t> mip_levels = std::nullopt);
+  virtual ~Image() = default;
 
   [[nodiscard]] VkImage            get() const;
   [[nodiscard]] const std::string& name() const;
   [[nodiscard]] VkExtent2D         size() const { return size_; }
   [[nodiscard]] VkFormat           format() const { return format_; }
   [[nodiscard]] uint32_t           mipLevels() const { return mip_levels_; }
-  [[nodiscard]] const ImageView&   view() const { return image_view_; }
+  [[nodiscard]] const ImageView&   imageView() const { return image_view_; }
 
-private:
+protected:
   std::string name_;
 
   VkExtent2D size_;

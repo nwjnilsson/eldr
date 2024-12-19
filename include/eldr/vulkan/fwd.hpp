@@ -16,7 +16,7 @@ struct GpuMeshBuffers;
 
 // RenderGraph types
 class RenderGraph;
-class BufferResource;
+template <typename T> class BufferResource;
 class TextureResource;
 class GraphicsStage;
 class PhysicalStage;
@@ -40,9 +40,9 @@ class Sampler;
 class Pipeline;
 // class GraphicsPipeline;
 // class ComputePipeline;
-class GpuTexture;
-class Buffer;
+template <typename T> class Buffer;
 class Image;
+class Texture;
 class ImageView;
 class Framebuffer;
 class RenderPass;

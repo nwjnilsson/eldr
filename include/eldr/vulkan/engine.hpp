@@ -14,6 +14,21 @@ class Window;
 
 // TODO: move Vulkan Engine to eldr:: namespace?
 namespace eldr::vk {
+// TODO: decide where structs should live
+struct GpuSceneData {
+  ELDR_IMPORT_CORE_TYPES()
+  Mat4f view;
+  Mat4f proj;
+  Mat4f viewproj;
+  Vec4f ambient_color;
+  Vec4f sunlight_direction;
+  Vec4f sunlight_color;
+};
+struct GpuModelData {
+  ELDR_IMPORT_CORE_TYPES()
+  Mat4f model_mat;
+};
+
 struct GpuVertex {
   ELDR_IMPORT_CORE_TYPES();
   Point3f pos;
@@ -41,8 +56,8 @@ public:
   };
 
   GltfMetallicRoughness& metalRoughMaterial() const;
-  const wr::Image&       whiteImage() const;
-  const wr::Image&       errorImage() const;
+  const wr::Texture&     whiteImage() const;
+  const wr::Texture&     errorImage() const;
   const wr::Sampler&     defaultSamplerLinear() const;
 
   void updateImGui(std::function<void()> const& lambda);
@@ -94,15 +109,7 @@ private:
   struct EngineData;
   std::unique_ptr<EngineData> ed_;
 
-  struct GpuSceneData {
-    ELDR_IMPORT_CORE_TYPES()
-    Mat4f view;
-    Mat4f proj;
-    Mat4f viewproj;
-    Vec4f ambient_color;
-    Vec4f sunlight_direction;
-    Vec4f sunlight_color;
-  } scene_data_;
+  GpuSceneData scene_data_;
 
   // TODO: decide whether these go in EngineData
   DrawContext main_draw_context_;

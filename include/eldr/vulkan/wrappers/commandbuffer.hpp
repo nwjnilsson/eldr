@@ -32,10 +32,10 @@ public:
   const CommandBuffer& submitAndWait() const;
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
-  const CommandBuffer&
-  bindIndexBuffer(const Buffer& buffer,
-                  VkIndexType   index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize  offset     = 0) const;
+  const CommandBuffer& bindIndexBuffer(const Buffer<uint32_t>& buffer,
+                                       /* VkIndexType             index_type =
+                                          VK_INDEX_TYPE_UINT32, */
+                                       VkDeviceSize offset = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
   /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
@@ -85,11 +85,13 @@ public:
 
   const CommandBuffer& generateMipmaps(const Image& image) const;
 
-  const CommandBuffer& copyBufferToImage(const Buffer& buffer, Image& image,
+  template <typename T>
+  const CommandBuffer& copyBufferToImage(const Buffer<T>& buffer, Image& image,
                                          const VkBufferImageCopy&) const;
-  const CommandBuffer& copyBufferToImage(const void*  data,
-                                         VkDeviceSize buffer_size, Image& image,
-                                         const VkBufferImageCopy&) const;
+
+  const CommandBuffer& copyDataToImage(const uint8_t* data,
+                                       VkDeviceSize buffer_size, Image& image,
+                                       const VkBufferImageCopy&) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
                                      VkShaderStageFlags stage, uint32_t size,
@@ -104,8 +106,8 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const Buffer&
-  createStagingBuffer(std::string_view name, const void* data,
+  [[nodiscard]] const Buffer<uint8_t>&
+  createStagingBuffer(std::string_view name, const uint8_t* data,
                       VkDeviceSize buffer_size) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
@@ -121,7 +123,7 @@ private:
   class CommandBufferImpl;
   std::shared_ptr<CommandBufferImpl> cb_data_;
 
-  Fence                       wait_fence_;
-  mutable std::vector<Buffer> staging_buffers_;
+  Fence                                wait_fence_;
+  mutable std::vector<Buffer<uint8_t>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

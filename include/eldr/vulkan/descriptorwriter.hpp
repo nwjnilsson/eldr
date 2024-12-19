@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/texture.hpp>
+#include <eldr/vulkan/wrappers/image.hpp>
 
 #include <deque>
 
@@ -11,11 +11,13 @@ public:
   void reset();
 
   template <typename T>
-  DescriptorWriter& writeUniformBuffer(uint32_t          binding,
-                                       const wr::Buffer& buffer, size_t offset);
+  DescriptorWriter& writeUniformBuffer(uint32_t             binding,
+                                       const wr::Buffer<T>& buffer,
+                                       size_t               offset);
   template <typename T>
-  DescriptorWriter& writeStorageBuffer(uint32_t          binding,
-                                       const wr::Buffer& buffer, size_t offset);
+  DescriptorWriter& writeStorageBuffer(uint32_t             binding,
+                                       const wr::Buffer<T>& buffer,
+                                       size_t               offset);
 
   DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
 
@@ -35,7 +37,7 @@ public:
 
 private:
   template <typename T>
-  DescriptorWriter& writeBuffer(uint32_t binding, const wr::Buffer& buffer,
+  DescriptorWriter& writeBuffer(uint32_t binding, const wr::Buffer<T>& buffer,
                                 size_t offset, VkDescriptorType type);
   DescriptorWriter&
   writeImage(uint32_t binding, VkImageView image, VkSampler sampler,
@@ -50,7 +52,7 @@ private:
 
 template <typename T>
 DescriptorWriter&
-DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer& buffer,
+DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer<T>& buffer,
                               VkDeviceSize offset, VkDescriptorType type)
 {
   buffer_infos_.push_back({
@@ -76,18 +78,18 @@ DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer& buffer,
 }
 
 template <typename T>
-DescriptorWriter& DescriptorWriter::writeUniformBuffer(uint32_t binding,
-                                                       const wr::Buffer& buffer,
-                                                       size_t            offset)
+DescriptorWriter&
+DescriptorWriter::writeUniformBuffer(uint32_t             binding,
+                                     const wr::Buffer<T>& buffer, size_t offset)
 {
   return writeBuffer<T>(binding, buffer, offset,
                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 
 template <typename T>
-DescriptorWriter& DescriptorWriter::writeStorageBuffer(uint32_t binding,
-                                                       const wr::Buffer& buffer,
-                                                       size_t            offset)
+DescriptorWriter&
+DescriptorWriter::writeStorageBuffer(uint32_t             binding,
+                                     const wr::Buffer<T>& buffer, size_t offset)
 {
   return writeBuffer<T>(binding, buffer, offset,
                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);

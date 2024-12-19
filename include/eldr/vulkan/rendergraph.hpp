@@ -64,7 +64,7 @@ enum class BufferUsage {
   VertexBuffer,
 };
 
-class BufferResource : public RenderResource {
+template <typename T> class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
@@ -79,22 +79,22 @@ public:
   /// `format`.
   /// @note Calling this function is only valid on buffers of type
   /// BufferUsage::VERTEX_BUFFER.
-  void addVertexAttribute(VkFormat format, std::uint32_t offset);
+  void addVertexAttribute(VkFormat format, uint32_t offset);
 
   /// @brief Specifies the element size of the buffer upfront if data is not to
   /// be uploaded immediately.
   /// @param element_size The element size in bytes
-  void setElementSize(std::size_t element_size)
-  {
-    element_size_ = element_size;
-  }
+  // void setElementSize(std::size_t element_size)
+  // {
+  //   element_size_ = element_size;
+  // }
 
   /// @brief Specifies the data that should be uploaded to this buffer at the
   /// start of the next frame.
   /// @tparam T The type of the data uploaded to the buffer, e.g GpuVertex for
   /// vertices and uint32_t for indices.
   /// @param data A span of elements to upload to the buffer
-  template <typename T> void uploadData(std::span<T> data);
+  void uploadData(std::span<T> data);
 
   /// @brief @copybrief upload_data(const T *, std::size_t)
   /// @note This is equivalent to doing `upload_data(data.data(), data.size() *
@@ -106,12 +106,12 @@ private:
   const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
 
-  // Data to upload to the GPU on a call to render(). BufferResource owns
+  // Data to upload to the GPU on a call to render(). `BufferResource` owns
   // vertex/index data and when the data has been uploaded, it is a good idea to
   // reset the data_ pointer to save memory.
-  std::unique_ptr<uint8_t[]> data_{ nullptr };
-  size_t                     data_size_{ 0 };
-  size_t                     element_size_{ 0 };
+  T*     data_{ nullptr };
+  size_t data_size_{ 0 };
+  // size_t   element_size_{ 0 };
 };
 
 enum class TextureUsage {
@@ -231,45 +231,47 @@ public:
   GraphicsStage& operator=(GraphicsStage&&)      = delete;
 
   /// @brief Specifies that this stage should clear the screen before rendering.
-  void setClearsScreen(bool clears_screen) { clears_screen_ = clears_screen; }
+  // void setClearsScreen(bool clears_screen) { clears_screen_ = clears_screen;
+  // }
 
   /// @brief Specifies the depth options for this stage.
   /// @param depth_test Whether depth testing should be performed
   /// @param depth_write Whether depth writing should be performed
-  void setDepthOptions(bool depth_test, bool depth_write)
-  {
-    depth_test_  = depth_test;
-    depth_write_ = depth_write;
-  }
+  // void setDepthOptions(bool depth_test, bool depth_write)
+  // {
+  //   depth_test_  = depth_test;
+  //   depth_write_ = depth_write;
+  // }
 
   /// @brief Set the blend attachment for this stage.
   /// @param blend_attachment The blend attachment
-  void setBlendAttachment(VkPipelineColorBlendAttachmentState blend_attachment)
-  {
-    blend_attachment_ = blend_attachment;
-  }
+  // void setBlendAttachment(VkPipelineColorBlendAttachmentState
+  // blend_attachment)
+  // {
+  //   blend_attachment_ = blend_attachment;
+  // }
 
-  void setCullMode(VkCullModeFlagBits cull_mode) { cull_mode_ = cull_mode; }
+  // void setCullMode(VkCullModeFlagBits cull_mode) { cull_mode_ = cull_mode; }
 
   /// @brief Specifies that `buffer` should map to `binding` in the shaders of
   /// this stage.
-  void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
+  // void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
 
   /// @brief Specifies that `shader` should be used during the pipeline of this
   /// stage.
   /// @note Binding two shaders of same type (e.g. two vertex shaders) is
   /// undefined behaviour.
-  void usesShader(const wr::Shader& shader);
+  // void usesShader(const wr::Shader& shader);
 
 private:
   // bool                                clears_screen_{ false };
   // bool                                depth_test_{ false };
   // bool                                depth_write_{ false };
-  VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
-  VkPipelineColorBlendAttachmentState blend_attachment_{};
-  VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
-  std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
-  std::vector<VkPipelineShaderStageCreateInfo>             shaders_;
+  // VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  // VkPipelineColorBlendAttachmentState blend_attachment_{};
+  // VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
+  // // std::unordered_map<const BufferResource*, std::uint32_t>
+  // buffer_bindings_; std::vector<VkPipelineShaderStageCreateInfo> shaders_;
 };
 
 class PhysicalResource : public RenderGraphObject {
@@ -300,7 +302,7 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  wr::Buffer buffer_;
+  wr::Buffer<uint8_t> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -437,10 +439,9 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-template <typename T> void BufferResource::uploadData(std::span<T> data)
+template <typename T> void BufferResource<T>::uploadData(std::span<T> data)
 {
-  data_size_ = data.size() * (element_size_ = sizeof(T));
-  data_      = std::make_unique_for_overwrite<uint8_t[]>(data_size_);
-  memcpy(data_.get(), data.data(), data_size_);
+  data_size_ = data.size_bytes();
+  data_      = data.data();
 }
 } // namespace eldr::vk
