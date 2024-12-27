@@ -93,6 +93,7 @@ public:
   size_t pixelCount() const { return static_cast<size_t>(size_.x * size_.y); }
   size_t bytesPerPixel() const;
   size_t bufferSize() const;
+  bool   srgbGamma() const { return srgb_gamma_; }
   // Convert RGB to RGBA, adding an opaque alpha channel.
   // This is useful for creating Vulkan images, which require RGBA.
   void              rgbToRgba();

@@ -2,6 +2,7 @@
  * Struct class adapted from Mitsuba3
  */
 #pragma once
+#include <eldr/core/fwd.hpp>
 
 #include <string>
 #include <vector>
@@ -149,7 +150,7 @@ public:
   /// Append a new field to the \c Struct; determines size and offset
   /// automatically
   Struct& append(const std::string& name, Type type,
-                 uint32_t flags    = (uint32_t) Flags::Empty,
+                 uint32_t flags    = static_cast<uint32_t>(Flags::Empty),
                  double   default_ = 0.0);
 
   /// Append a new field to the \c Struct (manual version)
@@ -181,12 +182,12 @@ public:
   ByteOrder byteOrder() const { return byte_order_; }
 
   /// Return the byte order of the host machine
-  static ByteOrder host_byte_order()
+  static ByteOrder hostByteOrder()
   {
 #if defined(LITTLE_ENDIAN)
     return ByteOrder::LittleEndian;
 #elif defined(BIG_ENDIAN)
-    return ByteOrder::LittleEndian;
+    return ByteOrder::BigEndian;
 #else
 #  error Either LITTLE_ENDIAN or BIG_ENDIAN must be defined!
 #endif
@@ -260,6 +261,8 @@ protected:
   bool               pack_;
   ByteOrder          byte_order_;
 };
+
+ELDR_DECLARE_ENUM_OPERATORS(Struct::Flags)
 
 extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
 

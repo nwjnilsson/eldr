@@ -12,15 +12,31 @@ getTextureCreateInfo(const Bitmap&                  bitmap,
 {
   const VkExtent2D size{ bitmap.width(), bitmap.height() };
   // Calculate mip level count to generate mip levels
-  const uint32_t         n_mip_levels{ mip_levels.has_value()
-                                         ? mip_levels.value()
-                                         : static_cast<uint32_t>(std::floor(std::log2(
+  const uint32_t n_mip_levels{ mip_levels.has_value()
+                                 ? mip_levels.value()
+                                 : static_cast<uint32_t>(std::floor(std::log2(
                                      std::max(size.width, size.height)))) +
                                      1 };
+
+  VkFormat format;
+  // Pixel format should be RGBA at this point
+  assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
+  switch (bitmap.componentFormat()) {
+    case Struct::Type::UInt8:
+      if (bitmap.srgbGamma())
+        format = VK_FORMAT_R8G8B8A8_SRGB;
+      else
+        format = VK_FORMAT_R8G8B8A8_UNORM;
+      break;
+    default:
+      Throw("getTextureCreateInfo(): component formats other than UInt8 are "
+            "not yet implemented");
+  }
+
   Image::ImageCreateInfo texture_info{
     .name        = bitmap.name(),
     .extent      = size,
-    .format      = VK_FORMAT_R8G8B8A8_SRGB, // TODO: get from component format?
+    .format      = format,
     .tiling      = VK_IMAGE_TILING_OPTIMAL,
     .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,

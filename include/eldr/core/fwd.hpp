@@ -120,3 +120,39 @@ template <typename Float_> struct CoreAliases {
   using prefix##Color4d     = typename prefix##CoreAliases::Color4d;
 
 #define ELDR_IMPORT_CORE_TYPES() ELDR_IMPORT_CORE_TYPES_PREFIX(Float, )
+
+#define ELDR_DECLARE_ENUM_OPERATORS_IMPL(name, neq_expr)                       \
+  constexpr uint32_t operator|(name f1, name f2)                               \
+  {                                                                            \
+    return static_cast<uint32_t>(f1) | static_cast<uint32_t>(f2);              \
+  }                                                                            \
+  constexpr uint32_t operator|(uint32_t f1, name f2)                           \
+  {                                                                            \
+    return f1 | static_cast<uint32_t>(f2);                                     \
+  }                                                                            \
+  constexpr uint32_t operator|=(uint32_t f1, name f2)                          \
+  {                                                                            \
+    return f1 | static_cast<uint32_t>(f2);                                     \
+  }                                                                            \
+  constexpr uint32_t operator&(name f1, name f2)                               \
+  {                                                                            \
+    return static_cast<uint32_t>(f1) & static_cast<uint32_t>(f2);              \
+  }                                                                            \
+  constexpr uint32_t operator&(uint32_t f1, name f2)                           \
+  {                                                                            \
+    return f1 & static_cast<uint32_t>(f2);                                     \
+  }                                                                            \
+  constexpr uint32_t operator&=(uint32_t f1, name f2)                          \
+  {                                                                            \
+    return f1 & static_cast<uint32_t>(f2);                                     \
+  }                                                                            \
+  constexpr uint32_t operator~(name f1) { return ~static_cast<uint32_t>(f1); } \
+  constexpr uint32_t operator+(name e) { return static_cast<uint32_t>(e); }    \
+  template <typename UInt32> constexpr auto hasFlag(UInt32 flags, name f)      \
+  {                                                                            \
+    return neq_expr(flags & static_cast<uint32_t>(f), 0u);                     \
+  }
+
+#define ELDR_DECLARE_ENUM_OPERATORS(name)                                      \
+  ELDR_DECLARE_ENUM_OPERATORS_IMPL(name,                                       \
+                                   [&](UInt32 a, UInt32 b) { return a != b; })

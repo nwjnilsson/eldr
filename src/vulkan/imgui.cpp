@@ -96,7 +96,6 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
               font_texture_channels,
               {},
               font_texture_data },
-      // VK_FORMAT_R8G8B8A8_UNORM,
       font_mip_levels,
     };
   }

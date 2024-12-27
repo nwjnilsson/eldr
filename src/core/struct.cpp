@@ -11,16 +11,11 @@
 #include <cmath>
 
 namespace eldr {
-constexpr bool hasFlag(uint32_t flags, Struct::Flags f)
-{
-  return (flags & static_cast<uint32_t>(f)) != 0;
-}
-
 Struct::Struct(bool pack, Struct::ByteOrder byte_order)
   : pack_(pack), byte_order_(byte_order)
 {
   if (byte_order_ == Struct::ByteOrder::HostByteOrder)
-    byte_order_ = host_byte_order();
+    byte_order_ = hostByteOrder();
 }
 
 Struct::Struct(const Struct& s)

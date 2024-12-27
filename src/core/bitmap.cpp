@@ -14,7 +14,6 @@ extern "C" {
 
 #include <array>
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 namespace eldr {
@@ -99,45 +98,45 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
       // case PixelFormat::XYZ:   channels = { "X", "Y", "Z"};           break;
       // case PixelFormat::XYZA:  channels = { "X", "Y", "Z", "A"};      break;
       // case PixelFormat::MultiChannel:
-      if (channel_names.size() == 0) {
-        for (size_t i = 0; i < channel_count; ++i)
-          channels.push_back(fmt::format("ch%i", i));
-      }
-      else {
-        std::vector<std::string> channels_sorted{ channel_names };
-        std::sort(channels_sorted.begin(), channels_sorted.end());
-        for (size_t i = 1; i < channels_sorted.size(); ++i) {
-          if (channels_sorted[i] == channels_sorted[i - 1])
-            Throw("Bitmap::rebuildStruct(): duplicate channel name \"%s\"",
-                  channels_sorted[i]);
-        }
-        for (size_t i = 0; i < channel_count; ++i)
-          channels.push_back(channel_names[i]);
-      }
-      break;
+      // if (channel_names.size() == 0) {
+      //   for (size_t i = 0; i < channel_count; ++i)
+      //     channels.push_back(fmt::format("ch%i", i));
+      // }
+      // else {
+      //   std::vector<std::string> channels_sorted{ channel_names };
+      //   std::sort(channels_sorted.begin(), channels_sorted.end());
+      //   for (size_t i = 1; i < channels_sorted.size(); ++i) {
+      //     if (channels_sorted[i] == channels_sorted[i - 1])
+      //       Throw("Bitmap::rebuildStruct(): duplicate channel name \"%s\"",
+      //             channels_sorted[i]);
+      //   }
+      //   for (size_t i = 0; i < channel_count; ++i)
+      //     channels.push_back(channel_names[i]);
+      // }
+      // break;
     default:
       Throw("Unknown pixel format!");
   }
 
   if (channel_count != 0 && channel_count != channels.size())
     Throw("Bitmap::rebuildStruct(): channel count (%i) does not match pixel "
-          "format (%s)!",
-          channel_count, (uint32_t) pixel_format_);
+          "format (%s)",
+          channel_count, pixel_format_);
 
   struct_ = std::make_unique<Struct>();
   for (auto ch : channels) {
     bool     is_alpha = ch == "A" && pixel_format_ != PixelFormat::MultiChannel;
-    uint32_t flags    = (uint32_t) Struct::Flags::Empty;
+    uint32_t flags    = static_cast<uint32_t>(Struct::Flags::Empty);
     if (!is_alpha && ch != "W" && srgb_gamma_)
-      flags |= (uint32_t) Struct::Flags::Gamma;
+      flags |= Struct::Flags::Gamma;
     if (!is_alpha && ch != "W" && premultiplied_alpha_)
-      flags |= +(uint32_t) Struct::Flags::PremultipliedAlpha;
+      flags |= Struct::Flags::PremultipliedAlpha;
     if (is_alpha)
-      flags |= +(uint32_t) Struct::Flags::Alpha;
+      flags |= Struct::Flags::Alpha;
     if (ch == "W")
-      flags |= (uint32_t) Struct::Flags::Weight;
+      flags |= Struct::Flags::Weight;
     if (Struct::isInteger(component_format_))
-      flags |= (uint32_t) Struct::Flags::Normalized;
+      flags |= Struct::Flags::Normalized;
     struct_->append(ch, component_format_, flags);
   }
 }
@@ -174,8 +173,8 @@ size_t Bitmap::bytesPerPixel() const
       result = 8;
       break;
     default:
-      throw std::runtime_error("Unknown component format: " +
-                               std::to_string((uint32_t) component_format_));
+      Throw("bytesPerPixel(): Not implemented for component format '%s'",
+            component_format_);
   }
   return result * channelCount();
 }
@@ -211,7 +210,7 @@ void Bitmap::read(Stream* stream, FileFormat format)
       readPng(stream);
       break;
     default:
-      Throw("Bitmap: Unknown file format!");
+      Throw("read(): Not implemented for FileFormat::'%s'", format);
   }
 }
 
