@@ -52,9 +52,9 @@ struct FrameData {
 
 // TODO: is this even used
 struct GpuMeshBuffers {
-  BufferResource* index_buffer_;
-  BufferResource* vertex_buffer_;
-  VkDeviceAddress vertex_buffer_address;
+  BufferResource<uint32_t>*  index_buffer_;
+  BufferResource<GpuVertex>* vertex_buffer_;
+  VkDeviceAddress            vertex_buffer_address;
 };
 
 struct VulkanEngine::EngineData {
@@ -330,12 +330,12 @@ void VulkanEngine::setupRenderGraph()
   back_buffer_ = ed_->render_graph->add<TextureResource>(
     "back buffer", TextureUsage::BackBuffer, color_format);
 
-  index_buffer_ = ed_->render_graph->add<BufferResource<uint32_t>>(
-    "index buffer", BufferUsage::IndexBuffer);
-  index_buffer_->uploadData<uint32_t>(indices_);
+  index_buffer_ =
+    ed_->render_graph->add<BufferResource<uint32_t>>("index buffer");
+  index_buffer_->uploadData(indices_);
 
-  vertex_buffer_ = ed_->render_graph->add<BufferResource<GpuVertex>>(
-    "vertex buffer", BufferUsage::VertexBuffer);
+  vertex_buffer_ =
+    ed_->render_graph->add<BufferResource<GpuVertex>>("vertex buffer");
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
@@ -347,7 +347,7 @@ void VulkanEngine::setupRenderGraph()
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
                                      offsetof(GpuVertex, color));
   vertex_buffer_->setElementSize(sizeof(GpuVertex));
-  vertex_buffer_->uploadData<GpuVertex>(vertices_);
+  vertex_buffer_->uploadData(vertices_);
 
   auto* main_stage = ed_->render_graph->add<GraphicsStage>("main stage");
   // Write order matters here (for now)
@@ -356,17 +356,17 @@ void VulkanEngine::setupRenderGraph()
   main_stage->writesTo(back_buffer_);
   main_stage->readsFrom(index_buffer_);
   main_stage->readsFrom(vertex_buffer_);
-  main_stage->bindBuffer(vertex_buffer_, 0);
-  main_stage->setClearsScreen(true);
-  main_stage->setDepthOptions(true, true);
+  // main_stage->bindBuffer(vertex_buffer_, 0);
+  // main_stage->setClearsScreen(true);
+  // main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
       drawGeometry(physical, cb);
     });
 
-  for (const auto& shader : ed_->shaders) {
-    main_stage->usesShader(shader);
-  }
+  // for (const auto& shader : ed_->shaders) {
+  //   main_stage->usesShader(shader);
+  // }
 
   // TODO: Only one descriptor set is currently allocated for any given
   // ResourceDescriptor. Additionally, for each frame in flight, the

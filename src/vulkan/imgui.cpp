@@ -4,8 +4,8 @@
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/gputexture.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
+#include <eldr/vulkan/wrappers/texture.hpp>
 
 namespace eldr::vk {
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
@@ -81,24 +81,22 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   if (im_font == nullptr || font_texture_data == nullptr) {
     log_->error("Unable to load font {}.  Falling back to error texture",
                 font_file_path);
-    imgui_texture_ = wr::GpuTexture{ device_, Bitmap{}, font_mip_levels };
+    imgui_texture_ =
+      wr::Texture{ device_, Bitmap::createCheckerboard(), font_mip_levels };
   }
   else {
     log_->trace("Creating ImGUI font texture");
 
-    VkDeviceSize upload_size = static_cast<VkDeviceSize>(font_texture_width) *
-                               static_cast<VkDeviceSize>(font_texture_height) *
-                               static_cast<VkDeviceSize>(font_texture_channels);
-
-    imgui_texture_ = wr::GpuTexture{
+    imgui_texture_ = wr::Texture{
       device_,
-      "ImGUI font texture",
-      font_texture_data,
-      upload_size,
-      VkExtent2D{ static_cast<uint32_t>(font_texture_width),
-                  static_cast<uint32_t>(font_texture_height) },
-      font_texture_channels,
-      VK_FORMAT_R8G8B8A8_UNORM,
+      Bitmap{ "ImGUI font texture",
+              Bitmap::PixelFormat::RGBA,
+              Struct::Type::UInt8,
+              { font_texture_width, font_texture_height },
+              font_texture_channels,
+              {},
+              font_texture_data },
+      // VK_FORMAT_R8G8B8A8_UNORM,
       font_mip_levels,
     };
   }
@@ -109,10 +107,10 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   }
   set_layout_ = descriptor_builder.build(device, 0);
 
-  index_buffer_  = render_graph->add<BufferResource>("imgui index buffer",
-                                                     BufferUsage::IndexBuffer);
-  vertex_buffer_ = render_graph->add<BufferResource>("imgui vertex buffer",
-                                                     BufferUsage::VertexBuffer);
+  index_buffer_ =
+    render_graph->add<BufferResource<uint32_t>>("imgui index buffer");
+  vertex_buffer_ =
+    render_graph->add<BufferResource<GpuVertex>>("imgui vertex buffer");
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(ImDrawVert, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
@@ -125,10 +123,11 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   stage_->writesTo(back_buffer);
   stage_->readsFrom(index_buffer_);
   stage_->readsFrom(vertex_buffer_);
-  stage_->bindBuffer(vertex_buffer_, 0);
-  stage_->usesShader(vertex_shader_);
-  stage_->usesShader(fragment_shader_);
-  stage_->setCullMode(VK_CULL_MODE_NONE);
+  // TODO: what to do with imgui pipeline?
+  //  stage_->bindBuffer(vertex_buffer_, 0);
+  //  stage_->usesShader(vertex_shader_);
+  //  stage_->usesShader(fragment_shader_);
+  //  stage_->setCullMode(VK_CULL_MODE_NONE);
 
   stage_->addDescriptorLayout(set_layout_);
 

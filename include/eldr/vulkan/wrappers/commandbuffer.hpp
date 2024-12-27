@@ -32,9 +32,10 @@ public:
   const CommandBuffer& submitAndWait() const;
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
+
   const CommandBuffer& bindIndexBuffer(const Buffer<uint32_t>& buffer,
-                                       /* VkIndexType             index_type =
-                                          VK_INDEX_TYPE_UINT32, */
+                                       /*VkIndexType             index_type =
+                                          VK_INDEX_TYPE_UINT32,*/
                                        VkDeviceSize offset = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not

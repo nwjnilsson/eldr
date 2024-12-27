@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <variant>
 #include <vector>
 
 namespace eldr::vk {
@@ -55,63 +56,37 @@ private:
   std::shared_ptr<PhysicalResource> physical_;
 };
 
-enum class BufferUsage {
-  /// @brief Specifies that the buffer will be used to input index data.
-  IndexBuffer,
-
-  /// @brief Specifies that the buffer will be used to input per vertex data to
-  /// a vertex shader.
-  VertexBuffer,
-};
+// enum class BufferUsage {
+//   /// @brief Specifies that the buffer will be used to input index data.
+//   IndexBuffer,
+//
+//   /// @brief Specifies that the buffer will be used to input per vertex data
+//   to
+//   /// a vertex shader.
+//   VertexBuffer,
+// };
 
 template <typename T> class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  BufferResource(std::string&& name, BufferUsage usage)
-    : RenderResource(name), usage_(usage)
-  {
-  }
-  /// @brief Returns the BufferUsage of this buffer
-  BufferUsage usage() const { return usage_; }
+  using value_type = T;
+  BufferResource(std::string&& name) : RenderResource(name) {}
 
   /// @brief Specifies that element `offset` of this vertex buffer is of format
   /// `format`.
   /// @note Calling this function is only valid on buffers of type
   /// BufferUsage::VERTEX_BUFFER.
   void addVertexAttribute(VkFormat format, uint32_t offset);
-
-  /// @brief Specifies the element size of the buffer upfront if data is not to
-  /// be uploaded immediately.
-  /// @param element_size The element size in bytes
-  // void setElementSize(std::size_t element_size)
-  // {
-  //   element_size_ = element_size;
-  // }
-
   /// @brief Specifies the data that should be uploaded to this buffer at the
   /// start of the next frame.
-  /// @tparam T The type of the data uploaded to the buffer, e.g GpuVertex for
-  /// vertices and uint32_t for indices.
   /// @param data A span of elements to upload to the buffer
   void uploadData(std::span<T> data);
 
-  /// @brief @copybrief upload_data(const T *, std::size_t)
-  /// @note This is equivalent to doing `upload_data(data.data(), data.size() *
-  /// sizeof(T))`
-  /// @see upload_data(const T *data, std::size_t count)
-  // template <typename T> void uploadData(const std::vector<T>& data);
-
 private:
-  const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
-
-  // Data to upload to the GPU on a call to render(). `BufferResource` owns
-  // vertex/index data and when the data has been uploaded, it is a good idea to
-  // reset the data_ pointer to save memory.
-  T*     data_{ nullptr };
-  size_t data_size_{ 0 };
-  // size_t   element_size_{ 0 };
+  // Data to upload to the GPU on a call to render().
+  std::unique_ptr<std::span<T>> data_;
 };
 
 enum class TextureUsage {
@@ -289,7 +264,7 @@ protected:
   explicit PhysicalResource() = default;
 };
 
-class PhysicalBuffer : public PhysicalResource {
+template <typename T> class PhysicalBuffer : public PhysicalResource {
   friend RenderGraph;
 
 public:
@@ -302,7 +277,7 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  wr::Buffer<uint8_t> buffer_;
+  wr::Buffer<T> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -371,8 +346,8 @@ public:
   PhysicalGraphicsStage& operator=(PhysicalGraphicsStage&&)      = delete;
 
 private:
-  wr::RenderPass               render_pass_;
-  std::vector<wr::Framebuffer> framebuffers_;
+  // wr::RenderPass               render_pass_;
+  // std::vector<wr::Framebuffer> framebuffers_;
 };
 
 // class ComputePass {};
@@ -421,7 +396,11 @@ private:
   const wr::Swapchain swapchain_;
   Logger              log_{ requestLogger("render-graph") };
 
-  std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
+  using IBuffer = BufferResource<uint32_t>;
+  using VBuffer = BufferResource<GpuVertex>;
+  std::vector<std::variant<std::unique_ptr<BufferResource<uint32_t>>,
+                           std::unique_ptr<BufferResource<GpuVertex>>>>
+                                                buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;
   std::vector<std::unique_ptr<RenderStage>>     stages_;
   // Stage execution order. Each sub-list contains nodes that can be recorded
@@ -439,9 +418,14 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-template <typename T> void BufferResource<T>::uploadData(std::span<T> data)
+template <typename T>
+void BufferResource<T>::addVertexAttribute(VkFormat format, uint32_t offset)
 {
-  data_size_ = data.size_bytes();
-  data_      = data.data();
+  vertex_attributes_.push_back({
+    .location = static_cast<uint32_t>(vertex_attributes_.size()),
+    .binding  = 0,
+    .format   = format,
+    .offset   = offset,
+  });
 }
 } // namespace eldr::vk

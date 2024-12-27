@@ -25,11 +25,13 @@ public:
   // VkDeviceSize    size() const { return size_; }
   [[nodiscard]] const std::string& name() const { return name_; }
   [[nodiscard]] VkBuffer           get() const;
-  /// @brief Returns the exact size, in bytes, requested upon buffer creation.
+  /// @brief Returns the number of elements in this buffer.
+  /// @return size_t The number of elements in the buffer.
+  [[nodiscard]] size_t size() const { return size_; }
+  /// @brief Returns the size, in bytes, requested upon buffer creation.
   /// The real size of the VMA allocation may be greater. See VMA allocation
   /// creation docs for more info.
   /// @return VkDeviceSize The size requested upon buffer creation, in bytes.
-  [[nodiscard]] VkDeviceSize size() const { return size_; }
   [[nodiscard]] VkDeviceSize size_bytes() const { return size_bytes_; }
 
   /// @brief Returns whether the buffer is empty or not.
@@ -39,7 +41,7 @@ public:
   /// @brief Copies the data pointed to by `data` to the mapped GPU memory.
   /// @param data Pointer to the data to copy to the GPU buffer.
   /// @param data_size The size, in bytes, to copy.
-  // void uploadData(const void* data, size_t data_size) const;
+  void uploadData(const void* data, size_t data_size) const;
 
   /// @brief Copies `data` to the mapped GPU memory.
   /// @tparam T The type of data to upload.

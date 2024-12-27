@@ -1,4 +1,5 @@
 #include <eldr/core/platform.hpp>
+#include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
@@ -10,15 +11,6 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk {
-void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
-{
-  vertex_attributes_.push_back({
-    .location = static_cast<uint32_t>(vertex_attributes_.size()),
-    .binding  = 0,
-    .format   = format,
-    .offset   = offset,
-  });
-}
 
 void RenderStage::writesTo(const RenderResource* resource)
 {
@@ -35,39 +27,33 @@ void RenderStage::readsFrom(const RenderResource* resource)
 bool RenderStage::hasBlockingRead() const
 {
   for (auto* resource : reads_) {
-    if (const auto* buffer = resource->as<BufferResource>())
-      switch (buffer->usage()) {
-        case BufferUsage::IndexBuffer:
-        case BufferUsage::VertexBuffer:
-          break;
-        default:
-          return true;
-      }
+    // index buffer and vertex buffer reads are non-blocking
+    if (resource->as<BufferResource<uint32_t>>())
+      continue;
+    else if (resource->as<BufferResource<GpuVertex>>())
+      continue;
     else
-      // Texture resources are a blocking read dep
       return true;
   }
   return false;
 }
 
-void GraphicsStage::bindBuffer(const BufferResource* buffer,
-                               const uint32_t        binding)
-{
-  buffer_bindings_.emplace(buffer, binding);
-}
-
-void GraphicsStage::usesShader(const wr::Shader& shader)
-{
-  shaders_.push_back({
-    .sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-    .pNext               = {},
-    .flags               = {},
-    .stage               = shader.stage(),
-    .module              = shader.module(),
-    .pName               = shader.entryPoint().c_str(),
-    .pSpecializationInfo = {},
-  });
-}
+// void GraphicsStage::bindBuffer(const BufferResource* buffer,
+//                                const uint32_t        binding)
+// {
+//   buffer_bindings_.emplace(buffer, binding);
+// }
+//
+// void GraphicsStage::usesShader(const wr::Shader& shader)
+// {
+//   shaders_.push_back({
+//     .sType               =
+//     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = {}, .flags
+//     = {}, .stage               = shader.stage(), .module              =
+//     shader.module(), .pName               = shader.entryPoint().c_str(),
+//     .pSpecializationInfo = {},
+//   });
+// }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
                                       const wr::CommandBuffer& cb,
@@ -136,32 +122,46 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   }
 
   std::vector<VkBuffer> vertex_buffers;
+
   for (const auto* resource : stage->reads_) {
-    const auto* buffer_resource = resource->as<BufferResource>();
-    if (buffer_resource == nullptr) {
+    std::variant<const IBuffer*, const VBuffer*> buffer_resource;
+
+    if (auto* buff{ resource->as<IBuffer>() }; buff != nullptr)
+      buffer_resource = buff;
+    else if (auto* buff{ resource->as<VBuffer>() }; buff != nullptr)
+      buffer_resource = buff;
+    else {
       continue;
     }
 
-    auto physical_buffer = buffer_resource->physical_->as<PhysicalBuffer>();
-    if (physical_buffer == nullptr) {
-      continue;
-    }
-    if (unlikely(physical_buffer->buffer_.empty())) {
-      log_->debug("The PhysicalBuffer of '{}' in stage '{}' is empty. "
-                  "This can happen when RenderGraph::render(...) gets called "
-                  "before data has been uploaded to the buffer via "
-                  "BufferResource::uploadData<type>(...)), or it could be "
-                  "caused by another bug.",
-                  buffer_resource->name_, stage->name_);
-      continue;
-    }
-    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-      assert(physical_buffer->buffer_.get());
-      cb.bindIndexBuffer(physical_buffer->buffer_);
-    }
-    else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
-      vertex_buffers.push_back(physical_buffer->buffer_.get());
-    }
+    std::visit(
+      [&](auto& arg) {
+        using T = typename std::decay_t<decltype(*arg)>::value_type;
+        if (const auto& physical_buffer{
+              dynamic_pointer_cast<PhysicalBuffer<T>>(arg->physical_) }) {
+
+          if (unlikely(physical_buffer->buffer_.empty())) {
+            log_->debug(
+              "The PhysicalBuffer of '{}' in stage '{}' is empty. "
+              "This can happen when RenderGraph::render(...) gets called "
+              "before data has been uploaded to the buffer via "
+              "BufferResource::uploadData(...), or it could be "
+              "caused by some other bug.",
+              arg->name_, stage->name_);
+            return;
+          }
+
+          if constexpr (std::is_same_v<T, uint32_t>) {
+            assert(physical_buffer->buffer_.get());
+            cb.bindIndexBuffer(physical_buffer->buffer_);
+          }
+
+          else if constexpr (std::is_same_v<T, GpuVertex>) {
+            vertex_buffers.push_back(physical_buffer->buffer_.get());
+          }
+        }
+      },
+      buffer_resource);
   }
 
   if (!vertex_buffers.empty()) {
@@ -179,110 +179,115 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   cb.fullBarrier();
 }
 
-void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
-                                  PhysicalGraphicsStage& physical) const
-{
-  std::vector<VkAttachmentDescription> attachments;
-  std::vector<VkAttachmentReference>   resolve_refs;
-  std::vector<VkAttachmentReference>   color_refs;
-  std::vector<VkAttachmentReference>   depth_refs;
-  // Build vulkan attachments. For every texture resource that stage writes to,
-  // we create a corresponding VkAttachmentDescription and attach it to the
-  // render pass.
-  for (size_t i = 0; i < stage->writes_.size(); i++) {
-    const auto* resource = stage->writes_[i];
-    const auto* texture  = resource->as<TextureResource>();
-    if (texture == nullptr) {
-      continue;
-    }
-
-    VkAttachmentDescription attachment{};
-    attachment.flags   = 0;
-    attachment.format  = texture->format_;
-    attachment.samples = stage->sample_count_;
-    attachment.loadOp  = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                               : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    bool msaa_enabled{ stage->sample_count_ != VK_SAMPLE_COUNT_1_BIT };
-
-    switch (texture->usage_) {
-      case TextureUsage::BackBuffer: {
-        if (!stage->clears_screen_ && !msaa_enabled) {
-          attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-          attachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
-        }
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT; // use only one sample when
-                                                    // resolving to back buffer
-        attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        const VkAttachmentReference bb_ref{
-          static_cast<uint32_t>(i), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        };
-        if (msaa_enabled)
-          resolve_refs.push_back(bb_ref);
-        else
-          color_refs.push_back(bb_ref);
-      } break;
-      case TextureUsage::ColorBuffer:
-        assert(msaa_enabled);
-        if (!stage->clears_screen_) {
-          attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-          attachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
-        }
-        attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        color_refs.push_back(
-          { static_cast<uint32_t>(i), attachment.finalLayout });
-        break;
-      case TextureUsage::DepthStencilBuffer:
-        attachment.finalLayout =
-          VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        depth_refs.push_back(
-          { static_cast<uint32_t>(i),
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
-        break;
-      default:
-        assert(false);
-    }
-    attachments.push_back(attachment);
-  }
-
-  const VkSubpassDescription subpass_description{
-    .flags                = 0,
-    .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
-    .inputAttachmentCount = 0,
-    .pInputAttachments    = nullptr,
-    .colorAttachmentCount = static_cast<std::uint32_t>(color_refs.size()),
-    .pColorAttachments    = color_refs.data(),
-    .pResolveAttachments  = resolve_refs.data(),
-    .pDepthStencilAttachment =
-      !depth_refs.empty() ? depth_refs.data() : nullptr,
-    .preserveAttachmentCount = 0,
-    .pPreserveAttachments    = nullptr,
-  };
-
-  const VkSubpassDependency subpass_dependency{
-    .srcSubpass   = VK_SUBPASS_EXTERNAL,
-    .dstSubpass   = 0,
-    .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-    .srcAccessMask = 0,
-    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-    .dependencyFlags = 0,
-  };
-
-  // TODO: make a render pass builder? see how it pans out with dynamic
-  // rendering, dunno where I will end up
-  physical.render_pass_ =
-    wr::RenderPass{ device_, attachments, subpass_description,
-                    subpass_dependency };
-}
+// void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
+//                                   PhysicalGraphicsStage& physical) const
+// {
+//   std::vector<VkAttachmentDescription> attachments;
+//   std::vector<VkAttachmentReference>   resolve_refs;
+//   std::vector<VkAttachmentReference>   color_refs;
+//   std::vector<VkAttachmentReference>   depth_refs;
+//   // Build vulkan attachments. For every texture resource that stage writes
+//   to,
+//   // we create a corresponding VkAttachmentDescription and attach it to the
+//   // render pass.
+//   for (size_t i = 0; i < stage->writes_.size(); i++) {
+//     const auto* resource = stage->writes_[i];
+//     const auto* texture  = resource->as<TextureResource>();
+//     if (texture == nullptr) {
+//       continue;
+//     }
+//
+//     VkAttachmentDescription attachment{};
+//     attachment.flags   = 0;
+//     attachment.format  = texture->format_;
+//     attachment.samples = stage->sample_count_;
+//     attachment.loadOp  = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
+//                                                :
+//                                                VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+//     attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+//     attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+//     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+//     attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+//
+//     bool msaa_enabled{ stage->sample_count_ != VK_SAMPLE_COUNT_1_BIT };
+//
+//     switch (texture->usage_) {
+//       case TextureUsage::BackBuffer: {
+//         if (!stage->clears_screen_ && !msaa_enabled) {
+//           attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//           attachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
+//         }
+//         attachment.samples = VK_SAMPLE_COUNT_1_BIT; // use only one sample
+//         when
+//                                                     // resolving to back
+//                                                     buffer
+//         attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+//         attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//         const VkAttachmentReference bb_ref{
+//           static_cast<uint32_t>(i), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+//         };
+//         if (msaa_enabled)
+//           resolve_refs.push_back(bb_ref);
+//         else
+//           color_refs.push_back(bb_ref);
+//       } break;
+//       case TextureUsage::ColorBuffer:
+//         assert(msaa_enabled);
+//         if (!stage->clears_screen_) {
+//           attachment.initialLayout =
+//           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; attachment.loadOp =
+//           VK_ATTACHMENT_LOAD_OP_LOAD;
+//         }
+//         attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//         color_refs.push_back(
+//           { static_cast<uint32_t>(i), attachment.finalLayout });
+//         break;
+//       case TextureUsage::DepthStencilBuffer:
+//         attachment.finalLayout =
+//           VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+//         depth_refs.push_back(
+//           { static_cast<uint32_t>(i),
+//             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
+//         break;
+//       default:
+//         assert(false);
+//     }
+//     attachments.push_back(attachment);
+//   }
+//
+//   const VkSubpassDescription subpass_description{
+//     .flags                = 0,
+//     .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
+//     .inputAttachmentCount = 0,
+//     .pInputAttachments    = nullptr,
+//     .colorAttachmentCount = static_cast<std::uint32_t>(color_refs.size()),
+//     .pColorAttachments    = color_refs.data(),
+//     .pResolveAttachments  = resolve_refs.data(),
+//     .pDepthStencilAttachment =
+//       !depth_refs.empty() ? depth_refs.data() : nullptr,
+//     .preserveAttachmentCount = 0,
+//     .pPreserveAttachments    = nullptr,
+//   };
+//
+//   const VkSubpassDependency subpass_dependency{
+//     .srcSubpass   = VK_SUBPASS_EXTERNAL,
+//     .dstSubpass   = 0,
+//     .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+//                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+//     .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+//                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+//     .srcAccessMask = 0,
+//     .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+//                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+//     .dependencyFlags = 0,
+//   };
+//
+//   // TODO: make a render pass builder? see how it pans out with dynamic
+//   // rendering, dunno where I will end up
+//   physical.render_pass_ =
+//     wr::RenderPass{ device_, attachments, subpass_description,
+//                     subpass_dependency };
+// }
 
 // void RenderGraph::buildPipelineLayout(const RenderStage* stage,
 //                                       PhysicalStage&     physical) const
@@ -418,9 +423,14 @@ void RenderGraph::compile()
 
   log_->trace("Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
-    log_->trace("   - {}", buffer_resource->name_);
-    auto physical              = std::make_shared<PhysicalBuffer>(device_);
-    buffer_resource->physical_ = physical;
+    std::visit(
+      [&](auto& arg) {
+        log_->trace("   - {}", arg->name_);
+        using T        = std::decay_t<decltype(arg)>;
+        arg->physical_ = std::make_shared<
+          PhysicalBuffer<typename T::element_type::value_type>>(device_);
+      },
+      buffer_resource);
   }
 
   log_->trace("Allocating physical resource for texture:");
@@ -474,11 +484,11 @@ void RenderGraph::compile()
             }
           }
         }
-        graphics_stage->sample_count_ = sample_count;
-        // log_->debug("Stage '{}' sample count: {}", graphics_stage->name_,
-        //             static_cast<uint32_t>(sample_count));
+        // graphics_stage->sample_count_ = sample_count;
+        //  log_->debug("Stage '{}' sample count: {}", graphics_stage->name_,
+        //              static_cast<uint32_t>(sample_count));
 
-        buildRenderPass(graphics_stage, physical);
+        // buildRenderPass(graphics_stage, physical);
         // buildPipelineLayout(graphics_stage, physical);
         // buildGraphicsPipeline(graphics_stage, physical);
 
@@ -510,12 +520,13 @@ void RenderGraph::compile()
             // the order of the image views need to correspond with the
             // attachment order in the VkRenderPass
             for (const auto* image : images) {
-              image_views.push_back(image->image_.view().get());
+              image_views.push_back(image->image_.imageView().get());
             }
             std::fill_n(std::back_inserter(image_views), back_buffers.size(),
                         img_view.get());
-            physical.framebuffers_.emplace_back(device_, physical.render_pass_,
-                                                image_views, swapchain_);
+            // physical.framebuffers_.emplace_back(device_,
+            // physical.render_pass_,
+            //                                     image_views, swapchain_);
             image_views.clear();
           }
         }
@@ -527,58 +538,57 @@ void RenderGraph::compile()
 void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
 {
   for (auto& buffer_resource : buffer_resources_) {
-    auto& physical = *buffer_resource->physical_->as<PhysicalBuffer>();
-
-    if (buffer_resource->data_.get() != nullptr) {
-      // There is data to be uploaded to gpu
-      if (buffer_resource->data_size_ == 0) {
-        // Free the buffer
-        // TODO: Decide whether BufferResource::uploadData() should allow
-        // upploading empty spans at all. Doing so is most likely a mistake (as
-        // far as I can see right now).
-        // physical.buffer_.reset();
-        physical.buffer_ = {};
-      }
-      else {
-        bool new_buffer_needed = false;
-        if (unlikely(physical.buffer_.empty())) {
-          new_buffer_needed = true;
-        }
-        else {
-          // A gpu buffer already exists
-          const size_t buffer_size{ static_cast<size_t>(
-            physical.buffer_.size()) };
-          if (buffer_resource->data_size_ != buffer_size) {
-            // The gpu buffer needs to be resized
-            new_buffer_needed = true;
+    std::visit(
+      [&](auto& arg) {
+        if (arg->data_ != nullptr) {
+          // There is data to be uploaded to the gpu
+          using T = std::decay_t<decltype(arg)>::element_type::value_type;
+          auto& physical{ *dynamic_pointer_cast<PhysicalBuffer<T>>(
+            arg->physical_) };
+          if (arg->data_->size() == 0) {
+            // Free the buffer
+            // TODO: Decide whether BufferResource::uploadData() should allow
+            // upploading empty spans at all. Doing so is most likely a
+            // mistake (as far as I can see right now).
+            // physical.buffer_.reset();
+            physical.buffer_ = {};
           }
-        }
+          else {
+            const size_t data_size{ arg->data_->size_bytes() };
+            bool         new_buffer_needed = false;
+            if (unlikely(physical.buffer_.empty())) {
+              new_buffer_needed = true;
+            }
+            else {
+              // A gpu buffer already exists
+              if (data_size != physical.buffer_.size_bytes()) {
+                // The gpu buffer needs to be resized
+                new_buffer_needed = true;
+              }
+            }
 
-        if (new_buffer_needed) {
-          // Otherwise build a new GPU buffer
-          VkBufferUsageFlags buffer_usage{};
-          switch (buffer_resource->usage_) {
-            case BufferUsage::IndexBuffer:
-              buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-              break;
-            case BufferUsage::VertexBuffer:
-              buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-              break;
-            default:
-              assert(false);
+            if (new_buffer_needed) {
+              // Otherwise build a new GPU buffer
+              VkBufferUsageFlags buffer_usage{};
+              if constexpr (std::is_same_v<T, uint32_t>)
+                buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+              else if constexpr (std::is_same_v<T, GpuVertex>)
+                buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+              else
+                assert(false);
+
+              physical.buffer_ =
+                wr::Buffer<T>{ device_, "render graph buffer", data_size,
+                               buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
+            }
           }
-          physical.buffer_ =
-            wr::Buffer<uint8_t>{ device_, "render graph buffer",
-                                 buffer_resource->data_size_, buffer_usage,
-                                 VMA_MEMORY_USAGE_CPU_TO_GPU };
+          // Upload data
+          physical.buffer_.uploadData(*arg->data_);
+          // Reset data pointer once it has been uploaded to gpu
+          arg->data_.reset();
         }
-        // Upload data
-        physical.buffer_.uploadData(buffer_resource->data_.get(),
-                                    buffer_resource->data_size_);
-      }
-    }
-    // Reset data held by buffer resource once it has been uploaded to gpu
-    buffer_resource->data_.reset();
+      },
+      buffer_resource);
   }
 
   // TODO: full memory barrier is not needed between nodes in same subset
