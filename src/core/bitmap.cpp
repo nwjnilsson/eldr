@@ -18,6 +18,7 @@ extern "C" {
 
 namespace eldr {
 
+// TODO: use span instead of uint8_t
 Bitmap::Bitmap(std::string_view name, PixelFormat px_format,
                Struct::Type component_format, Vec2u size, size_t channel_count,
                const std::vector<std::string>& channel_names, uint8_t* data)
@@ -648,7 +649,7 @@ void Bitmap::readPng(Stream* stream)
 void Bitmap::rgbToRgba()
 {
   if (pixel_format_ != PixelFormat::RGB)
-    Throw("convertToRGBA(): Unexpected pixel format ({})", pixel_format_);
+    Throw("rgbToRgba(): Unexpected pixel format ({})", pixel_format_);
 
   pixel_format_ = PixelFormat::RGBA;
   rebuildStruct();

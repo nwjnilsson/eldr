@@ -23,7 +23,7 @@ public:
 
   [[nodiscard]] wr::DescriptorSetLayout
   build(const wr::Device&                device,
-        VkDescriptorSetLayoutCreateFlags create_flags);
+        VkDescriptorSetLayoutCreateFlags create_flags = 0);
 
 private:
   DescriptorSetLayoutBuilder& add(uint32_t binding, VkDescriptorType type,

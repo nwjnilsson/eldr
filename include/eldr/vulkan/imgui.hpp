@@ -4,9 +4,10 @@
 #include <eldr/core/math.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
+#include <eldr/vulkan/wrappers/pipeline.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
+#include <eldr/vulkan/wrappers/texture.hpp>
 
 #include <imgui.h>
 
@@ -27,6 +28,9 @@ public:
   void update(DescriptorAllocator& descriptors);
 
 private:
+  void buildPipeline();
+
+private:
   const wr::Device    device_;
   const wr::Swapchain swapchain_;
   Logger              log_{ requestLogger("imgui-overlay") };
@@ -36,11 +40,12 @@ private:
   BufferResource* vertex_buffer_{ nullptr };
   GraphicsStage*  stage_{ nullptr };
 
-  wr::Image  imgui_texture_;
-  wr::Shader vertex_shader_;
-  wr::Shader fragment_shader_;
-
-  wr::DescriptorSetLayout set_layout_;
+  wr::Texture             imgui_texture_;
+  wr::Sampler             font_sampler_;
+  wr::Shader              vertex_shader_;
+  wr::Shader              fragment_shader_;
+  wr::DescriptorSetLayout imgui_layout_;
+  wr::Pipeline            imgui_pipeline_;
 
   struct PushConstantBlock {
     Vec2f scale;

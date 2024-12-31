@@ -53,11 +53,11 @@ private:
 template <typename T>
 DescriptorWriter&
 DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer<T>& buffer,
-                              VkDeviceSize offset, VkDescriptorType type)
+                              size_t index_offset, VkDescriptorType type)
 {
   buffer_infos_.push_back({
     .buffer = buffer.get(),
-    .offset = offset,
+    .offset = index_offset * sizeof(T),
     .range  = sizeof(T),
   });
 
@@ -78,11 +78,10 @@ DescriptorWriter::writeBuffer(uint32_t binding, const wr::Buffer<T>& buffer,
 }
 
 template <typename T>
-DescriptorWriter&
-DescriptorWriter::writeUniformBuffer(uint32_t             binding,
-                                     const wr::Buffer<T>& buffer, size_t offset)
+DescriptorWriter& DescriptorWriter::writeUniformBuffer(
+  uint32_t binding, const wr::Buffer<T>& buffer, size_t index_offset)
 {
-  return writeBuffer<T>(binding, buffer, offset,
+  return writeBuffer<T>(binding, buffer, index_offset,
                         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 }
 

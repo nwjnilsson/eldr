@@ -11,6 +11,15 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk {
+void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
+{
+  vertex_attributes_.push_back({
+    .location = static_cast<uint32_t>(vertex_attributes_.size()),
+    .binding  = 0,
+    .format   = format,
+    .offset   = offset,
+  });
+}
 
 void RenderStage::writesTo(const RenderResource* resource)
 {
@@ -27,12 +36,16 @@ void RenderStage::readsFrom(const RenderResource* resource)
 bool RenderStage::hasBlockingRead() const
 {
   for (auto* resource : reads_) {
-    // index buffer and vertex buffer reads are non-blocking
-    if (resource->as<BufferResource<uint32_t>>())
-      continue;
-    else if (resource->as<BufferResource<GpuVertex>>())
-      continue;
+    if (const auto* buffer = resource->as<BufferResource>())
+      switch (buffer->usage()) {
+        case BufferUsage::IndexBuffer:
+        case BufferUsage::VertexBuffer:
+          break;
+        default:
+          Throw("hasBlockingRead(): Unknown BufferUsage");
+      }
     else
+      // Texture resources are a blocking read dep
       return true;
   }
   return false;
@@ -56,8 +69,7 @@ bool RenderStage::hasBlockingRead() const
 // }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
-                                      const wr::CommandBuffer& cb,
-                                      const uint32_t image_index) const
+                                      const wr::CommandBuffer& cb) const
 {
   const PhysicalStage& physical = *stage->physical_;
 
@@ -124,44 +136,32 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   std::vector<VkBuffer> vertex_buffers;
 
   for (const auto* resource : stage->reads_) {
-    std::variant<const IBuffer*, const VBuffer*> buffer_resource;
-
-    if (auto* buff{ resource->as<IBuffer>() }; buff != nullptr)
-      buffer_resource = buff;
-    else if (auto* buff{ resource->as<VBuffer>() }; buff != nullptr)
-      buffer_resource = buff;
-    else {
+    auto* buffer_resource{ resource->as<BufferResource>() };
+    if (buffer_resource == nullptr)
       continue;
+
+    if (const auto& physical_buffer{
+          dynamic_pointer_cast<PhysicalBuffer>(buffer_resource->physical_) }) {
+
+      if (unlikely(physical_buffer->buffer_.empty())) {
+        log_->debug("The PhysicalBuffer of '{}' in stage '{}' is empty. "
+                    "This can happen when RenderGraph::render(...) gets called "
+                    "before data has been uploaded to the buffer via "
+                    "BufferResource::uploadData(...), or it could be "
+                    "caused by some other bug.",
+                    buffer_resource->name_, stage->name_);
+        return;
+      }
+
+      if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
+        assert(physical_buffer->buffer_.get());
+        cb.bindIndexBuffer(physical_buffer->buffer_);
+      }
+
+      else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
+        vertex_buffers.push_back(physical_buffer->buffer_.get());
+      }
     }
-
-    std::visit(
-      [&](auto& arg) {
-        using T = typename std::decay_t<decltype(*arg)>::value_type;
-        if (const auto& physical_buffer{
-              dynamic_pointer_cast<PhysicalBuffer<T>>(arg->physical_) }) {
-
-          if (unlikely(physical_buffer->buffer_.empty())) {
-            log_->debug(
-              "The PhysicalBuffer of '{}' in stage '{}' is empty. "
-              "This can happen when RenderGraph::render(...) gets called "
-              "before data has been uploaded to the buffer via "
-              "BufferResource::uploadData(...), or it could be "
-              "caused by some other bug.",
-              arg->name_, stage->name_);
-            return;
-          }
-
-          if constexpr (std::is_same_v<T, uint32_t>) {
-            assert(physical_buffer->buffer_.get());
-            cb.bindIndexBuffer(physical_buffer->buffer_);
-          }
-
-          else if constexpr (std::is_same_v<T, GpuVertex>) {
-            vertex_buffers.push_back(physical_buffer->buffer_.get());
-          }
-        }
-      },
-      buffer_resource);
   }
 
   if (!vertex_buffers.empty()) {
@@ -201,7 +201,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //     attachment.flags   = 0;
 //     attachment.format  = texture->format_;
 //     attachment.samples = stage->sample_count_;
-//     attachment.loadOp  = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
+//     attachment.loadOp  = stage->clears_screen_ ?
+//     VK_ATTACHMENT_LOAD_OP_CLEAR
 //                                                :
 //                                                VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 //     attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -224,7 +225,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //         attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 //         attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 //         const VkAttachmentReference bb_ref{
-//           static_cast<uint32_t>(i), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+//           static_cast<uint32_t>(i),
+//           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 //         };
 //         if (msaa_enabled)
 //           resolve_refs.push_back(bb_ref);
@@ -297,8 +299,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //     .pNext          = nullptr,
 //     .flags          = 0,
 //     .setLayoutCount =
-//     static_cast<uint32_t>(stage->descriptor_layouts_.size()), .pSetLayouts =
-//     stage->descriptor_layouts_.data(), .pushConstantRangeCount =
+//     static_cast<uint32_t>(stage->descriptor_layouts_.size()), .pSetLayouts
+//     = stage->descriptor_layouts_.data(), .pushConstantRangeCount =
 //       static_cast<uint32_t>(stage->push_constant_ranges_.size()),
 //     .pPushConstantRanges = stage->push_constant_ranges_.data(),
 //   };
@@ -318,8 +320,10 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //                                         const
 // {
 //
-//   // Build buffer and vertex layout bindings. For every buffer resource that
-//   // stage reads from, we create a corresponding attribute binding and vertex
+//   // Build buffer and vertex layout bindings. For every buffer resource
+//   that
+//   // stage reads from, we create a corresponding attribute binding and
+//   vertex
 //   // binding description.
 //   // std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
 //   // std::vector<VkVertexInputBindingDescription>   vertex_bindings;
@@ -334,10 +338,13 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //   //     continue;
 //   //   }
 //
-//   //   // We use std::unordered_map::at() here to ensure that a binding value
+//   //   // We use std::unordered_map::at() here to ensure that a binding
+//   value
 //   //   // exists for buffer_resource.
-//   //   const uint32_t binding = stage->buffer_bindings_.at(buffer_resource);
-//   //   for (auto attribute_description : buffer_resource->vertex_attributes_)
+//   //   const uint32_t binding =
+//   stage->buffer_bindings_.at(buffer_resource);
+//   //   for (auto attribute_description :
+//   buffer_resource->vertex_attributes_)
 //   {
 //   //     attribute_description.binding = binding;
 //   //     attribute_descriptions.push_back(attribute_description);
@@ -345,7 +352,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //
 //   //   vertex_bindings.push_back({
 //   //     .binding   = binding,
-//   //     .stride    = static_cast<uint32_t>(buffer_resource->element_size_),
+//   //     .stride    =
+//   static_cast<uint32_t>(buffer_resource->element_size_),
 //   //     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 //   //   });
 //   // }
@@ -356,7 +364,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 //     .setCullMode(stage->cull_mode_,
 //                  VK_FRONT_FACE_COUNTER_CLOCKWISE) // cull mode should
 //                  probably
-//                                                   // not be a member of stage
+//                                                   // not be a member of
+//                                                   stage
 //     .setMultisampling(stage->sample_count_)
 //     .setDepthFormat(device_.findDepthFormat()) // should be set from depth
 //                                                // texture in the end
@@ -423,14 +432,8 @@ void RenderGraph::compile()
 
   log_->trace("Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
-    std::visit(
-      [&](auto& arg) {
-        log_->trace("   - {}", arg->name_);
-        using T        = std::decay_t<decltype(arg)>;
-        arg->physical_ = std::make_shared<
-          PhysicalBuffer<typename T::element_type::value_type>>(device_);
-      },
-      buffer_resource);
+    log_->trace("   - {}", buffer_resource->name_);
+    buffer_resource->physical_ = std::make_shared<PhysicalBuffer>(device_);
   }
 
   log_->trace("Allocating physical resource for texture:");
@@ -438,8 +441,7 @@ void RenderGraph::compile()
     log_->trace("   - {}", texture_resource->name());
 
     if (texture_resource->usage_ == TextureUsage::BackBuffer) {
-      texture_resource->physical_ =
-        std::make_shared<PhysicalBackBuffer>(device_);
+      texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
       continue;
     }
 
@@ -535,66 +537,61 @@ void RenderGraph::compile()
   }
 }
 
-void RenderGraph::render(uint32_t image_index, const wr::CommandBuffer& cb)
+void RenderGraph::render(const wr::CommandBuffer& cb)
 {
   for (auto& buffer_resource : buffer_resources_) {
-    std::visit(
-      [&](auto& arg) {
-        if (arg->data_ != nullptr) {
-          // There is data to be uploaded to the gpu
-          using T = std::decay_t<decltype(arg)>::element_type::value_type;
-          auto& physical{ *dynamic_pointer_cast<PhysicalBuffer<T>>(
-            arg->physical_) };
-          if (arg->data_->size() == 0) {
-            // Free the buffer
-            // TODO: Decide whether BufferResource::uploadData() should allow
-            // upploading empty spans at all. Doing so is most likely a
-            // mistake (as far as I can see right now).
-            // physical.buffer_.reset();
-            physical.buffer_ = {};
-          }
-          else {
-            const size_t data_size{ arg->data_->size_bytes() };
-            bool         new_buffer_needed = false;
-            if (unlikely(physical.buffer_.empty())) {
-              new_buffer_needed = true;
-            }
-            else {
-              // A gpu buffer already exists
-              if (data_size != physical.buffer_.size_bytes()) {
-                // The gpu buffer needs to be resized
-                new_buffer_needed = true;
-              }
-            }
-
-            if (new_buffer_needed) {
-              // Otherwise build a new GPU buffer
-              VkBufferUsageFlags buffer_usage{};
-              if constexpr (std::is_same_v<T, uint32_t>)
-                buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-              else if constexpr (std::is_same_v<T, GpuVertex>)
-                buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-              else
-                assert(false);
-
-              physical.buffer_ =
-                wr::Buffer<T>{ device_, "render graph buffer", data_size,
-                               buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
-            }
-          }
-          // Upload data
-          physical.buffer_.uploadData(*arg->data_);
-          // Reset data pointer once it has been uploaded to gpu
-          arg->data_.reset();
+    if (buffer_resource->data_ != nullptr) {
+      // There is data to be uploaded to the gpu
+      const size_t data_size{ buffer_resource->data_->size };
+      auto&        physical{ *dynamic_pointer_cast<PhysicalBuffer>(
+        buffer_resource->physical_) };
+      if (data_size == 0) {
+        // Free the buffer
+        // TODO: Decide whether BufferResource::uploadData() should allow
+        // upploading empty spans at all. Doing so is most likely a
+        // mistake (as far as I can see right now).
+        // physical.buffer_.reset();
+        physical.buffer_ = {};
+      }
+      else {
+        bool new_buffer_needed = false;
+        if (unlikely(physical.buffer_.empty())) {
+          new_buffer_needed = true;
         }
-      },
-      buffer_resource);
+        else {
+          // A gpu buffer already exists
+          if (data_size != physical.buffer_.size_bytes()) {
+            // The gpu buffer needs to be resized
+            new_buffer_needed = true;
+          }
+        }
+
+        if (new_buffer_needed) {
+          // Otherwise build a new GPU buffer
+          VkBufferUsageFlags buffer_usage{};
+          if (buffer_resource->usage_ == BufferUsage::IndexBuffer)
+            buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+          else if (buffer_resource->usage_ == BufferUsage::VertexBuffer)
+            buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+          else
+            assert(false);
+
+          physical.buffer_ =
+            wr::Buffer<Byte>{ device_, "render graph buffer", data_size,
+                              buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
+        }
+      }
+      // Upload data
+      physical.buffer_.uploadData(buffer_resource->data_->p_data, data_size);
+      // Reset data pointer once it has been uploaded to gpu
+      buffer_resource->data_.reset();
+    }
   }
 
   // TODO: full memory barrier is not needed between nodes in same subset
   for (const auto& subset : stage_stack_) {
     for (const auto& stage : subset)
-      recordCommandBuffer(stage, cb, image_index);
+      recordCommandBuffer(stage, cb);
   }
 }
 

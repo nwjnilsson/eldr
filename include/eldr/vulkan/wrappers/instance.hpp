@@ -10,7 +10,6 @@ class Instance {
 public:
   Instance() = default;
   Instance(const VkApplicationInfo&, std::vector<const char*>&& extensions);
-  ~Instance();
 
   [[nodiscard]] VkInstance get() const;
 

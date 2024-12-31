@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
@@ -10,7 +9,6 @@
 #include <functional>
 #include <memory>
 #include <span>
-#include <variant>
 #include <vector>
 
 namespace eldr::vk {
@@ -56,37 +54,55 @@ private:
   std::shared_ptr<PhysicalResource> physical_;
 };
 
-// enum class BufferUsage {
-//   /// @brief Specifies that the buffer will be used to input index data.
-//   IndexBuffer,
-//
-//   /// @brief Specifies that the buffer will be used to input per vertex data
-//   to
-//   /// a vertex shader.
-//   VertexBuffer,
-// };
+enum class BufferUsage {
+  /// @brief Specifies that the buffer will be used to input index data.
+  IndexBuffer,
 
-template <typename T> class BufferResource : public RenderResource {
+  /// @brief Specifies that the buffer will be used to input per vertex data to
+  /// a vertex shader.
+  VertexBuffer,
+};
+
+class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  using value_type = T;
-  BufferResource(std::string&& name) : RenderResource(name) {}
+  BufferResource(std::string&& name, BufferUsage usage)
+    : RenderResource(name), usage_(usage)
+  {
+  }
+
+  /// @return The usage of this buffer resource
+  BufferUsage usage() const { return usage_; }
 
   /// @brief Specifies that element `offset` of this vertex buffer is of format
   /// `format`.
   /// @note Calling this function is only valid on buffers of type
   /// BufferUsage::VERTEX_BUFFER.
   void addVertexAttribute(VkFormat format, uint32_t offset);
+
   /// @brief Specifies the data that should be uploaded to this buffer at the
   /// start of the next frame.
   /// @param data A span of elements to upload to the buffer
-  void uploadData(std::span<T> data);
+  /// @detail Ensure that `data` stays alive until the next frame has been
+  /// drawn.
+  template <std::ranges::contiguous_range R> void bindData(const R& data)
+  {
+    std::span s(data);
+    using D = typename std::decay_t<decltype(s)>;
+    data_   = std::make_unique<DataRange>(s.data(), s.size_bytes(), sizeof(D));
+  }
 
 private:
+  const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
   // Data to upload to the GPU on a call to render().
-  std::unique_ptr<std::span<T>> data_;
+  struct DataRange {
+    const void* p_data;
+    size_t      size;
+    size_t      element_size;
+  };
+  std::unique_ptr<DataRange> data_;
 };
 
 enum class TextureUsage {
@@ -143,17 +159,17 @@ public:
   /// @note This function will be removed in the near future, as we are aiming
   /// for users of the API to not have to deal with descriptors at all.
   // TODO: Refactor descriptor management in the render graph
-  void addDescriptorLayout(wr::DescriptorSetLayout& layout)
-  {
-    descriptor_layouts_.push_back(layout.get());
-  }
+  // void addDescriptorLayout(wr::DescriptorSetLayout& layout)
+  // {
+  //   descriptor_layouts_.push_back(layout.get());
+  // }
 
   /// @brief Add a push constant range to this render stage.
   /// @param range The push constant range
-  void addPushConstantRange(VkPushConstantRange range)
-  {
-    push_constant_ranges_.push_back(range);
-  }
+  // void addPushConstantRange(VkPushConstantRange range)
+  // {
+  //   push_constant_ranges_.push_back(range);
+  // }
 
   [[nodiscard]] const std::string& name() const { return name_; }
 
@@ -264,7 +280,7 @@ protected:
   explicit PhysicalResource() = default;
 };
 
-template <typename T> class PhysicalBuffer : public PhysicalResource {
+class PhysicalBuffer : public PhysicalResource {
   friend RenderGraph;
 
 public:
@@ -277,7 +293,8 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  wr::Buffer<T> buffer_;
+  // Buffer of any kind of data. Can be used as index buffer or vertex buffer.
+  wr::Buffer<Byte> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -385,22 +402,17 @@ public:
   //                           PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
-                           const wr::CommandBuffer& cb,
-                           const std::uint32_t      image_index) const;
+                           const wr::CommandBuffer& cb) const;
   void compile();
 
-  void render(uint32_t image_index, const wr::CommandBuffer& cb);
+  void render(const wr::CommandBuffer& cb);
 
 private:
   const wr::Device    device_;
   const wr::Swapchain swapchain_;
   Logger              log_{ requestLogger("render-graph") };
 
-  using IBuffer = BufferResource<uint32_t>;
-  using VBuffer = BufferResource<GpuVertex>;
-  std::vector<std::variant<std::unique_ptr<BufferResource<uint32_t>>,
-                           std::unique_ptr<BufferResource<GpuVertex>>>>
-                                                buffer_resources_;
+  std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;
   std::vector<std::unique_ptr<RenderStage>>     stages_;
   // Stage execution order. Each sub-list contains nodes that can be recorded
@@ -418,14 +430,4 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-template <typename T>
-void BufferResource<T>::addVertexAttribute(VkFormat format, uint32_t offset)
-{
-  vertex_attributes_.push_back({
-    .location = static_cast<uint32_t>(vertex_attributes_.size()),
-    .binding  = 0,
-    .format   = format,
-    .offset   = offset,
-  });
-}
 } // namespace eldr::vk

@@ -39,7 +39,7 @@ struct GltfMetallicRoughness {
     const vk::wr::Texture*                   metal_rough_texture;
     const vk::wr::Sampler*                   metal_rough_sampler;
     const vk::wr::Buffer<MaterialConstants>* data_buffer;
-    size_t                                   data_buffer_offset;
+    size_t                                   data_index;
   };
 
   MaterialInstance writeMaterial(const vk::wr::Device&    device,

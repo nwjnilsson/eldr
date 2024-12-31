@@ -225,11 +225,11 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
     .pNext           = nullptr,
     .flags           = 0,
-    .blendConstants  = {},
     .logicOpEnable   = VK_FALSE,
     .logicOp         = VK_LOGIC_OP_COPY,
     .attachmentCount = 1,
     .pAttachments    = &color_blend_attachment_,
+    .blendConstants  = {},
   };
 
   const std::vector<VkDynamicState> dynamic_states{ VK_DYNAMIC_STATE_VIEWPORT,

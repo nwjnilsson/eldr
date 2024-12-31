@@ -81,7 +81,7 @@ Buffer<T>::Buffer(const Device& device, std::string_view name,
   uploadData(data);
 }
 
-template <typename T> void Buffer<T>::uploadData(std::span<T> data) const
+template <typename T> void Buffer<T>::uploadData(std::span<const T> data) const
 {
   assert(data.size() > 0);
   assert(data.size_bytes() <= size_bytes_);

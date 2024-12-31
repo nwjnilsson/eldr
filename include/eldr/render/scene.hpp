@@ -49,13 +49,13 @@ struct SceneNode : public Renderable {
 };
 
 struct MeshNode final : public SceneNode {
-  inline MeshNode(std::shared_ptr<Mesh> s) : mesh(s) {};
+  // inline MeshNode(std::shared_ptr<Mesh> s) : mesh(s) {};
   std::shared_ptr<Mesh> mesh;
   void draw(const Mat4f& top_matrix, DrawContext& ctx) const override;
 };
 
 struct Scene : public Renderable {
-  ELDR_IMPORT_CORE_TYPES();
+  ELDR_IMPORT_CORE_TYPES()
   struct SceneInfo {
     const std::filesystem::path model_path;
   };

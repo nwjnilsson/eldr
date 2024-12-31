@@ -1,6 +1,8 @@
 #include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
+#include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/imgui.hpp>
+#include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -99,24 +101,19 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       font_mip_levels,
     };
   }
+  font_sampler_ = wr::Sampler{ device_, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+                               VK_SAMPLER_MIPMAP_MODE_LINEAR, font_mip_levels };
 
-  DescriptorSetLayoutBuilder descriptor_builder;
-  for (uint32_t i = 0; i < max_frames_in_flight; ++i) {
-    descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
-  }
-  set_layout_ = descriptor_builder.build(device, 0);
-
-  index_buffer_ =
-    render_graph->add<BufferResource<uint32_t>>("imgui index buffer");
-  vertex_buffer_ =
-    render_graph->add<BufferResource<GpuVertex>>("imgui vertex buffer");
+  index_buffer_  = render_graph->add<BufferResource>("imgui index buffer",
+                                                     BufferUsage::IndexBuffer);
+  vertex_buffer_ = render_graph->add<BufferResource>("imgui vertex buffer",
+                                                     BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(ImDrawVert, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
                                      offsetof(ImDrawVert, uv));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
                                      offsetof(ImDrawVert, col));
-  vertex_buffer_->setElementSize(sizeof(ImDrawVert));
 
   stage_ = render_graph->add<GraphicsStage>("imgui stage");
   stage_->writesTo(back_buffer);
@@ -128,14 +125,9 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   //  stage_->usesShader(fragment_shader_);
   //  stage_->setCullMode(VK_CULL_MODE_NONE);
 
-  stage_->addDescriptorLayout(set_layout_);
+  // stage_->addDescriptorLayout(set_layout_);
 
-  // Setup push constant range for global translation and scale.
-  stage_->addPushConstantRange({
-    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    .offset     = 0,
-    .size       = sizeof(PushConstantBlock),
-  });
+  buildPipeline();
 
   // Setup blend attachment.
   // stage_->setBlendAttachment({
@@ -151,6 +143,49 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
 }
 
 ImGuiOverlay::~ImGuiOverlay() { ImGui::DestroyContext(); }
+
+void ImGuiOverlay::buildPipeline()
+{
+  // Setup push constant range for global translation and scale.
+  const VkPushConstantRange imgui_range{
+    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    .offset     = 0,
+    .size       = sizeof(PushConstantBlock),
+  };
+
+  DescriptorSetLayoutBuilder descriptor_builder;
+  for (uint32_t i = 0; i < max_frames_in_flight; ++i) {
+    descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
+  }
+  imgui_layout_ = descriptor_builder.build(device_);
+
+  wr::Shader vert_shader{ device_, "ImGui vertex shader", "imgui.vert.spv",
+                          VK_SHADER_STAGE_VERTEX_BIT };
+  wr::Shader frag_shader{ device_, "ImGui fragment shader", "imgui.frag.spv",
+                          VK_SHADER_STAGE_FRAGMENT_BIT };
+  PipelineBuilder pipeline_builder;
+  pipeline_builder.addDescriptorSetLayout(imgui_layout_)
+    .addPushConstantRange(imgui_range)
+    .setShaders(vert_shader, frag_shader)
+    .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+    .setPolygonMode(VK_POLYGON_MODE_FILL)
+    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+    .setMultisamplingNone()
+    .disableBlending()
+    .enableDepthtest(
+      true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op
+                                            // as i used in rendergraph
+
+    // TODO: THE FORMATS SHOULD BE SET FROM TEXTURE RESOURCE
+    // render format
+    //.setColorAttachmentFormat(back_buffer_->format_)
+    //.setDepthFormat(depth_buffer->format_);
+    .setColorAttachmentFormat(swapchain_.imageFormat())
+    .setDepthFormat(device_.findDepthFormat());
+
+  // finally build the pipeline
+  imgui_pipeline_ = pipeline_builder.build(device_, "ImGui pipeline");
+}
 
 void ImGuiOverlay::update(DescriptorAllocator& descriptors)
 {
@@ -173,7 +208,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       index_data.push_back(cmd_list->IdxBuffer.Data[j]);
     }
   }
-  index_buffer_->uploadData<uint32_t>(index_data);
+  index_buffer_->bindData(index_data);
 
   std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
@@ -182,7 +217,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  vertex_buffer_->uploadData<ImDrawVert>(vertex_data);
+  vertex_buffer_->bindData(vertex_data);
 
   stage_->setOnRecord([&](const PhysicalStage&     physical,
                           const wr::CommandBuffer& cb) {
@@ -195,10 +230,16 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     push_const_block_.scale =
       Vec2f(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
     push_const_block_.translate = Vec2f(-1.0f);
-    VkDescriptorSet im_descriptor[]{ descriptors.allocate(device_,
-                                                          set_layout_) };
-    cb.bindDescriptorSets(im_descriptor, physical.pipelineLayout());
-    cb.pushConstants(physical.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,
+    VkDescriptorSet  descriptor_set{ descriptors.allocate(device_,
+                                                          imgui_layout_) };
+    DescriptorWriter writer;
+    writer.writeCombinedImageSampler(1, imgui_texture_, font_sampler_)
+      .updateSet(device_, descriptor_set);
+
+    VkDescriptorSet im_descriptors[]{ descriptor_set };
+    cb.bindPipeline(imgui_pipeline_);
+    cb.bindDescriptorSets(im_descriptors, imgui_pipeline_.layout());
+    cb.pushConstants(imgui_pipeline_.layout(), VK_SHADER_STAGE_VERTEX_BIT,
                      sizeof(PushConstantBlock), &push_const_block_);
 
     const VkViewport viewports[] = { {

@@ -1,5 +1,5 @@
 src = [
-  'wrappers/buffer.cpp',
+  'vktools/format.cpp',
   'wrappers/commandbuffer.cpp',
   'wrappers/commandpool.cpp',
   'wrappers/debugutilsmessenger.cpp',
@@ -9,18 +9,21 @@ src = [
   'wrappers/fence.cpp',
   'wrappers/framebuffer.cpp',
   'wrappers/image.cpp',
-  'wrappers/texture.cpp',
   'wrappers/instance.cpp',
+  'wrappers/pipeline.cpp',
   'wrappers/sampler.cpp',
   'wrappers/semaphore.cpp',
   'wrappers/shader.cpp',
   'wrappers/surface.cpp',
   'wrappers/swapchain.cpp',
-  'descriptorwriter.cpp',
+  'wrappers/texture.cpp',
+  'descriptorallocator.cpp',
   'descriptorsetlayoutbuilder.cpp',
-  'vktools/format.cpp',
+  'descriptorwriter.cpp',
   'engine.cpp',
   'imgui.cpp',
+  'material.cpp',
+  'pipelinebuilder.cpp',
   'rendergraph.cpp'
   ]
 

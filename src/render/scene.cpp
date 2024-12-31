@@ -66,9 +66,9 @@ VkSamplerMipmapMode extractMipmapMode(fastgltf::Filter filter)
 namespace eldr::vk {
 // TODO: move
 struct SceneData {
-  std::vector<vk::wr::Sampler> samplers;
-  vk::DescriptorAllocator      descriptors;
-  vk::wr::Buffer               material_buffer;
+  std::vector<vk::wr::Sampler>                             samplers;
+  vk::DescriptorAllocator                                  descriptors;
+  vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
 } // namespace eldr::vk
 
@@ -127,10 +127,9 @@ void Scene::draw(const Mat4f& top_matrix, DrawContext& ctx) const
   }
 }
 
-std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
-                                               std::filesystem::path file_path)
+std::optional<std::shared_ptr<Scene>>
+Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 {
-  ELDR_IMPORT_CORE_TYPES()
   Logger log{ requestLogger("mesh") };
 
   namespace fg = fastgltf;
@@ -206,15 +205,6 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
 
   images.resize(gltf.images.size(), engine.errorImage());
 
-  const size_t mat_buffer_size{
-    sizeof(GltfMetallicRoughness::MaterialConstants) * gltf.materials.size()
-  };
-
-  scene.vk_scene_data->material_buffer =
-    vk::wr::Buffer{ engine.device(), "Material buffer", mat_buffer_size,
-                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    VMA_MEMORY_USAGE_CPU_TO_GPU };
-
   int data_index{ 0 };
   std::vector<GltfMetallicRoughness::MaterialConstants>
     scene_material_constants;
@@ -252,8 +242,7 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
 
       // set the uniform buffer for the material data
       .data_buffer = &scene.vk_scene_data->material_buffer,
-      .data_buffer_offset =
-        data_index * sizeof(GltfMetallicRoughness::MaterialConstants),
+      .data_index  = static_cast<size_t>(data_index),
     };
     // grab textures from gltf file
     if (mat.pbrData.baseColorTexture.has_value()) {
@@ -276,9 +265,13 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
     data_index++;
   }
 
-  scene.vk_scene_data->material_buffer
-    .uploadData<GltfMetallicRoughness::MaterialConstants>(
-      scene_material_constants);
+  scene.vk_scene_data->material_buffer = {
+    engine.device(),
+    "Material buffer",
+    scene_material_constants,
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    VMA_MEMORY_USAGE_CPU_TO_GPU,
+  };
 
   //----------------------------------------------------------------------------
   // Load meshes
@@ -384,8 +377,9 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
     std::shared_ptr<SceneNode> scene_node;
 
     if (node.meshIndex.has_value()) {
-      scene_node = std::make_shared<MeshNode>();
-      static_pointer_cast<MeshNode>(scene_node)->mesh = meshes[*node.meshIndex];
+      const auto p_mesh{ std::make_shared<MeshNode>() };
+      p_mesh->mesh = meshes[*node.meshIndex];
+      scene_node   = std::move(p_mesh);
     }
     else {
       scene_node = std::make_shared<SceneNode>();
@@ -396,8 +390,11 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
 
     std::visit(fg::visitor{
                  [&](fg::math::fmat4x4 matrix) {
-                   memcpy(&scene_node->local_transform, matrix.data(),
-                          sizeof(matrix));
+                   for (size_t i = 0; i < matrix.rows(); ++i) {
+                     for (size_t j = 0; i < matrix.columns(); ++j) {
+                       scene_node->local_transform[i][j] = matrix[i][j];
+                     }
+                   }
                  },
                  [&](fg::TRS transform) {
                    Vec3f tl{ transform.translation[0], transform.translation[1],
@@ -407,9 +404,9 @@ std::optional<std::shared_ptr<Scene>> loadGltf(const vk::VulkanEngine& engine,
                    Vec3f  sc{ transform.scale[0], transform.scale[1],
                              transform.scale[2] };
 
-                   Mat4f tm{ glm::translate(glm::mat4(1.f), tl) };
+                   Mat4f tm{ glm::translate(Mat4f(1.f), tl) };
                    Mat4f rm{ glm::toMat4(rot) };
-                   Mat4f sm{ glm::scale(glm::mat4(1.f), sc) };
+                   Mat4f sm{ glm::scale(Mat4f(1.f), sc) };
 
                    scene_node->local_transform = tm * rm * sm;
                  } },

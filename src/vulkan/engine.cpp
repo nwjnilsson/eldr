@@ -52,9 +52,9 @@ struct FrameData {
 
 // TODO: is this even used
 struct GpuMeshBuffers {
-  BufferResource<uint32_t>*  index_buffer_;
-  BufferResource<GpuVertex>* vertex_buffer_;
-  VkDeviceAddress            vertex_buffer_address;
+  BufferResource* index_buffer_;
+  BufferResource* vertex_buffer_;
+  VkDeviceAddress vertex_buffer_address;
 };
 
 struct VulkanEngine::EngineData {
@@ -221,20 +221,17 @@ void VulkanEngine::setupFrameData()
       { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 }
     };
 
+    constexpr size_t elem_count{ 1 };
     ed_->frames_in_flight.push_back({
       .descriptors = DescriptorAllocator{ 1000, frame_sizes },
       .scene_data_buffer =
         wr::Buffer<GpuSceneData>{
-          ed_->device,
-          "Scene data uniform buffer",
-          1,
-          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-          VMA_MEMORY_USAGE_CPU_TO_GPU,
-        },
+          ed_->device, "Scene data uniform buffer", elem_count,
+          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU },
       .model_data_buffer =
-        wr::Buffer<GpuModelData>{ ed_->device, "Model data uniform buffer", 1,
-                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                  VMA_MEMORY_USAGE_CPU_TO_GPU },
+        wr::Buffer<GpuModelData>{
+          ed_->device, "Model data uniform buffer", elem_count,
+          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU },
       .cmd_buf = nullptr, // Set later when drawing frames
     });
   }
@@ -303,8 +300,8 @@ void VulkanEngine::buildBuffers()
   log_->debug("Vertex deduplication before and after {} -> {}", total_vtx_count,
               vertices_.size());
 
-  vertex_buffer_->uploadData<GpuVertex>(vertices_);
-  index_buffer_->uploadData<uint32_t>(indices_);
+  vertex_buffer_->bindData(vertices_);
+  index_buffer_->bindData(indices_);
 }
 
 void VulkanEngine::setupRenderGraph()
@@ -318,24 +315,25 @@ void VulkanEngine::setupRenderGraph()
     ed_->device.findMaxMsaaSampleCount()
   };
 
+  auto*    graph{ ed_->render_graph.get() };
   VkFormat color_format{ ed_->swapchain.imageFormat() };
-  msaa_buffer_ = ed_->render_graph->add<TextureResource>(
+  msaa_buffer_ = graph->add<TextureResource>(
     "MSAA color buffer", TextureUsage::ColorBuffer, color_format, sample_count);
 
-  auto* depth_buf{ ed_->render_graph->add<TextureResource>(
+  auto* depth_buf{ graph->add<TextureResource>(
     "depth buffer", TextureUsage::DepthStencilBuffer,
     ed_->device.findDepthFormat(), sample_count) };
 
   // TODO: handle resolve buffers implicitly in render graph
-  back_buffer_ = ed_->render_graph->add<TextureResource>(
+  back_buffer_ = graph->add<TextureResource>(
     "back buffer", TextureUsage::BackBuffer, color_format);
 
   index_buffer_ =
-    ed_->render_graph->add<BufferResource<uint32_t>>("index buffer");
-  index_buffer_->uploadData(indices_);
+    graph->add<BufferResource>("index buffer", BufferUsage::IndexBuffer);
+  index_buffer_->bindData(indices_);
 
   vertex_buffer_ =
-    ed_->render_graph->add<BufferResource<GpuVertex>>("vertex buffer");
+    graph->add<BufferResource>("vertex buffer", BufferUsage::VertexBuffer);
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
                                      offsetof(GpuVertex, pos));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
@@ -346,10 +344,9 @@ void VulkanEngine::setupRenderGraph()
                                      offsetof(GpuVertex, uv_y));
   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
                                      offsetof(GpuVertex, color));
-  vertex_buffer_->setElementSize(sizeof(GpuVertex));
-  vertex_buffer_->uploadData(vertices_);
+  vertex_buffer_->bindData(vertices_);
 
-  auto* main_stage = ed_->render_graph->add<GraphicsStage>("main stage");
+  auto* main_stage{ graph->add<GraphicsStage>("main stage") };
   // Write order matters here (for now)
   main_stage->writesTo(msaa_buffer_); // clear value index 0 is clear color
   main_stage->writesTo(depth_buf);    // clear value index 1 is depth stencil
@@ -374,26 +371,30 @@ void VulkanEngine::setupRenderGraph()
   // it is (for now) okay to only add a single layout for each resource
   // descriptor that applies to all frames. for (const auto& descriptor :
   // descriptors_)
-  main_stage->addDescriptorLayout(ed_->scene_data_descriptor_layout);
+  // main_stage->addDescriptorLayout(ed_->scene_data_descriptor_layout);
 }
 
 void VulkanEngine::recreateSwapchain()
 {
+  const auto& device{ ed_->device };
+  auto&       swapchain{ ed_->swapchain };
+  auto&       graph{ ed_->render_graph };
+  auto&       overlay{ ed_->imgui_overlay };
+
   window_.waitForFocus();
-  ed_->device.waitIdle();
-  ed_->swapchain.setupSwapchain(
-    ed_->device, ed_->surface, VkExtent2D{ window_.width(), window_.height() });
+  device.waitIdle();
+  swapchain.setupSwapchain(device, ed_->surface,
+                           { window_.width(), window_.height() });
   // TODO: experiment with render graph creation/compilation. It is not
   // necessary to rebuild the whole thing on every swapchain invalidation.
-  ed_->render_graph.reset();
-  ed_->render_graph =
-    std::make_unique<RenderGraph>(ed_->device, ed_->swapchain);
+  graph.reset();
+  graph = std::make_unique<RenderGraph>(device, swapchain);
   setupRenderGraph();
   // Reset first to destroy ImGui context
-  ed_->imgui_overlay.reset();
-  ed_->imgui_overlay = std::make_unique<ImGuiOverlay>(
-    ed_->device, ed_->swapchain, ed_->render_graph.get(), back_buffer_);
-  ed_->render_graph->compile();
+  overlay.reset();
+  overlay = std::make_unique<ImGuiOverlay>(device, swapchain, graph.get(),
+                                           back_buffer_);
+  graph->compile();
 }
 
 void VulkanEngine::updateScene(uint32_t current_image)
@@ -420,7 +421,6 @@ void VulkanEngine::updateScene(uint32_t current_image)
     ed_->swapchain.extent().width /
       static_cast<float>(ed_->swapchain.extent().height),
     0.1f, 10.0f) };
-  GpuModelData model_data[]{ { .model_mat = model } };
   proj[1][1] *= -1;
   scene_data_.proj               = proj;
   scene_data_.view               = view;
@@ -428,7 +428,8 @@ void VulkanEngine::updateScene(uint32_t current_image)
   scene_data_.ambient_color      = {};
   scene_data_.sunlight_color     = {};
   scene_data_.sunlight_direction = {};
-  GpuSceneData scene_data[]{ scene_data_ };
+  const GpuModelData model_data[]{ { .model_mat = model } };
+  const GpuSceneData scene_data[]{ scene_data_ };
   ed_->frames_in_flight[current_image].scene_data_buffer.uploadData(scene_data);
   ed_->frames_in_flight[current_image].model_data_buffer.uploadData(model_data);
 }
@@ -575,7 +576,7 @@ void VulkanEngine::drawFrame()
 
   const auto& cb{ device.requestCommandBuffer() };
   frame.cmd_buf = &cb;
-  ed_->render_graph->render(image_index, cb);
+  ed_->render_graph->render(cb);
 
   VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT

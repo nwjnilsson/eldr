@@ -159,7 +159,7 @@ void Swapchain::setupSwapchain(const Device& device, const Surface& surface,
   }
 
   device.logger()->trace("Creating swapchain...");
-  sc_data_ = std::make_shared<SwapchainImpl>(device, surface);
+  sc_data_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
 
   // Clear data from old swapchain
   image_views_.clear();

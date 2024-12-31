@@ -36,6 +36,8 @@ struct GpuVertex {
   Vec3f   normal;
   float   uv_y;
   Color4f color;
+
+  bool operator==(const GpuVertex&) const = default;
 };
 
 class VulkanEngine {

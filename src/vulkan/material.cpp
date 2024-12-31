@@ -24,8 +24,7 @@ MaterialInstance GltfMetallicRoughness::writeMaterial(
     descriptor_allocator.allocate(device, material_layout);
 
   writer.reset();
-  writer.writeUniformBuffer<MaterialConstants>(0, data_buffer,
-                                               resources.data_buffer_offset);
+  writer.writeUniformBuffer(0, *resources.data_buffer, resources.data_index);
   writer.writeCombinedImageSampler(1, *resources.color_texture,
                                    *resources.color_sampler,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

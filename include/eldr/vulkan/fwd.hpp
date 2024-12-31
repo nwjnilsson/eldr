@@ -16,7 +16,7 @@ struct GpuMeshBuffers;
 
 // RenderGraph types
 class RenderGraph;
-template <typename T> class BufferResource;
+class BufferResource;
 class TextureResource;
 class GraphicsStage;
 class PhysicalStage;

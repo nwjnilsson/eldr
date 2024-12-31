@@ -238,7 +238,7 @@ Device::Device(const Instance& instance, const Surface& surface,
   VmaVulkanFunctions vma_vulkan_functions{};
   vma_vulkan_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
   vma_vulkan_functions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
-  const VmaAllocatorCreateInfo allocator_ci{
+  VmaAllocatorCreateInfo allocator_ci{
     .flags                          = {},
     .physicalDevice                 = physical_device,
     .device                         = VK_NULL_HANDLE, // set later
