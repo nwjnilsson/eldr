@@ -141,7 +141,7 @@ const CommandBuffer& CommandBuffer::beginRenderPass(
 const CommandBuffer&
 CommandBuffer::beginRendering(const VkRenderingInfoKHR& render_info) const
 {
-  vkCmdBeginRenderingKHR(cb_data_->command_buffer_, &render_info);
+  vkCmdBeginRendering(cb_data_->command_buffer_, &render_info);
   return *this;
 }
 
@@ -164,7 +164,7 @@ const CommandBuffer& CommandBuffer::endRenderPass() const
 
 const CommandBuffer& CommandBuffer::endRendering() const
 {
-  vkCmdEndRenderingKHR(cb_data_->command_buffer_);
+  vkCmdEndRendering(cb_data_->command_buffer_);
   return *this;
 }
 
@@ -229,7 +229,7 @@ CommandBuffer::blitImage(const Image& src_image, VkImageLayout src_layout,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<Byte>& buffer,
+const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
                                                     VkIndexType  index_type,
                                                     VkDeviceSize offset) const
 {
@@ -407,14 +407,12 @@ CommandBuffer::copyBufferToImage(const Buffer<T>& buffer, Image& image,
 }
 
 const CommandBuffer&
-CommandBuffer::copyDataToImage(const void* data, VkDeviceSize buffer_size,
-                               Image&                   image,
+CommandBuffer::copyDataToImage(std::span<const byte> data, Image& image,
                                const VkBufferImageCopy& copy_region) const
 {
   return copyBufferToImage(
     createStagingBuffer(
-      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data,
-      buffer_size),
+      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data),
     image, copy_region);
 }
 
@@ -432,11 +430,11 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const Buffer<uint8_t>&
-CommandBuffer::createStagingBuffer(std::string_view name, const uint8_t* data,
-                                   VkDeviceSize buffer_size) const
+const Buffer<std::byte>&
+CommandBuffer::createStagingBuffer(std::string_view      name,
+                                   std::span<const byte> data) const
 {
-  staging_buffers_.emplace_back(cb_data_->device_, name, data, buffer_size,
+  staging_buffers_.emplace_back(cb_data_->device_, name, data,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                 VMA_MEMORY_USAGE_CPU_ONLY);
   return staging_buffers_.back();

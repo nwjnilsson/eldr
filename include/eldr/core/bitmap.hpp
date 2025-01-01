@@ -9,6 +9,7 @@
 #include <eldr/core/struct.hpp>
 
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,7 @@ namespace eldr {
 
 class Bitmap {
   ELDR_IMPORT_CORE_TYPES();
+  using byte = std::byte;
 
 public:
   enum class PixelFormat {
@@ -47,7 +49,7 @@ public:
   Bitmap(std::string_view name, PixelFormat px_format,
          Struct::Type component_format, Vec2u size, size_t channel_count,
          const std::vector<std::string>& channel_names = {},
-         uint8_t*                        data          = nullptr);
+         byte*                           data          = nullptr);
 
   Bitmap(const std::filesystem::path& path, FileFormat = FileFormat::Auto);
 
@@ -68,17 +70,20 @@ public:
   /// Return the component format of this bitmap
   Struct::Type componentFormat() const { return component_format_; }
 
-  /// Return a pointer to the underlying bitmap storage
-  void* data() { return data_.get(); }
-
-  /// Return a pointer to the underlying bitmap storage
-  const void* data() const { return data_.get(); }
-
   /// Return a pointer to the underlying data
-  uint8_t* uint8Data() { return data_.get(); }
+  byte* data() { return data_.get(); }
 
   /// Return a pointer to the underlying data (const)
-  const uint8_t* uint8Data() const { return data_.get(); }
+  const byte* data() const { return data_.get(); }
+
+  /// Return a span of the underlying data
+  std::span<byte> bytes() { return std::span{ data_.get(), bufferSize() }; }
+
+  /// Return a span of the underlying data (const)
+  std::span<const byte> bytes() const
+  {
+    return std::span{ data_.get(), bufferSize() };
+  }
 
   /// Return the bitmap dimensions in pixels
   const Vec2u& size() const { return size_; }
@@ -153,16 +158,16 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  std::string                name_{ "undefined" };
-  Logger                     log_{ requestLogger("bitmap") };
-  PixelFormat                pixel_format_;
-  Struct::Type               component_format_;
-  Vec2u                      size_{};
-  std::unique_ptr<Struct>    struct_{};
-  bool                       srgb_gamma_{ false };
-  bool                       premultiplied_alpha_{ false };
-  std::unique_ptr<uint8_t[]> data_{};
-  bool                       owns_data_{ false };
+  std::string             name_{ "undefined" };
+  Logger                  log_{ requestLogger("bitmap") };
+  PixelFormat             pixel_format_;
+  Struct::Type            component_format_;
+  Vec2u                   size_{};
+  std::unique_ptr<Struct> struct_{};
+  bool                    srgb_gamma_{ false };
+  bool                    premultiplied_alpha_{ false };
+  std::unique_ptr<byte[]> data_{};
+  bool                    owns_data_{ false };
 };
 
 extern std::ostream& operator<<(std::ostream&              os,

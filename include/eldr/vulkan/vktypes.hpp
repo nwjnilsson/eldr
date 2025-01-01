@@ -1,12 +1,9 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/descriptorallocator.hpp>
-#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
 // Misc Vulkan types
-
 namespace eldr::vk {
 struct GpuResourceAllocation {
   const wr::Device  device_;

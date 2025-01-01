@@ -69,7 +69,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   ImFont* im_font =
     io.Fonts->AddFontFromFileTTF(font_file_path.c_str(), font_size);
 
-  uint8_t* font_texture_data{};
+  uint8_t* font_texture_data;
   int      font_texture_width{ 0 };
   int      font_texture_height{ 0 };
   io.Fonts->GetTexDataAsRGBA32(&font_texture_data, &font_texture_width,
@@ -97,7 +97,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
               { font_texture_width, font_texture_height },
               font_texture_channels,
               {},
-              font_texture_data },
+              reinterpret_cast<byte_t*>(font_texture_data) },
       font_mip_levels,
     };
   }

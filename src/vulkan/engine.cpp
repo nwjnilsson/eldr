@@ -615,6 +615,8 @@ void VulkanEngine::drawFrame()
 
 std::string VulkanEngine::deviceName() const { return ed_->device.name(); }
 
+const wr::Device& VulkanEngine::device() const { return ed_->device; }
+
 void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
 {
   const auto& device{ ed_->device };

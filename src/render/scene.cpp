@@ -3,6 +3,7 @@
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/descriptorallocator.hpp> // SceneData
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/material.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>

@@ -2,13 +2,8 @@
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
-#include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
-#include <eldr/vulkan/wrappers/swapchain.hpp>
 
 namespace eldr::vk {
 void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
@@ -433,7 +428,7 @@ void RenderGraph::compile()
   log_->trace("Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
     log_->trace("   - {}", buffer_resource->name_);
-    buffer_resource->physical_ = std::make_shared<PhysicalBuffer>(device_);
+    buffer_resource->physical_ = std::make_shared<PhysicalBuffer>();
   }
 
   log_->trace("Allocating physical resource for texture:");
@@ -542,7 +537,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
   for (auto& buffer_resource : buffer_resources_) {
     if (buffer_resource->data_ != nullptr) {
       // There is data to be uploaded to the gpu
-      const size_t data_size{ buffer_resource->data_->size };
+      const size_t data_size{ buffer_resource->data_->size_bytes() };
       auto&        physical{ *dynamic_pointer_cast<PhysicalBuffer>(
         buffer_resource->physical_) };
       if (data_size == 0) {
@@ -577,12 +572,12 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
             assert(false);
 
           physical.buffer_ =
-            wr::Buffer<Byte>{ device_, "render graph buffer", data_size,
-                              buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
+            wr::Buffer<std::byte>{ device_, "render graph buffer", data_size,
+                                   buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
         }
       }
       // Upload data
-      physical.buffer_.uploadData(buffer_resource->data_->p_data, data_size);
+      physical.buffer_.uploadData(*buffer_resource->data_);
       // Reset data pointer once it has been uploaded to gpu
       buffer_resource->data_.reset();
     }

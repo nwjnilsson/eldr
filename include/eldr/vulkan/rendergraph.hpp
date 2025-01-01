@@ -1,6 +1,8 @@
 #pragma once
 #include <eldr/vulkan/wrappers/buffer.hpp>
+#include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 #include <eldr/vulkan/wrappers/renderpass.hpp>
@@ -8,6 +10,7 @@
 
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -88,21 +91,16 @@ public:
   /// drawn.
   template <std::ranges::contiguous_range R> void bindData(const R& data)
   {
-    std::span s(data);
-    using D = typename std::decay_t<decltype(s)>;
-    data_   = std::make_unique<DataRange>(s.data(), s.size_bytes(), sizeof(D));
+    using T = std::ranges::range_value_t<R>;
+    std::span<const T> s(data);
+    data_ = std::make_unique<std::span<const byte_t>>(std::as_bytes(s));
   }
 
 private:
   const BufferUsage                              usage_;
   std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
   // Data to upload to the GPU on a call to render().
-  struct DataRange {
-    const void* p_data;
-    size_t      size;
-    size_t      element_size;
-  };
-  std::unique_ptr<DataRange> data_;
+  std::unique_ptr<std::span<const byte_t>> data_;
 };
 
 enum class TextureUsage {
@@ -284,17 +282,17 @@ class PhysicalBuffer : public PhysicalResource {
   friend RenderGraph;
 
 public:
-  explicit PhysicalBuffer(const wr::Device& device);
+  explicit PhysicalBuffer()             = default;
   PhysicalBuffer(const PhysicalBuffer&) = delete;
   PhysicalBuffer(PhysicalBuffer&&)      = delete;
-  ~PhysicalBuffer()                     = default;
+  ~PhysicalBuffer() override            = default;
 
   PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
   // Buffer of any kind of data. Can be used as index buffer or vertex buffer.
-  wr::Buffer<Byte> buffer_;
+  wr::Buffer<byte_t> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {

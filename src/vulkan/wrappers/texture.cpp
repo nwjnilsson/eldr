@@ -74,8 +74,7 @@ Texture::Texture(const Device& device, const Bitmap& bitmap,
   device.execute([&](const CommandBuffer& cb) {
     cb.transitionImageLayout(*this, VK_IMAGE_LAYOUT_UNDEFINED,
                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-      .copyDataToImage(bitmap.uint8Data(), bitmap.bufferSize(), *this,
-                       copy_region)
+      .copyDataToImage(bitmap.bytes(), *this, copy_region)
       // The transition below is not necessary when generating mipmaps using the
       // blit command, since each level will be transitioned to
       // VK_IMAGE_LAYOUT_SHADER_READ_ONLY after the blit command is finished.

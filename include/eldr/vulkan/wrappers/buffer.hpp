@@ -2,6 +2,8 @@
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 
+#include <span>
+
 namespace eldr::vk::wr {
 template <typename T> class Buffer {
 private:
@@ -55,28 +57,18 @@ public:
       .pUserData      = {},
       .priority       = {},
     };
-    b_data_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci, name);
+    b_data_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci);
     vmaSetAllocationName(device.allocator(), b_data_->allocation_,
                          fmt::format("{} allocation", name).c_str());
   }
 
   Buffer(
-    const Device& device, std::string_view name, std::span<T> data,
+    const Device& device, std::string_view name, std::span<const T> data,
     VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
     VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
     : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
   {
     uploadData(data);
-  }
-
-  Buffer(
-    const Device& device, std::string_view name, const void* data,
-    VkDeviceSize buffer_size, VkBufferUsageFlags buffer_usage,
-    VmaMemoryUsage           memory_usage,
-    VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
-    : Buffer(device, name, 1, buffer_usage, memory_usage, alloc_flags)
-  {
-    uploadData(data, buffer_size);
   }
 
   // VkDeviceSize    size() const { return size_; }
@@ -95,22 +87,15 @@ public:
   /// @return bool `true` if size_ == 0.
   [[nodiscard]] bool empty() const { return size_ == 0; }
 
-  /// @brief Copies the data pointed to by `data` to the mapped GPU memory.
-  /// @param data Pointer to the data to copy to the GPU buffer.
-  /// @param data_size The size, in bytes, to copy.
-  void uploadData(const void* data, size_t data_size) const
-  {
-    assert(data_size > 0);
-    assert(b_data_->alloc_info_.pMappedData != nullptr);
-    std::memcpy(b_data_->alloc_info_.pMappedData, data, data_size);
-  }
-
   /// @brief Copies `data` to the mapped GPU memory.
   /// @tparam T The type of data to upload.
   /// @param data The span of data to upload to the GPU buffer.
   void uploadData(std::span<const T> data) const
   {
-    uploadData(data.data(), data.size_bytes());
+    assert(data.size() > 0);
+    assert(b_data_->alloc_info_.pMappedData != nullptr);
+    std::memcpy(b_data_->alloc_info_.pMappedData, data.data(),
+                data.size_bytes());
   }
   // void copyFromBuffer(const GpuBuffer&, const CommandPool&);
 

@@ -2,7 +2,8 @@
 
 #include <eldr/core/math.hpp>
 using Float = typename glm::float32_t;
-using Byte  = std::byte;
+
+using byte_t = std::byte;
 
 namespace eldr {
 class Bitmap;

@@ -18,10 +18,9 @@ extern "C" {
 
 namespace eldr {
 
-// TODO: use span instead of uint8_t
 Bitmap::Bitmap(std::string_view name, PixelFormat px_format,
                Struct::Type component_format, Vec2u size, size_t channel_count,
-               const std::vector<std::string>& channel_names, uint8_t* data)
+               const std::vector<std::string>& channel_names, byte* data)
   : name_(name), pixel_format_(px_format), component_format_(component_format),
     size_(size), data_(data), owns_data_(false)
 
@@ -36,7 +35,7 @@ Bitmap::Bitmap(std::string_view name, PixelFormat px_format,
   rebuildStruct(channel_count, channel_names);
 
   if (!data_) {
-    data_      = std::make_unique<uint8_t[]>(bufferSize());
+    data_      = std::make_unique<byte[]>(bufferSize());
     owns_data_ = true;
   }
 }
@@ -49,8 +48,8 @@ Bitmap::Bitmap(const Bitmap& bitmap)
     premultiplied_alpha_(bitmap.premultiplied_alpha_), owns_data_(true)
 {
   const size_t size{ bufferSize() };
-  data_ = std::make_unique<uint8_t[]>(size);
-  memcpy(data_.get(), bitmap.data_.get(), size);
+  data_ = std::make_unique<byte[]>(size);
+  memcpy(data(), bitmap.data(), size);
 }
 
 Bitmap::Bitmap(Bitmap&& other) noexcept
@@ -410,20 +409,20 @@ void Bitmap::readJpeg(Stream* stream)
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
 
-  data_      = std::make_unique<uint8_t[]>(bufferSize());
+  data_      = std::make_unique<byte[]>(bufferSize());
   owns_data_ = true;
 
-  auto scanlines = std::make_unique<uint8_t*[]>(size_.y);
+  auto scanlines = std::make_unique<byte*[]>(size_.y);
 
   for (size_t i = 0; i < size_.y; ++i)
-    scanlines[i] = uint8Data() + row_stride * i;
+    scanlines[i] = data() + row_stride * i;
 
   // Process scanline by scanline
   int counter = 0;
   while (cinfo.output_scanline < cinfo.output_height)
-    counter +=
-      jpeg_read_scanlines(&cinfo, scanlines.get() + counter,
-                          (JDIMENSION) (size_.y - cinfo.output_scanline));
+    counter += jpeg_read_scanlines(
+      &cinfo, reinterpret_cast<unsigned char**>(scanlines.get()) + counter,
+      (JDIMENSION) (size_.y - cinfo.output_scanline));
 
   // Release the libjpeg data structures
   jpeg_finish_decompress(&cinfo);
@@ -629,16 +628,16 @@ void Bitmap::readPng(Stream* stream)
               fs ? fs->path().string() : "<stream>", size_.x, size_.y,
               pixel_format_, component_format_);
 
-  size_t size = bufferSize();
-  data_       = std::make_unique<uint8_t[]>(size);
-  owns_data_  = true;
+  const size_t size{ bufferSize() };
+  data_      = std::make_unique<byte[]>(size);
+  owns_data_ = true;
 
   rows             = new png_bytep[size_.y];
   size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
   assert(row_bytes == size / size_.y);
 
   for (size_t i = 0; i < size_.y; i++)
-    rows[i] = uint8Data() + i * row_bytes;
+    rows[i] = reinterpret_cast<png_byte*>(data()) + i * row_bytes;
 
   png_read_image(png_ptr, rows);
   png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
@@ -655,10 +654,10 @@ void Bitmap::rgbToRgba()
   rebuildStruct();
 
   if (owns_data_) {
-    size_t                     size   = bufferSize();
-    std::unique_ptr<uint8_t[]> tmp    = std::make_unique<uint8_t[]>(size);
-    uint8_t*                   p_tmp  = tmp.get();
-    uint8_t*                   p_data = uint8Data();
+    size_t size{ bufferSize() };
+    auto   tmp{ std::make_unique<byte[]>(size) };
+    byte*  p_tmp{ tmp.get() };
+    byte*  p_data{ data() };
 
     // TODO: This may need to be optimized for high resolution textures.
     // A 1024x1024 texture was converted in about a millisecond on my laptop.
@@ -672,11 +671,16 @@ void Bitmap::rgbToRgba()
         p_tmp[rgba_index]     = p_data[rgb_index];
         p_tmp[rgba_index + 1] = p_data[rgb_index + 1];
         p_tmp[rgba_index + 2] = p_data[rgb_index + 2];
-        p_tmp[rgba_index + 3] = 0xff;
+        p_tmp[rgba_index + 3] = byte{ 0xff };
       }
     }
     data_ = std::move(tmp);
   }
+  else
+    // TODO: One could simply allocate new data that the bitmap owns and copy
+    // the old RGB data in this case
+    Throw("rgbToRgba(): Alpha channel cannot be added when the data isn't "
+          "owned by the bitmap");
 }
 
 Bitmap Bitmap::createCheckerboard()
@@ -706,7 +710,7 @@ Bitmap Bitmap::createCheckerboard()
   for (uint32_t y = 0; y < checkerboard.height(); y++) {
     for (uint32_t x = 0; x < checkerboard.width(); x++) {
       const int color_id = getColor(x, y, square_dimension, colors.size());
-      std::memcpy(checkerboard.uint8Data(), &colors[color_id][0],
+      std::memcpy(checkerboard.data(), &colors[color_id][0],
                   channel_count * sizeof(colors[color_id][0]));
     }
   }
@@ -725,7 +729,7 @@ Bitmap Bitmap::createDefaultWhite()
   Bitmap default_white{ "Default white", pixel_format, component_format, size,
                         channel_count };
   std::vector<uint8_t> solid_white(default_white.bufferSize(), 0xFF);
-  std::memcpy(default_white.uint8Data(), solid_white.data(),
+  std::memcpy(default_white.data(), solid_white.data(),
               default_white.bufferSize());
   return default_white;
 }

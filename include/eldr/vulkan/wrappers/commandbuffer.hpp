@@ -10,6 +10,8 @@
 namespace eldr::vk::wr {
 
 class CommandBuffer {
+  using byte = std::byte;
+
 public:
   CommandBuffer() = default;
   CommandBuffer(const Device& device_, const CommandPool& command_pool,
@@ -34,7 +36,7 @@ public:
   const CommandBuffer& reset() const;
 
   const CommandBuffer&
-  bindIndexBuffer(const Buffer<Byte>& buffer,
+  bindIndexBuffer(const Buffer<byte>& buffer,
                   VkIndexType         index_type = VK_INDEX_TYPE_UINT32,
                   VkDeviceSize        offset     = 0) const;
 
@@ -90,8 +92,7 @@ public:
   const CommandBuffer& copyBufferToImage(const Buffer<T>& buffer, Image& image,
                                          const VkBufferImageCopy&) const;
 
-  const CommandBuffer& copyDataToImage(const void*  data,
-                                       VkDeviceSize buffer_size, Image& image,
+  const CommandBuffer& copyDataToImage(std::span<const byte> data, Image& image,
                                        const VkBufferImageCopy&) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
@@ -107,9 +108,8 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const Buffer<uint8_t>&
-  createStagingBuffer(std::string_view name, const uint8_t* data,
-                      VkDeviceSize buffer_size) const;
+  [[nodiscard]] const Buffer<byte>&
+  createStagingBuffer(std::string_view name, std::span<const byte> data) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
   [[nodiscard]] VkCommandBuffer    get() const;
@@ -124,7 +124,7 @@ private:
   class CommandBufferImpl;
   std::shared_ptr<CommandBufferImpl> cb_data_;
 
-  Fence                                wait_fence_;
-  mutable std::vector<Buffer<uint8_t>> staging_buffers_;
+  Fence                             wait_fence_;
+  mutable std::vector<Buffer<byte>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

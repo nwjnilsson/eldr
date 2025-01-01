@@ -9,6 +9,7 @@ src = [
   'wrappers/fence.cpp',
   'wrappers/framebuffer.cpp',
   'wrappers/image.cpp',
+  'wrappers/imageview.cpp',
   'wrappers/instance.cpp',
   'wrappers/pipeline.cpp',
   'wrappers/sampler.cpp',

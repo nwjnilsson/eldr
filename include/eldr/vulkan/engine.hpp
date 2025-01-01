@@ -51,7 +51,7 @@ public:
   VulkanEngine(const Window& window);
   ~VulkanEngine();
 
-  const wr::Device& device() const;
+  const wr::Device& device() const; // TODO: refactor and remove
   void addScene(const std::string& name, const std::shared_ptr<Scene>& scene)
   {
     loaded_scenes[name] = scene;
