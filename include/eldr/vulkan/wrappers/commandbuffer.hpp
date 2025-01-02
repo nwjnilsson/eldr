@@ -1,7 +1,6 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/fence.hpp>
 
 #include <span>

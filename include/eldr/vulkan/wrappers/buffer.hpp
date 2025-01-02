@@ -1,6 +1,7 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/vktypes.hpp>
+#include <eldr/vulkan/wrappers/device.hpp>
 
 #include <span>
 
