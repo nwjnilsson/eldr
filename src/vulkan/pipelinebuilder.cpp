@@ -256,7 +256,7 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
   pipeline_ci.pDepthStencilState  = &depth_stencil_;
   pipeline_ci.pColorBlendState    = &color_blending;
   pipeline_ci.pDynamicState       = &dynamic_state;
-  pipeline_ci.renderPass          = {}; // dynamic rendering
+  pipeline_ci.renderPass          = VK_NULL_HANDLE; // dynamic rendering
   pipeline_ci.subpass             = 0;
   pipeline_ci.basePipelineIndex   = -1;
 

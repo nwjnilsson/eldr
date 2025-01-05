@@ -125,6 +125,7 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   std::vector<const char*> device_extensions;
   device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+  device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 #ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
   device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif

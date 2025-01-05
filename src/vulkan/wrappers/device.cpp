@@ -86,11 +86,11 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
     required_extensions.erase(extension.extensionName);
   }
   // Queue families
-  QueueFamilyIndices indices = findQueueFamilies(device, surface);
+  const QueueFamilyIndices indices{ findQueueFamilies(device, surface) };
 
   // Swap chain
-  SwapchainSupportDetails swapchain_support =
-    getSwapchainSupportDetails(device, surface);
+  SwapchainSupportDetails swapchain_support{ getSwapchainSupportDetails(
+    device, surface) };
 
   VkPhysicalDeviceFeatures supported_features;
   vkGetPhysicalDeviceFeatures(device, &supported_features);
@@ -135,7 +135,10 @@ selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
       return device;
     }
   }
-  // Return integrated GPU if no discrete one is present
+  // Return integrated GPU if no discrete one is present. TODO: I haven't really
+  // thought about what happens when the integrated gpu is returned while the
+  // rest of the code may depend on certain extensions being available. I guess
+  // this would cause problems but I'll leave that to future me.
   return gpus[0];
 }
 } // namespace
@@ -220,10 +223,16 @@ Device::Device(const Instance& instance, const Surface& surface,
   device_features.samplerAnisotropy = VK_TRUE;
   device_features.sampleRateShading = VK_TRUE;
 
+  const VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+    .pNext = {},
+    .dynamicRendering = VK_TRUE,
+  };
+
   // Logical device create info
   const VkDeviceCreateInfo device_ci{
     .sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                 = {},
+    .pNext                 = &dynamic_rendering_features,
     .flags                 = {},
     .queueCreateInfoCount  = static_cast<uint32_t>(queue_create_infos.size()),
     .pQueueCreateInfos     = queue_create_infos.data(),
