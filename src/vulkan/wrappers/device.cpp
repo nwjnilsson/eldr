@@ -69,7 +69,7 @@ getSwapchainSupportDetails(VkPhysicalDevice physical_device,
 }
 
 bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
-                      std::vector<const char*> device_extensions)
+                      const std::vector<const char*>& device_extensions)
 {
   // Enumerate physical device extension
   uint32_t                           props_count;
@@ -80,10 +80,10 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
                                        properties.data());
 
   // Check extensions
-  std::set<std::string> required_extensions(device_extensions.begin(),
-                                            device_extensions.end());
+  std::set<std::string> extensions(device_extensions.begin(),
+                                   device_extensions.end());
   for (const auto& extension : properties) {
-    required_extensions.erase(extension.extensionName);
+    extensions.erase(extension.extensionName);
   }
   // Queue families
   const QueueFamilyIndices indices{ findQueueFamilies(device, surface) };
@@ -95,7 +95,7 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
   VkPhysicalDeviceFeatures supported_features;
   vkGetPhysicalDeviceFeatures(device, &supported_features);
 
-  return required_extensions.empty() && indices.isComplete() &&
+  return extensions.empty() && indices.isComplete() &&
          !swapchain_support.formats.empty() &&
          !swapchain_support.present_modes.empty() &&
          supported_features.samplerAnisotropy;
@@ -103,7 +103,7 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface,
 
 VkPhysicalDevice
 selectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface,
-                     std::vector<const char*>& device_extensions)
+                     const std::vector<const char*>& device_extensions)
 {
   uint32_t gpu_count;
   VkResult err = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
@@ -190,12 +190,12 @@ Device::DeviceImpl::~DeviceImpl()
 // Device
 //------------------------------------------------------------------------------
 Device::Device(const Instance& instance, const Surface& surface,
-               std::vector<const char*>& required_extensions, Logger logger)
+               const std::vector<const char*>& device_extensions, Logger logger)
   : log_(logger)
 {
   // Select physical device
-  VkPhysicalDevice physical_device =
-    selectPhysicalDevice(instance.get(), surface.get(), required_extensions);
+  VkPhysicalDevice physical_device{ selectPhysicalDevice(
+    instance.get(), surface.get(), device_extensions) };
 
   vkGetPhysicalDeviceProperties(physical_device, &physical_device_props_);
 
@@ -223,23 +223,31 @@ Device::Device(const Instance& instance, const Surface& surface,
   device_features.samplerAnisotropy = VK_TRUE;
   device_features.sampleRateShading = VK_TRUE;
 
+  VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_features{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+    .pNext = {},
+    .bufferDeviceAddress              = VK_TRUE,
+    .bufferDeviceAddressCaptureReplay = VK_FALSE,
+    .bufferDeviceAddressMultiDevice   = VK_FALSE,
+  };
+
   const VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features{
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-    .pNext = {},
+    .pNext = &buffer_device_features,
     .dynamicRendering = VK_TRUE,
   };
 
   // Logical device create info
   const VkDeviceCreateInfo device_ci{
-    .sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                 = &dynamic_rendering_features,
-    .flags                 = {},
-    .queueCreateInfoCount  = static_cast<uint32_t>(queue_create_infos.size()),
-    .pQueueCreateInfos     = queue_create_infos.data(),
-    .enabledLayerCount     = {},
-    .ppEnabledLayerNames   = {},
-    .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
-    .ppEnabledExtensionNames = required_extensions.data(),
+    .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .pNext                   = &dynamic_rendering_features,
+    .flags                   = {},
+    .queueCreateInfoCount    = static_cast<uint32_t>(queue_create_infos.size()),
+    .pQueueCreateInfos       = queue_create_infos.data(),
+    .enabledLayerCount       = {},
+    .ppEnabledLayerNames     = {},
+    .enabledExtensionCount   = static_cast<uint32_t>(device_extensions.size()),
+    .ppEnabledExtensionNames = device_extensions.data(),
     .pEnabledFeatures        = &device_features,
   };
 
@@ -248,9 +256,9 @@ Device::Device(const Instance& instance, const Surface& surface,
   vma_vulkan_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
   vma_vulkan_functions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
   VmaAllocatorCreateInfo allocator_ci{
-    .flags                          = {},
-    .physicalDevice                 = physical_device,
-    .device                         = VK_NULL_HANDLE, // set later
+    .flags          = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+    .physicalDevice = physical_device,
+    .device         = VK_NULL_HANDLE, // set later
     .preferredLargeHeapBlockSize    = {},
     .pAllocationCallbacks           = nullptr,
     .pDeviceMemoryCallbacks         = nullptr,

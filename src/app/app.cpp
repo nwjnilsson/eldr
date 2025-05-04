@@ -76,14 +76,16 @@ void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/, double /*x_offset*/,
 
 void EldrApp::run()
 {
-  auto scene{ Scene::load(*vk_engine_, { model_path }) };
+  auto p_scene{ Scene::load(*vk_engine_, { model_path }) };
+  assert(p_scene);
+  Scene scene{ *p_scene.value() };
   // vk_engine_->addScene(scene);
 
   while (!window_->shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
     updateImGui();
-    vk_engine_->drawFrame();
+    vk_engine_->drawFrame(scene);
     frame_time_ = stop_watch_.seconds();
   }
 }

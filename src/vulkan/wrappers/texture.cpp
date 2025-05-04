@@ -1,5 +1,4 @@
 #include <eldr/core/fstream.hpp>
-#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/texture.hpp>

@@ -201,8 +201,8 @@ private:
   std::vector<const RenderResource*> writes_;
   std::vector<const RenderResource*> reads_;
 
-  std::vector<VkDescriptorSetLayout> descriptor_layouts_;
-  std::vector<VkPushConstantRange>   push_constant_ranges_;
+  // std::vector<VkDescriptorSetLayout> descriptor_layouts_;
+  // std::vector<VkPushConstantRange>   push_constant_ranges_;
   std::function<void(const PhysicalStage&, const wr::CommandBuffer&)>
     on_record_{ [](auto&, auto&) {} };
 };

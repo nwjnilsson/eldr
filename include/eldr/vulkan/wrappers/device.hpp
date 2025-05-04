@@ -26,7 +26,7 @@ class Device {
 public:
   Device() = default;
   Device(const Instance&, const Surface&,
-         std::vector<const char*>& required_extensions, Logger logger);
+         const std::vector<const char*>& device_extensions, Logger logger);
 
   [[nodiscard]] std::string name() const
   {

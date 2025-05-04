@@ -2,6 +2,7 @@
 
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/math.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
@@ -36,9 +37,11 @@ private:
   Logger              log_{ requestLogger("imgui-overlay") };
   float               scale_{ 1.0f };
 
-  BufferResource* index_buffer_{ nullptr };
-  BufferResource* vertex_buffer_{ nullptr };
-  GraphicsStage*  stage_{ nullptr };
+  // BufferResource* index_buffer_{ nullptr };
+  // BufferResource* vertex_buffer_{ nullptr };
+  GraphicsStage*         stage_{ nullptr };
+  wr::Buffer<uint32_t>   index_buffer_;
+  wr::Buffer<ImDrawVert> vertex_buffer_;
 
   wr::Texture             imgui_texture_;
   wr::Sampler             font_sampler_;

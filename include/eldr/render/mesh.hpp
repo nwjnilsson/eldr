@@ -3,7 +3,7 @@
 #include <eldr/core/math.hpp>
 #include <eldr/render/shape.hpp>
 
-#include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -60,7 +60,6 @@ public:
   {
     return surfaces_;
   }
-
 
 protected:
   std::vector<Point3f>    vtx_positions_;

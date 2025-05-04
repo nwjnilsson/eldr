@@ -128,8 +128,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     cb.beginRendering(render_info);
   }
 
-  std::vector<VkBuffer> vertex_buffers;
-
+  // std::vector<VkBuffer> vertex_buffers;
   for (const auto* resource : stage->reads_) {
     auto* buffer_resource{ resource->as<BufferResource>() };
     if (buffer_resource == nullptr)
@@ -148,20 +147,20 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
         return;
       }
 
-      if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-        assert(physical_buffer->buffer_.get());
-        cb.bindIndexBuffer(physical_buffer->buffer_);
-      }
+      //    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
+      //      assert(physical_buffer->buffer_.get());
+      //      cb.bindIndexBuffer(physical_buffer->buffer_);
+      //    }
 
-      else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
-        vertex_buffers.push_back(physical_buffer->buffer_.get());
-      }
+      //    else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
+      //      vertex_buffers.push_back(physical_buffer->buffer_.get());
+      //    }
     }
   }
 
-  if (!vertex_buffers.empty()) {
-    cb.bindVertexBuffers(vertex_buffers);
-  }
+  // if (!vertex_buffers.empty()) {
+  //   cb.bindVertexBuffers(vertex_buffers);
+  // }
   // cb.bindPipeline(physical.pipeline_);
   stage->on_record_(physical, cb);
 
@@ -567,7 +566,8 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
           if (buffer_resource->usage_ == BufferUsage::IndexBuffer)
             buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
           else if (buffer_resource->usage_ == BufferUsage::VertexBuffer)
-            buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                           VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
           else
             assert(false);
 

@@ -70,8 +70,8 @@ struct Scene : public Renderable {
   loadObj(std::filesystem::path file_path);
 
   [[nodiscard]]
-  static std::shared_ptr<Scene> load(const vk::VulkanEngine& engine,
-                                     const SceneInfo&);
+  static std::optional<std::shared_ptr<Scene>>
+  load(const vk::VulkanEngine& engine, const SceneInfo&);
 
   std::unordered_map<std::string, std::shared_ptr<Mesh>>      meshes;
   std::unordered_map<std::string, std::shared_ptr<Material>>  materials;

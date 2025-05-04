@@ -499,8 +499,8 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 //   return loaded_shapes;
 // }
 
-std::shared_ptr<Scene> Scene::load(const vk::VulkanEngine& engine,
-                                   const SceneInfo&        scene_info)
+std::optional<std::shared_ptr<Scene>>
+Scene::load(const vk::VulkanEngine& engine, const SceneInfo& scene_info)
 {
   const char* env_p = std::getenv("ELDR_DIR");
   if (env_p == nullptr) {
@@ -511,9 +511,7 @@ std::shared_ptr<Scene> Scene::load(const vk::VulkanEngine& engine,
   filepath /= scene_info.model_path;
 
   // TODO: determine file type obj/gltf if obj is to be supported too
-  auto scene{
-    Scene::loadGltf(engine, filepath).value_or(std::shared_ptr<Scene>{})
-  };
+  auto scene{ Scene::loadGltf(engine, filepath) };
 
   return scene;
 }

@@ -54,7 +54,7 @@ public:
   const wr::Device& device() const; // TODO: refactor and remove
   void addScene(const std::string& name, const std::shared_ptr<Scene>& scene)
   {
-    loaded_scenes[name] = scene;
+    loaded_scenes_[name] = scene;
   };
 
   GltfMetallicRoughness& metalRoughMaterial() const;
@@ -68,7 +68,7 @@ public:
                   std::span<const Point2f> texcoords,
                   std::span<const Color4f> colors,
                   std::span<const Vec3f>   normals);
-  void drawFrame();
+  void drawFrame(const Scene& scene);
 
   [[nodiscard]] std::string deviceName() const;
 
@@ -84,8 +84,8 @@ private:
   void setupRenderGraph();
   void recreateSwapchain();
   void buildBuffers();
-  void updateScene(uint32_t current_image);
-  void drawGeometry(const PhysicalStage& physical, const wr::CommandBuffer& cb);
+  void updateScene(const Scene&, uint32_t current_image);
+  void drawGeometry(const wr::CommandBuffer& cb);
 
 private:
   const Window& window_;
@@ -96,15 +96,15 @@ private:
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
 
-  std::vector<GpuVertex> vertices_;
-  std::vector<uint32_t>  indices_;
+  //  std::vector<GpuVertex> vertices_;
+  //  std::vector<uint32_t>  indices_;
 
   TextureResource* back_buffer_;
   TextureResource* msaa_buffer_;
-  BufferResource*  vertex_buffer_;
-  BufferResource*  index_buffer_;
+  // BufferResource*  vertex_buffer_;
+  // BufferResource*  index_buffer_;
 
-  std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes;
+  std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
   // Hide vulkan implementation details to avoid pulling in every single vulkan
   // related type when including engine.hpp

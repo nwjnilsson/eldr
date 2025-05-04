@@ -88,13 +88,25 @@ public:
   /// @return bool `true` if size_ == 0.
   [[nodiscard]] bool empty() const { return size_ == 0; }
 
+  /// @brief Returns a VkDeviceAddress for this buffer
+  [[nodiscard]] VkDeviceAddress getDeviceAddress() const
+  {
+    VkBufferDeviceAddressInfo address_info{
+      .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+      .pNext  = {},
+      .buffer = b_data_->buffer_
+    };
+    return vkGetBufferDeviceAddress(b_data_->device_.logical(), &address_info);
+  }
+
   /// @brief Copies `data` to the mapped GPU memory.
   /// @tparam T The type of data to upload.
   /// @param data The span of data to upload to the GPU buffer.
   void uploadData(std::span<const T> data) const
   {
-    assert(data.size() > 0);
     assert(b_data_->alloc_info_.pMappedData != nullptr);
+    assert(data.size() > 0);
+    assert(data.size_bytes() <= size_bytes_);
     std::memcpy(b_data_->alloc_info_.pMappedData, data.data(),
                 data.size_bytes());
   }
@@ -104,6 +116,7 @@ private:
   std::string                 name_;
   std::shared_ptr<BufferImpl> b_data_;
   size_t                      size_{ 0 };
-  VkDeviceSize                size_bytes_{ 0 };
+  // TODO: not sure if still needed
+  VkDeviceSize size_bytes_{ 0 };
 };
 } // namespace eldr::vk::wr

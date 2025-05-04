@@ -52,8 +52,8 @@ struct FrameData {
 
 // TODO: is this even used
 struct GpuMeshBuffers {
-  BufferResource* index_buffer_;
-  BufferResource* vertex_buffer_;
+  BufferResource* index_buffer;
+  BufferResource* vertex_buffer;
   VkDeviceAddress vertex_buffer_address;
 };
 
@@ -64,6 +64,9 @@ struct VulkanEngine::EngineData {
   wr::Device              device;
   wr::Swapchain           swapchain;
   DescriptorAllocator     global_descriptor_allocator;
+
+  wr::Buffer<GpuVertex> vertex_buffer;
+  wr::Buffer<uint32_t>  index_buffer;
 
   std::unique_ptr<RenderGraph>  render_graph;
   std::unique_ptr<ImGuiOverlay> imgui_overlay;
@@ -123,9 +126,10 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   // Create device
   // ---------------------------------------------------------------------------
-  std::vector<const char*> device_extensions;
+  std::vector<const char*> device_extensions; // required
   device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+  device_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
 #ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
   device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
@@ -271,13 +275,13 @@ void VulkanEngine::initDefaultData()
 
 void VulkanEngine::buildBuffers()
 {
-  indices_.clear();
-  vertices_.clear();
+  std::vector<uint32_t>  indices;
+  std::vector<GpuVertex> vertices;
 
   std::unordered_map<GpuVertex, uint32_t> unique_vertices{};
   // Vertex deduplication
   size_t total_vtx_count{ 0 };
-  for (auto& es : loaded_scenes) {
+  for (auto& es : loaded_scenes_) {
     for (auto& en : es.second->nodes) {
       if (const auto& mesh_node{
             dynamic_cast<const MeshNode*>(en.second.get()) }) {
@@ -290,19 +294,29 @@ void VulkanEngine::buildBuffers()
           GpuVertex v{ mesh->vtxPositions()[i], uv_x, mesh->vtxNormals()[i],
                        uv_y, mesh->vtxColors()[i] };
           if (unique_vertices.count(v) == 0) {
-            unique_vertices[v] = static_cast<uint32_t>(vertices_.size());
-            vertices_.push_back(v);
+            unique_vertices[v] = static_cast<uint32_t>(vertices.size());
+            vertices.push_back(v);
           }
-          indices_.push_back(unique_vertices[v]);
+          indices.push_back(unique_vertices[v]);
         }
       }
     }
   }
   log_->debug("Vertex deduplication before and after {} -> {}", total_vtx_count,
-              vertices_.size());
+              vertices.size());
 
-  vertex_buffer_->bindData(vertices_);
-  index_buffer_->bindData(indices_);
+  ed_->index_buffer  = { ed_->device, "index buffer", indices,
+                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                         VMA_MEMORY_USAGE_GPU_ONLY };
+  ed_->vertex_buffer = { ed_->device,
+                         "vertex buffer",
+                         vertices,
+                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                           VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                           VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                         VMA_MEMORY_USAGE_GPU_ONLY,
+                         VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT };
 }
 
 void VulkanEngine::setupRenderGraph()
@@ -321,7 +335,7 @@ void VulkanEngine::setupRenderGraph()
   msaa_buffer_ = graph->add<TextureResource>(
     "MSAA color buffer", TextureUsage::ColorBuffer, color_format, sample_count);
 
-  auto* depth_buf{ graph->add<TextureResource>(
+  auto* depth_buffer{ graph->add<TextureResource>(
     "depth buffer", TextureUsage::DepthStencilBuffer,
     ed_->device.findDepthFormat(), sample_count) };
 
@@ -329,49 +343,60 @@ void VulkanEngine::setupRenderGraph()
   back_buffer_ = graph->add<TextureResource>(
     "back buffer", TextureUsage::BackBuffer, color_format);
 
-  index_buffer_ =
-    graph->add<BufferResource>("index buffer", BufferUsage::IndexBuffer);
-  index_buffer_->bindData(indices_);
+  // index_buffer_ =
+  //   graph->add<BufferResource>("index buffer", BufferUsage::IndexBuffer);
+  // index_buffer_->bindData(indices_);
 
-  vertex_buffer_ =
-    graph->add<BufferResource>("vertex buffer", BufferUsage::VertexBuffer);
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
-                                     offsetof(GpuVertex, pos));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
-                                     offsetof(GpuVertex, uv_x));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
-                                     offsetof(GpuVertex, normal));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
-                                     offsetof(GpuVertex, uv_y));
-  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
-                                     offsetof(GpuVertex, color));
-  vertex_buffer_->bindData(vertices_);
+  //  vertex_buffer_ =
+  //    graph->add<BufferResource>("vertex buffer", BufferUsage::VertexBuffer);
+  //  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
+  //                                     offsetof(GpuVertex, pos));
+  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
+  //                                    offsetof(GpuVertex,
+  //                                    uv_x));
+  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
+  //                                    offsetof(GpuVertex,
+  //                                    normal));
+  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
+  //                                    offsetof(GpuVertex,
+  //                                    uv_y));
+  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
+  //                                    offsetof(GpuVertex,
+  //                                    color));
+  // vertex_buffer_->bindData(vertices_);
 
   auto* main_stage{ graph->add<GraphicsStage>("main stage") };
   // Write order matters here (for now)
-  main_stage->writesTo(msaa_buffer_); // clear value index 0 is clear color
-  main_stage->writesTo(depth_buf);    // clear value index 1 is depth stencil
+  main_stage->writesTo(msaa_buffer_); // clear value index 0 is
+                                      // clear color
+  main_stage->writesTo(depth_buffer); // clear value index 1 is
+                                      // depth stencil
   main_stage->writesTo(back_buffer_);
-  main_stage->readsFrom(index_buffer_);
-  main_stage->readsFrom(vertex_buffer_);
-  // main_stage->bindBuffer(vertex_buffer_, 0);
-  // main_stage->setClearsScreen(true);
+  // main_stage->readsFrom(index_buffer_);
+  // main_stage->readsFrom(vertex_buffer_);
+  // main_stage->bindBuffer(vertex_buffer_,
+  // 0); main_stage->setClearsScreen(true);
   // main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
-      drawGeometry(physical, cb);
+      drawGeometry(cb);
     });
 
-  // for (const auto& shader : ed_->shaders) {
+  // for (const auto& shader : ed_->shaders)
+  // {
   //   main_stage->usesShader(shader);
   // }
 
-  // TODO: Only one descriptor set is currently allocated for any given
-  // ResourceDescriptor. Additionally, for each frame in flight, the
-  // descriptor set bound is identical to the previous frame.This means that
-  // it is (for now) okay to only add a single layout for each resource
-  // descriptor that applies to all frames. for (const auto& descriptor :
-  // descriptors_)
+  // TODO: Only one descriptor set is
+  // currently allocated for any given
+  // ResourceDescriptor. Additionally, for
+  // each frame in flight, the descriptor set
+  // bound is identical to the previous
+  // frame.This means that it is (for now)
+  // okay to only add a single layout for
+  // each resource descriptor that applies to
+  // all frames. for (const auto& descriptor
+  // : descriptors_)
   // main_stage->addDescriptorLayout(ed_->scene_data_descriptor_layout);
 }
 
@@ -398,17 +423,17 @@ void VulkanEngine::recreateSwapchain()
   graph->compile();
 }
 
-void VulkanEngine::updateScene(uint32_t current_image)
+void VulkanEngine::updateScene(const Scene& scene, uint32_t current_image)
 {
   // TODO: if scene has changed, rebuild vertices/indices
   static size_t last_scene_node_count{ 0 };
-  if (loaded_scenes.size() != last_scene_node_count) {
+  if (scene.meshes.size() != last_scene_node_count) {
     buildBuffers();
-    last_scene_node_count = loaded_scenes.size();
+    last_scene_node_count = scene.meshes.size();
   }
 
   main_draw_context_.opaque_surfaces.clear();
-  loaded_scenes["Suzanne"]->draw(Mat4f{ 1.f }, main_draw_context_);
+  scene.draw(Mat4f{ 1.f }, main_draw_context_);
 
   static StopWatch stop_watch;
   float            time{ stop_watch.seconds(false) };
@@ -435,11 +460,14 @@ void VulkanEngine::updateScene(uint32_t current_image)
   ed_->frames_in_flight[current_image].model_data_buffer.uploadData(model_data);
 }
 
-void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
-                                const wr::CommandBuffer& cb)
+void VulkanEngine::drawGeometry(const wr::CommandBuffer& cb)
 {
   const auto& swapchain{ ed_->swapchain };
   const auto& device{ ed_->device };
+
+  cb.bindIndexBuffer(ed_->index_buffer);
+  VkBuffer vbuffers[]{ ed_->vertex_buffer.get() };
+  cb.bindVertexBuffers(vbuffers);
 
   const size_t surface_count{ main_draw_context_.opaque_surfaces.size() };
   size_t       idx_offset{ 0 };
@@ -450,8 +478,8 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     FrameData&      frame{ ed_->frames_in_flight[frame_index_] };
     VkDescriptorSet frame_descriptor{ frame.descriptors.allocate(
       device, ed_->scene_data_descriptor_layout) };
-    VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
-      device, ed_->viking_model_descriptor_layout) };
+    // VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
+    //   device, ed_->viking_model_descriptor_layout) };
 
     DescriptorWriter writer;
     writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
@@ -467,6 +495,23 @@ void VulkanEngine::drawGeometry(const PhysicalStage&     physical,
     // physical.pipelineLayout(), 1);
 
     cb.bindPipeline(*draw.material->data.pipeline);
+
+    GpuDrawPushConstants push_constants{
+      .world_matrix  = Mat4f{ 1.0f },
+      .vertex_buffer = ed_->vertex_buffer.getDeviceAddress(),
+    };
+    // thoughts:
+    // 1. All vertices are in the same buffer, buildBuffers() binds data
+    // 2. Vertex buffer device address thus stays the same, but needs to be
+    // fetched from rendergraph somehow still.
+    // ed_->render_graph->getDeviceAddress(vertex_buffer_);
+    //
+    //
+    // New thoughts: move index/vertex buffer resources out of rendergraph?
+    // Device address can then be easily accessed here.
+    cb.pushConstant(draw.material->data.pipeline->layout(), push_constants,
+                    VK_SHADER_STAGE_VERTEX_BIT);
+
     std::vector<VkDescriptorSet> descriptor_sets{
       frame_descriptor, draw.material->data.descriptor_set
     };
@@ -547,7 +592,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 //   recreateSwapchain();
 // }
 
-void VulkanEngine::drawFrame()
+void VulkanEngine::drawFrame(const Scene& scene)
 {
   const auto& swapchain{ ed_->swapchain };
   const auto& device{ ed_->device };
@@ -557,7 +602,7 @@ void VulkanEngine::drawFrame()
     return;
   }
 
-  updateScene(frame_index_); // move
+  updateScene(scene, frame_index_); // move
 
   FrameData& frame{ ed_->frames_in_flight[frame_index_] };
 
