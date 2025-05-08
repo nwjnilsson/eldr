@@ -229,13 +229,13 @@ CommandBuffer::blitImage(const Image& src_image, VkImageLayout src_layout,
   return *this;
 }
 
-const CommandBuffer&
-CommandBuffer::bindIndexBuffer(const Buffer<uint32_t>& buffer,
-                               VkDeviceSize            offset) const
+const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
+                                                    VkIndexType  index_type,
+                                                    VkDeviceSize offset) const
 {
   assert(buffer.get());
   vkCmdBindIndexBuffer(cb_data_->command_buffer_, buffer.get(), offset,
-                       VK_INDEX_TYPE_UINT32);
+                       index_type);
   return *this;
 }
 

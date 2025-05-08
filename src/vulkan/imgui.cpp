@@ -8,6 +8,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/texture.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk {
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
@@ -104,23 +105,26 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   font_sampler_ = wr::Sampler{ device_, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
                                VK_SAMPLER_MIPMAP_MODE_LINEAR, font_mip_levels };
 
-  // index_buffer_  = render_graph->add<BufferResource>("imgui index buffer",
-  //                                                    BufferUsage::IndexBuffer);
-  // vertex_buffer_ = render_graph->add<BufferResource>("imgui vertex buffer",
-  //                                                    BufferUsage::VertexBuffer);
-  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
-  //                                    offsetof(ImDrawVert, pos));
-  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
-  //                                    offsetof(ImDrawVert, uv));
-  // vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
-  //                                    offsetof(ImDrawVert, col));
+  ibuffer_ = render_graph->add<BufferResource>("imgui index buffer",
+                                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                               VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+  vbuffer_ = render_graph->add<BufferResource>(
+    "imgui vertex buffer", VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
+  //                                      offsetof(ImDrawVert, pos));
+  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
+  //                                      offsetof(ImDrawVert, uv));
+  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
+  //                                      offsetof(ImDrawVert, col));
   stage_ = render_graph->add<GraphicsStage>("imgui stage");
   stage_->writesTo(back_buffer);
-  // stage_->readsFrom(index_buffer_);
-  // stage_->readsFrom(vertex_buffer_);
+  stage_->readsFrom(ibuffer_);
+  stage_->readsFrom(vbuffer_);
   //  TODO: what to do with imgui pipeline?
-  //   stage_->bindBuffer(vertex_buffer_, 0);
+  // stage_->bindBuffer(vertex_buffer_, 0);
   //   stage_->usesShader(vertex_shader_);
   //   stage_->usesShader(fragment_shader_);
   //   stage_->setCullMode(VK_CULL_MODE_NONE);
@@ -154,9 +158,7 @@ void ImGuiOverlay::buildPipeline()
   };
 
   DescriptorSetLayoutBuilder descriptor_builder;
-  for (uint32_t i = 0; i < max_frames_in_flight; ++i) {
-    descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
-  }
+  descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
   imgui_layout_ = descriptor_builder.build(device_);
 
   wr::Shader vert_shader{ device_, "ImGui vertex shader", "imgui.vert.spv",
@@ -165,6 +167,10 @@ void ImGuiOverlay::buildPipeline()
                           VK_SHADER_STAGE_FRAGMENT_BIT };
   PipelineBuilder pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(imgui_layout_)
+    .addVertexBinding(0, sizeof(ImDrawVert))
+    .addVertexAttribute(VK_FORMAT_R32G32_SFLOAT, offsetof(ImDrawVert, pos))
+    .addVertexAttribute(VK_FORMAT_R32G32_SFLOAT, offsetof(ImDrawVert, uv))
+    .addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM, offsetof(ImDrawVert, col))
     .addPushConstantRange(imgui_range)
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
@@ -208,14 +214,15 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       index_data.push_back(cmd_list->IdxBuffer.Data[j]);
     }
   }
-  // index_buffer_->bindData(index_data);
-  // TODO: decide whether to keep this or use staging buffer and GPU_ONLY memory
-  if (index_buffer_.size() <= index_data.size())
-    index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
-  else
-    index_buffer_ = { device_, "imgui index buffer", index_data,
-                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                      VMA_MEMORY_USAGE_CPU_TO_GPU };
+  ibuffer_->bindData(index_data);
+  // TODO: decide whether to keep this or use staging buffer and GPU_ONLY
+  // memory
+  // if (index_buffer_.size() <= index_data.size())
+  //   index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
+  // else
+  //   index_buffer_ = { device_, "imgui index buffer", index_data,
+  //                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+  //                     VMA_MEMORY_USAGE_CPU_TO_GPU };
 
   std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
@@ -224,13 +231,14 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  // vertex_buffer_->bindData(vertex_data);
-  if (vertex_buffer_.size() <= vertex_data.size())
-    vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
-  else
-    vertex_buffer_ = { device_, "imgui vertex buffer", vertex_data,
-                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                       VMA_MEMORY_USAGE_CPU_TO_GPU };
+  vbuffer_->bindData(vertex_data);
+  // if (vertex_buffer_.size() <= vertex_data.size())
+  //   vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
+  // else {
+  //   vertex_buffer_ = { device_, "imgui vertex buffer", vertex_data,
+  //                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+  //                      VMA_MEMORY_USAGE_CPU_TO_GPU };
+  // }
 
   stage_->setOnRecord([&](const PhysicalStage&     physical,
                           const wr::CommandBuffer& cb) {
@@ -238,9 +246,9 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     if (imgui_draw_data == nullptr) {
       return;
     }
-    cb.bindIndexBuffer(index_buffer_);
-    VkBuffer vbuffers[]{ vertex_buffer_.get() };
-    cb.bindVertexBuffers(vbuffers);
+    // cb.bindIndexBuffer(index_buffer_);
+    // VkBuffer vbuffers[]{ vertex_buffer_.get() };
+    // cb.bindVertexBuffers(vbuffers);
 
     const ImGuiIO& io = ImGui::GetIO();
     push_const_block_.scale =

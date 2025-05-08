@@ -6,51 +6,46 @@
 #include <eldr/vulkan/wrappers/shader.hpp>
 
 namespace eldr::vk {
-void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
-{
-  vertex_attributes_.push_back({
-    .location = static_cast<uint32_t>(vertex_attributes_.size()),
-    .binding  = 0,
-    .format   = format,
-    .offset   = offset,
-  });
-}
+// void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
+// {
+//   vertex_attributes_.push_back({
+//     .location = static_cast<uint32_t>(vertex_attributes_.size()),
+//     .binding  = 0,
+//     .format   = format,
+//     .offset   = offset,
+//   });
+// }
 
 void RenderStage::writesTo(const RenderResource* resource)
 {
-  writes_.push_back(resource);
+  writes_.insert(resource);
 }
 
 void RenderStage::readsFrom(const RenderResource* resource)
 {
-  reads_.push_back(resource);
+  reads_.insert(resource);
 }
 
-// TODO: I may have to rethink this whole thing. Could textures be a
-// non-blocking read dep?
-bool RenderStage::hasBlockingRead() const
+bool RenderStage::hasReadDependency(
+  const std::vector<std::unique_ptr<RenderStage>>& stages) const
 {
   for (auto* resource : reads_) {
-    if (const auto* buffer = resource->as<BufferResource>())
-      switch (buffer->usage()) {
-        case BufferUsage::IndexBuffer:
-        case BufferUsage::VertexBuffer:
-          break;
-        default:
-          Throw("hasBlockingRead(): Unknown BufferUsage");
+    for (auto& stage : stages) {
+      if (stage.get() == this)
+        continue;
+      if (stage->writes_.contains(resource)) {
+        return true;
       }
-    else
-      // Texture resources are a blocking read dep
-      return true;
+    }
   }
   return false;
 }
 
-// void GraphicsStage::bindBuffer(const BufferResource* buffer,
-//                                const uint32_t        binding)
-// {
-//   buffer_bindings_.emplace(buffer, binding);
-// }
+void GraphicsStage::bindBuffer(const BufferResource* buffer,
+                               const uint32_t        binding)
+{
+  buffer_bindings_.emplace(buffer, binding);
+}
 //
 // void GraphicsStage::usesShader(const wr::Shader& shader)
 // {
@@ -128,7 +123,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     cb.beginRendering(render_info);
   }
 
-  // std::vector<VkBuffer> vertex_buffers;
+  std::vector<VkBuffer> vertex_buffers;
   for (const auto* resource : stage->reads_) {
     auto* buffer_resource{ resource->as<BufferResource>() };
     if (buffer_resource == nullptr)
@@ -147,14 +142,15 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
         return;
       }
 
-      //    if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-      //      assert(physical_buffer->buffer_.get());
-      //      cb.bindIndexBuffer(physical_buffer->buffer_);
-      //    }
+      if (buffer_resource->buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
+        assert(physical_buffer->buffer_.get());
+        cb.bindIndexBuffer(physical_buffer->buffer_);
+      }
 
-      //    else if (buffer_resource->usage_ == BufferUsage::VertexBuffer) {
-      //      vertex_buffers.push_back(physical_buffer->buffer_.get());
-      //    }
+      else if (buffer_resource->buffer_usage_ &
+               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+        vertex_buffers.push_back(physical_buffer->buffer_.get());
+      }
     }
   }
 
@@ -372,39 +368,59 @@ void RenderGraph::compile()
   // TODO: the topology sorting implemented here has not been extensively
   // tested, but it works for the two stages I'm currently using...
 
-  // Copy all stages to a new set that can be removed from when sorting
-  std::vector<RenderStage*> stage_set{};
+  // We make a copy of all reads to use when topology sorting to avoid
+  // modifying the real graph
+  std::unordered_map<RenderStage*, std::unordered_set<const RenderResource*>>
+    reads;
   for (auto& stage : stages_) {
-    stage_set.push_back(stage.get());
+    reads[stage.get()] = stage->reads_;
   }
 
+  // Set up the topology sort
   std::vector<RenderStage*> q_set{}; // stages with no read dependencies
-  // Initialize topology sort
-  for (auto stage : stage_set) {
-    if (!stage->hasBlockingRead())
-      q_set.push_back(stage);
+  for (auto& kv : reads) {
+    bool has_read_dep = false;
+    for (const auto* resource : kv.second) {
+      for (const auto& stage : stages_) {
+        if (stage.get() == kv.first)
+          continue;
+        if (stage->writes_.contains(resource)) {
+          has_read_dep = true;
+        }
+      }
+    }
+    if (!has_read_dep) {
+      reads[kv.first].clear();
+      q_set.push_back(kv.first);
+    }
   }
+
   // Topology sort
+  // This doesn't exactly follow the standard topology sort algorithm 1-1 since
+  // I'm not interested in having a flat vector of sorted nodes, but rather a
+  // vector of vectors where each subvector of nodes can be recorded onto the
+  // same command buffer without a memory barrier between. Another way of doing
+  // this would be to first do a regular topology sort where the nodes end up in
+  // a flat vector, and then figure out where the memory barriers are needed.
   while (!q_set.empty()) {
     stage_stack_.emplace_back(q_set);
-    for (auto q_stage : q_set) {
+    q_set.clear();
+    for (auto q_stage : stage_stack_.back()) {
       for (auto write : q_stage->writes_) {
-        for (auto g_stage : stage_set) {
-          if (auto it = std::find(g_stage->reads_.begin(),
-                                  g_stage->reads_.end(), write);
-              it != g_stage->reads_.end()) {
-            g_stage->reads_.erase(it);
+        for (auto& kv : reads) {
+          if (reads[kv.first].contains(write)) {
+            reads[kv.first].erase(write);
+            if (reads[kv.first].empty())
+              q_set.push_back(kv.first);
           }
         }
       }
     }
-    for (auto q_stage : q_set) {
-      stage_set.erase(std::find(stage_set.begin(), stage_set.end(), q_stage));
-    }
-    q_set.clear();
-    for (auto stage : stage_set) {
-      if (!stage->hasBlockingRead())
-        q_set.push_back(stage);
+  }
+  // Does any node still have incoming edges? If so, the graph is invalid
+  for (auto& kv : reads) {
+    if (!kv.second.empty()) {
+      ThrowVk(VkResult{}, "Render Graph contains cyclic dependencies!");
     }
   }
 #ifdef _DEBUG
@@ -420,9 +436,6 @@ void RenderGraph::compile()
   ss << "}";
   log_->debug("Proposed stage order:\n{}", ss.str());
 #endif
-  if (!stage_set.empty()) {
-    ThrowVk(VkResult{}, "Render Graph contains cyclic dependencies!");
-  }
 
   log_->trace("Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
@@ -534,9 +547,9 @@ void RenderGraph::compile()
 void RenderGraph::render(const wr::CommandBuffer& cb)
 {
   for (auto& buffer_resource : buffer_resources_) {
-    if (buffer_resource->data_ != nullptr) {
+    if (buffer_resource->data_.data() != nullptr) {
       // There is data to be uploaded to the gpu
-      const size_t data_size{ buffer_resource->data_->size_bytes() };
+      const size_t data_size{ buffer_resource->data_.size_bytes() };
       auto&        physical{ *dynamic_pointer_cast<PhysicalBuffer>(
         buffer_resource->physical_) };
       if (data_size == 0) {
@@ -562,24 +575,16 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          VkBufferUsageFlags buffer_usage{};
-          if (buffer_resource->usage_ == BufferUsage::IndexBuffer)
-            buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-          else if (buffer_resource->usage_ == BufferUsage::VertexBuffer)
-            buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                           VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-          else
-            assert(false);
-
           physical.buffer_ =
-            wr::Buffer<byte_t>{ device_, "render graph buffer", data_size,
-                                buffer_usage, VMA_MEMORY_USAGE_CPU_TO_GPU };
+            wr::Buffer<byte_t>{ device_, buffer_resource->name(), data_size,
+                                buffer_resource->buffer_usage_,
+                                buffer_resource->memory_usage_ };
         }
       }
       // Upload data
-      physical.buffer_.uploadData(*buffer_resource->data_);
+      physical.buffer_.uploadData(buffer_resource->data_);
       // Reset data pointer once it has been uploaded to gpu
-      buffer_resource->data_.reset();
+      buffer_resource->data_ = {};
     }
   }
 

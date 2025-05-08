@@ -20,6 +20,19 @@ public:
     descriptor_layouts_.push_back(layout.get());
     return *this;
   }
+
+  PipelineBuilder& addVertexAttribute(VkFormat format, uint32_t offset);
+
+  PipelineBuilder& addVertexBinding(uint32_t binding, size_t stride)
+  {
+    vertex_bindings_.push_back({
+      .binding   = binding,
+      .stride    = static_cast<uint32_t>(stride),
+      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    });
+    return *this;
+  }
+
   PipelineBuilder& addPushConstantRange(VkPushConstantRange pcr)
   {
     push_constant_ranges_.push_back(pcr);
@@ -46,8 +59,10 @@ public:
 
 private:
   // Pipeline layout stuff
-  std::vector<VkDescriptorSetLayout> descriptor_layouts_;
-  std::vector<VkPushConstantRange>   push_constant_ranges_;
+  std::vector<VkDescriptorSetLayout>             descriptor_layouts_;
+  std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
+  std::vector<VkVertexInputBindingDescription>   vertex_bindings_;
+  std::vector<VkPushConstantRange>               push_constant_ranges_;
 
   // Pipeline stuff
   std::vector<VkPipelineShaderStageCreateInfo> shader_stages_;

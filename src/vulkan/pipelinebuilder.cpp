@@ -29,6 +29,18 @@ void PipelineBuilder::reset()
   shader_stages_.clear();
 }
 
+PipelineBuilder& PipelineBuilder::addVertexAttribute(VkFormat format,
+                                                     uint32_t offset)
+{
+  vertex_attributes_.push_back({
+    .location = static_cast<uint32_t>(vertex_attributes_.size()),
+    .binding  = 0,
+    .format   = format,
+    .offset   = offset,
+  });
+  return *this;
+}
+
 PipelineBuilder& PipelineBuilder::setInputTopology(VkPrimitiveTopology topology)
 {
   input_assembly_.topology               = topology;
@@ -206,10 +218,18 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pPushConstantRanges = push_constant_ranges_.data(),
   };
 
-  // Use vertex pulling
-  VkPipelineVertexInputStateCreateInfo vertex_input_info{};
-  vertex_input_info.sType =
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  // optional, as vertex pulling can be used
+  const VkPipelineVertexInputStateCreateInfo vertex_input_info{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    .pNext = {},
+    .flags = {},
+    .vertexBindingDescriptionCount =
+      static_cast<uint32_t>(vertex_bindings_.size()),
+    .pVertexBindingDescriptions = vertex_bindings_.data(),
+    .vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(vertex_attributes_.size()),
+    .pVertexAttributeDescriptions = vertex_attributes_.data()
+  };
 
   const VkPipelineViewportStateCreateInfo viewport_state{
     .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,

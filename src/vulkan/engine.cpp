@@ -465,31 +465,32 @@ void VulkanEngine::drawGeometry(const wr::CommandBuffer& cb)
   const auto& swapchain{ ed_->swapchain };
   const auto& device{ ed_->device };
 
-  cb.bindIndexBuffer(ed_->index_buffer);
-  VkBuffer vbuffers[]{ ed_->vertex_buffer.get() };
-  cb.bindVertexBuffers(vbuffers);
+  // cb.bindIndexBuffer(ed_->index_buffer);
+  // VkBuffer vbuffers[]{ ed_->vertex_buffer.get() };
+  // cb.bindVertexBuffers(vbuffers);
 
-  const size_t surface_count{ main_draw_context_.opaque_surfaces.size() };
-  size_t       idx_offset{ 0 };
+  const size_t    surface_count{ main_draw_context_.opaque_surfaces.size() };
+  FrameData&      frame{ ed_->frames_in_flight[frame_index_] };
+  VkDescriptorSet frame_descriptor{ frame.descriptors.allocate(
+    device, ed_->scene_data_descriptor_layout) };
+  size_t          idx_offset{ 0 };
+
   for (size_t i = 0; i < surface_count; ++i) {
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
     // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
     //                       physical.pipelineLayout());
-    FrameData&      frame{ ed_->frames_in_flight[frame_index_] };
-    VkDescriptorSet frame_descriptor{ frame.descriptors.allocate(
-      device, ed_->scene_data_descriptor_layout) };
     // VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
     //   device, ed_->viking_model_descriptor_layout) };
 
     DescriptorWriter writer;
     writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
       .updateSet(device, frame_descriptor);
-    writer.reset();
-
-    writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
-      .writeCombinedImageSampler(1, ed_->viking_texture,
-                                 ed_->default_sampler_linear)
-      .updateSet(device, viking_descriptor);
+    //    writer.reset();
+    //
+    //    writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
+    //      .writeCombinedImageSampler(1, ed_->viking_texture,
+    //                                 ed_->default_sampler_linear)
+    //      .updateSet(device, viking_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);

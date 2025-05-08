@@ -12,6 +12,7 @@
 #include <memory>
 #include <ranges>
 #include <span>
+#include <unordered_set>
 #include <vector>
 
 namespace eldr::vk {
@@ -70,19 +71,15 @@ class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  BufferResource(std::string&& name, BufferUsage usage)
-    : RenderResource(name), usage_(usage)
+  BufferResource(std::string&& name, VkBufferUsageFlags buffer_usage,
+                 VmaMemoryUsage memory_usage)
+    : RenderResource(name), buffer_usage_(buffer_usage),
+      memory_usage_(memory_usage)
   {
   }
 
   /// @return The usage of this buffer resource
-  BufferUsage usage() const { return usage_; }
-
-  /// @brief Specifies that element `offset` of this vertex buffer is of format
-  /// `format`.
-  /// @note Calling this function is only valid on buffers of type
-  /// BufferUsage::VERTEX_BUFFER.
-  void addVertexAttribute(VkFormat format, uint32_t offset);
+  // BufferUsage usage() const { return usage_; }
 
   /// @brief Specifies the data that should be uploaded to this buffer at the
   /// start of the next frame.
@@ -93,14 +90,14 @@ public:
   {
     using T = std::ranges::range_value_t<R>;
     std::span<const T> s(data);
-    data_ = std::make_unique<std::span<const byte_t>>(std::as_bytes(s));
+    data_ = std::as_bytes(s);
   }
 
 private:
-  const BufferUsage                              usage_;
-  std::vector<VkVertexInputAttributeDescription> vertex_attributes_;
+  VkBufferUsageFlags buffer_usage_;
+  VmaMemoryUsage     memory_usage_;
   // Data to upload to the GPU on a call to render().
-  std::unique_ptr<std::span<const byte_t>> data_;
+  std::span<const byte_t> data_;
 };
 
 enum class TextureUsage {
@@ -183,23 +180,18 @@ public:
     on_record_ = std::move(on_record);
   }
 
-  /// @brief Returns true if this stage has a read dependency that is **not** of
-  /// index/vertex buffer type.
-  /// @details Vertex and index buffers are considered inputs only, i.e no stage
-  /// will write to such buffers. A read dependency on an index/vertex buffer is
-  /// therefore considered non-blocking in the render graph. This comes into
-  /// play when topology sorting the render graph, as there must be stages
-  /// without blocking read dependencies to perform the sorting.
-  bool hasBlockingRead() const;
+private:
+  bool hasReadDependency(
+    const std::vector<std::unique_ptr<RenderStage>>& stages) const;
 
 protected:
   explicit RenderStage(std::string_view name) : name_(name) {}
 
 private:
-  const std::string                  name_;
-  std::unique_ptr<PhysicalStage>     physical_;
-  std::vector<const RenderResource*> writes_;
-  std::vector<const RenderResource*> reads_;
+  const std::string                         name_;
+  std::unique_ptr<PhysicalStage>            physical_;
+  std::unordered_set<const RenderResource*> writes_;
+  std::unordered_set<const RenderResource*> reads_;
 
   // std::vector<VkDescriptorSetLayout> descriptor_layouts_;
   // std::vector<VkPushConstantRange>   push_constant_ranges_;
@@ -244,7 +236,7 @@ public:
 
   /// @brief Specifies that `buffer` should map to `binding` in the shaders of
   /// this stage.
-  // void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
+  void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
 
   /// @brief Specifies that `shader` should be used during the pipeline of this
   /// stage.
@@ -259,8 +251,8 @@ private:
   // VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
   // VkPipelineColorBlendAttachmentState blend_attachment_{};
   // VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
-  // // std::unordered_map<const BufferResource*, std::uint32_t>
-  // buffer_bindings_; std::vector<VkPipelineShaderStageCreateInfo> shaders_;
+  std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
+  // std::vector<VkPipelineShaderStageCreateInfo>             shaders_;
 };
 
 class PhysicalResource : public RenderGraphObject {

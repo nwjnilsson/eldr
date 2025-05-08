@@ -37,11 +37,11 @@ private:
   Logger              log_{ requestLogger("imgui-overlay") };
   float               scale_{ 1.0f };
 
-  // BufferResource* index_buffer_{ nullptr };
-  // BufferResource* vertex_buffer_{ nullptr };
-  GraphicsStage*         stage_{ nullptr };
-  wr::Buffer<uint32_t>   index_buffer_;
-  wr::Buffer<ImDrawVert> vertex_buffer_;
+  BufferResource* ibuffer_{ nullptr };
+  BufferResource* vbuffer_{ nullptr };
+  GraphicsStage*  stage_{ nullptr };
+  // wr::Buffer<uint32_t>   index_buffer_;
+  // wr::Buffer<ImDrawVert> vertex_buffer_;
 
   wr::Texture             imgui_texture_;
   wr::Sampler             font_sampler_;

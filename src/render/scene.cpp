@@ -134,7 +134,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   Logger log{ requestLogger("mesh") };
 
   namespace fg = fastgltf;
-  fmt::print("Loading GLTF: {}", file_path.c_str());
+  log->trace("Loading GLTF: {}", file_path.c_str());
 
   std::shared_ptr<Scene> p_scene{ std::make_shared<Scene>() };
   // p_scene->creator               = engine;
