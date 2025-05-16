@@ -25,21 +25,15 @@ src = [
   'imgui.cpp',
   'material.cpp',
   'pipelinebuilder.cpp',
-  'rendergraph.cpp'
+  'rendergraph.cpp',
+  'exceptions.cpp'
   ]
 
-configure_file(
-  input : meson.source_root() + '/include/eldr/vulkan/config.hpp.in',
-  output : 'engine_config.hpp',
-  configuration : vulkan_conf_data
-  )
 
-engine_conf_header = include_directories('.')
-
-vulkan_engine = library(
+vulkan_engine = static_library(
   'vulkan-engine',
   sources : src,
-  include_directories : [eldr_headers, engine_conf_header],
+  include_directories : [eldr_headers],
   dependencies : [glfw_dep, vulkan_dep, spdlog_dep, vma_dep, imgui_dep],
   link_with : [eldr_core])
   

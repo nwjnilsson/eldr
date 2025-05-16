@@ -35,8 +35,8 @@ DescriptorPool::DescriptorPoolImpl::~DescriptorPoolImpl()
 // DescriptorPool
 //------------------------------------------------------------------------------
 DescriptorPool::DescriptorPool(const Device& device, uint32_t max_sets,
-                               std::span<VkDescriptorPoolSize> pool_sizes,
-                               VkDescriptorPoolCreateFlags     flags)
+                               std::span<const VkDescriptorPoolSize> pool_sizes,
+                               VkDescriptorPoolCreateFlags           flags)
 {
   const VkDescriptorPoolCreateInfo pool_ci{
     .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -46,7 +46,7 @@ DescriptorPool::DescriptorPool(const Device& device, uint32_t max_sets,
     .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
     .pPoolSizes    = pool_sizes.data(),
   };
-  std::make_shared<DescriptorPoolImpl>(device, pool_ci);
+  dp_data_ = std::make_shared<DescriptorPoolImpl>(device, pool_ci);
 }
 
 VkDescriptorPool DescriptorPool::get() const { return dp_data_->pool_; }

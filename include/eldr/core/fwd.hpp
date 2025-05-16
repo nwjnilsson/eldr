@@ -1,6 +1,7 @@
 #pragma once
 
-#include <eldr/core/math.hpp>
+#include <eldr/eldr.hpp>
+#include <glm/fwd.hpp>
 using Float = typename glm::float32_t;
 
 using byte_t = std::byte;
@@ -10,6 +11,16 @@ class Bitmap;
 class Struct;
 class Stream;
 class StopWatch;
+
+namespace core {
+namespace logging {
+class Logger;
+enum LogLevel : int;
+class Formatter;
+// class Sink;
+} // namespace logging
+using Logger = logging::Logger;
+} // namespace core
 
 template <size_t size, typename T> using Color = glm::vec<size, T>;
 template <size_t size, typename T> using Point = glm::vec<size, T>;

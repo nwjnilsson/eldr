@@ -187,6 +187,23 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   }
 
   scene.vk_scene_data = std::make_shared<vk::SceneData>();
+  // Just an estimate of what will be needed
+  const std::vector<vk::DescriptorAllocator::PoolSizeRatio> sizes{
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
+  };
+  scene.vk_scene_data->descriptors =
+    vk::DescriptorAllocator{ static_cast<uint32_t>(gltf.materials.size()),
+                             sizes };
+
+  scene.vk_scene_data->material_buffer = {
+    engine.device(),
+    "Material buffer",
+    gltf.materials.size(),
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    VMA_MEMORY_USAGE_CPU_TO_GPU,
+  };
 
   // load samplers
   for (fg::Sampler& sampler : gltf.samplers) {
@@ -209,6 +226,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   int data_index{ 0 };
   std::vector<GltfMetallicRoughness::MaterialConstants>
     scene_material_constants;
+
   //----------------------------------------------------------------------------
   // Load materials
   //----------------------------------------------------------------------------
@@ -265,14 +283,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 
     data_index++;
   }
-
-  scene.vk_scene_data->material_buffer = {
-    engine.device(),
-    "Material buffer",
-    scene_material_constants,
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    VMA_MEMORY_USAGE_CPU_TO_GPU,
-  };
+  scene.vk_scene_data->material_buffer.uploadData(scene_material_constants);
 
   //----------------------------------------------------------------------------
   // Load meshes

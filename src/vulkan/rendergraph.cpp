@@ -138,7 +138,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
                     "before data has been uploaded to the buffer via "
                     "BufferResource::uploadData(...), or it could be "
                     "caused by some other bug.",
-                    buffer_resource->name_, stage->name_);
+                    buffer_resource->name_,
+                    stage->name_);
         return;
       }
 
@@ -423,7 +424,7 @@ void RenderGraph::compile()
       ThrowVk(VkResult{}, "Render Graph contains cyclic dependencies!");
     }
   }
-#ifdef _DEBUG
+#ifdef DEBUG
   std::ostringstream ss;
   ss << "{\n";
   for (size_t i = 0; i < stage_stack_.size(); ++i) {
@@ -531,7 +532,8 @@ void RenderGraph::compile()
             for (const auto* image : images) {
               image_views.push_back(image->image_.imageView().get());
             }
-            std::fill_n(std::back_inserter(image_views), back_buffers.size(),
+            std::fill_n(std::back_inserter(image_views),
+                        back_buffers.size(),
                         img_view.get());
             // physical.framebuffers_.emplace_back(device_,
             // physical.render_pass_,
@@ -576,7 +578,9 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
           physical.buffer_ =
-            wr::Buffer<byte_t>{ device_, buffer_resource->name(), data_size,
+            wr::Buffer<byte_t>{ device_,
+                                buffer_resource->name(),
+                                data_size,
                                 buffer_resource->buffer_usage_,
                                 buffer_resource->memory_usage_ };
         }

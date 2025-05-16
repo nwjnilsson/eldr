@@ -10,13 +10,17 @@ template <typename T> class Buffer {
 private:
   class BufferImpl : public GpuResourceAllocation {
   public:
-    BufferImpl(const Device& device, const VkBufferCreateInfo& buffer_ci,
+    BufferImpl(const Device&                  device,
+               const VkBufferCreateInfo&      buffer_ci,
                const VmaAllocationCreateInfo& alloc_ci)
       : GpuResourceAllocation(device)
     {
-      if (const VkResult result =
-            vmaCreateBuffer(device_.allocator(), &buffer_ci, &alloc_ci,
-                            &buffer_, &allocation_, &alloc_info_);
+      if (const VkResult result = vmaCreateBuffer(device_.allocator(),
+                                                  &buffer_ci,
+                                                  &alloc_ci,
+                                                  &buffer_,
+                                                  &allocation_,
+                                                  &alloc_info_);
           result != VK_SUCCESS)
         ThrowVk(result, "vmaCreateBuffer(): ");
     }
@@ -31,8 +35,11 @@ private:
 public:
   Buffer() = default;
   Buffer(
-    const Device& device, std::string_view name, size_t element_count,
-    VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
+    const Device&            device,
+    std::string_view         name,
+    size_t                   element_count,
+    VkBufferUsageFlags       buffer_usage,
+    VmaMemoryUsage           memory_usage,
     VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
     : size_(element_count), size_bytes_(size_ * sizeof(T))
   {
@@ -59,13 +66,17 @@ public:
       .priority       = {},
     };
     b_data_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci);
-    vmaSetAllocationName(device.allocator(), b_data_->allocation_,
+    vmaSetAllocationName(device.allocator(),
+                         b_data_->allocation_,
                          fmt::format("{} allocation", name).c_str());
   }
 
   Buffer(
-    const Device& device, std::string_view name, std::span<const T> data,
-    VkBufferUsageFlags buffer_usage, VmaMemoryUsage memory_usage,
+    const Device&            device,
+    std::string_view         name,
+    std::span<const T>       data,
+    VkBufferUsageFlags       buffer_usage,
+    VmaMemoryUsage           memory_usage,
     VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
     : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
   {
@@ -107,8 +118,8 @@ public:
     assert(b_data_->alloc_info_.pMappedData != nullptr);
     assert(data.size() > 0);
     assert(data.size_bytes() <= size_bytes_);
-    std::memcpy(b_data_->alloc_info_.pMappedData, data.data(),
-                data.size_bytes());
+    std::memcpy(
+      b_data_->alloc_info_.pMappedData, data.data(), data.size_bytes());
   }
   // void copyFromBuffer(const GpuBuffer&, const CommandPool&);
 

@@ -8,6 +8,8 @@ src = [ 'bitmap.cpp',
         'exceptions.cpp',
         'struct.cpp']
 
+# All libs can probably be just static but if anything should be shared, it's
+# probably the core types
 eldr_core = library(
   'eldr-core',
   sources : src,

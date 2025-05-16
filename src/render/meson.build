@@ -2,7 +2,7 @@ src = [
   'scene.cpp',
   'mesh.cpp'
   ]
-eldr_render = library(
+eldr_render = static_library(
   'eldr-render',
   sources : src,
   include_directories : [eldr_headers, tinyobjloader_headers],

@@ -13,7 +13,7 @@ public:
   };
 
   DescriptorAllocator() = default;
-  DescriptorAllocator(uint32_t max_sets, std::span<PoolSizeRatio> ratios);
+  DescriptorAllocator(uint32_t max_sets, std::span<const PoolSizeRatio> ratios);
 
   void            resetPools();
   void            destroyPools();

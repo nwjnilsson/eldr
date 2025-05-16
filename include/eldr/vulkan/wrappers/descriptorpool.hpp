@@ -9,11 +9,11 @@ class DescriptorPool {
 public:
   DescriptorPool() = default;
   DescriptorPool(const Device& device, uint32_t max_sets,
-                 std::span<VkDescriptorPoolSize> pool_sizes,
-                 VkDescriptorPoolCreateFlags     flags = 0);
+                 std::span<const VkDescriptorPoolSize> pool_sizes,
+                 VkDescriptorPoolCreateFlags           flags = 0);
 
-  VkDescriptorPool get() const;
-  void             reset(VkDescriptorPoolResetFlags flags = 0);
+  [[nodiscard]] VkDescriptorPool get() const;
+  void                           reset(VkDescriptorPoolResetFlags flags = 0);
 
 private:
   class DescriptorPoolImpl;

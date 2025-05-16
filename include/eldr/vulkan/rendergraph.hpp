@@ -386,10 +386,10 @@ public:
     }
   }
 
-  void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
+  // void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
   // void buildPipelineLayout(const RenderStage*, PhysicalStage&) const;
   // void buildGraphicsPipeline(const GraphicsStage*,
-  //                           PhysicalGraphicsStage&) const;
+  //                            PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
                            const wr::CommandBuffer& cb) const;

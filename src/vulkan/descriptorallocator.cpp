@@ -5,8 +5,8 @@
 
 namespace eldr::vk {
 
-DescriptorAllocator::DescriptorAllocator(uint32_t                 max_sets,
-                                         std::span<PoolSizeRatio> ratios)
+DescriptorAllocator::DescriptorAllocator(uint32_t max_sets,
+                                         std::span<const PoolSizeRatio> ratios)
   : ratios_(ratios.begin(), ratios.end()),
     sets_per_pool_(std::min(max_sets, max_sets_limit))
 {

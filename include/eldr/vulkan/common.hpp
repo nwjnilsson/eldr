@@ -3,6 +3,7 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/fwd.hpp>
 #include <spdlog/spdlog.h>
+#include <eldr/vulkan/exceptions.hpp>
 //------------------------------------------------------------------------------
 // vk_mem_alloc.h gives rise to a lot of warnings about unused
 // parameters/variables and missing field initializers, hence the suppression
