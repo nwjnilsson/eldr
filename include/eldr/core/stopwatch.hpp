@@ -5,6 +5,8 @@
 namespace eldr {
 class StopWatch {
 public:
+  using clock = std::chrono::high_resolution_clock;
+
   StopWatch();
   ~StopWatch() = default;
 
@@ -19,7 +21,7 @@ public:
   /// @return Rep The time, expressed as a Rep, since the previous timestamp.
   template <typename Rep, typename Duration> Rep time(bool reset = true)
   {
-    const auto current{ std::chrono::high_resolution_clock::now() };
+    const auto current{ clock::now() };
     Rep        time_since_last =
       std::chrono::duration<Rep, typename Duration::period>(current - latest_)
         .count();
@@ -34,9 +36,9 @@ public:
   /// will return the time passed since the last updated timestamp, whether that
   /// is from a previous call to millis(true) or since initialization.
   /// @return float The time, in milliseconds, since the previous timestamp.
-  [[nodiscard]] float millis(bool reset = true)
+  template <typename Rep = size_t> [[nodiscard]] Rep millis(bool reset = true)
   {
-    return time<float, std::chrono::milliseconds>(reset);
+    return time<Rep, std::chrono::milliseconds>(reset);
   }
   /// @brief Updates the current stopwatch timestamp and returns the time passed
   /// since the previous timestamp.
@@ -44,13 +46,13 @@ public:
   /// will return the time passed since the last updated timestamp, whether that
   /// is from a previous call to seconds(true) or since initialization.
   /// @return float The time, in seconds, since the previous timestamp.
-  [[nodiscard]] float seconds(bool reset = true)
+  template <typename Rep = size_t> [[nodiscard]] Rep seconds(bool reset = true)
   {
-    return time<float, std::chrono::seconds>(reset);
+    return time<Rep, std::chrono::seconds>(reset);
   }
 
 private:
-  std::chrono::time_point<std::chrono::high_resolution_clock> init_;
-  std::chrono::time_point<std::chrono::high_resolution_clock> latest_;
+  std::chrono::time_point<clock> init_;
+  std::chrono::time_point<clock> latest_;
 };
 } // namespace eldr

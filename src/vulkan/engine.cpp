@@ -99,6 +99,7 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   // Create instance
   // ---------------------------------------------------------------------------
+  using namespace config;
   const VkApplicationInfo app_info{
     .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     .pNext              = {},
@@ -455,7 +456,7 @@ void VulkanEngine::updateScene(const Scene& scene, uint32_t current_image)
   scene.draw(Mat4f{ 1.f }, main_draw_context_);
 
   static StopWatch stop_watch;
-  float            time{ stop_watch.seconds(false) };
+  float            time{ stop_watch.seconds<float>(false) };
 
   Mat4f model{ glm::rotate(
     Mat4f(1.0f), time * glm::radians(20.0f), Vec3f(0.0f, 0.0f, 1.0f)) };

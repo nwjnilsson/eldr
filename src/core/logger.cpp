@@ -2,51 +2,37 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/core/sink.hpp>
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#include <spdlog/pattern_formatter.h>
-#include <spdlog/spdlog.h>
-
 #include <iostream>
+#include <memory>
+#include <vector>
 
-namespace eldr::core::logging {
+namespace eldr::core {
 struct Logger::LoggerImpl {
-  std::mutex                      mutex;
-  LogLevel                        error_level{ LogLevel::Error };
-  std::unique_ptr<spdlog::logger> logger;
-  std::unique_ptr<Formatter>      formatter;
+  LogLevel                   error_level{ LogLevel::Error };
+  std::unique_ptr<Formatter> formatter;
+  std::vector<std::shared_ptr<Sink<ThreadingPolicy>>> sinks;
 };
 
-Logger::Logger(const std::string& name, PassKey, LogLevel level)
-  : log_level_(level), impl_(std::make_unique<LoggerImpl>())
+Logger::Logger(const PassKey&, LogLevel level)
+  : log_level_(level), impl_(std::make_shared<LoggerImpl>())
 {
-  impl_->logger = std::make_unique<spdlog::logger>(name);
 }
 
 const Formatter* Logger::formatter() const { return impl_->formatter.get(); }
 
 LogLevel Logger::errorLevel() const { return impl_->error_level; }
 
-LogLevel Logger::logLevel() const
-{
-  return static_cast<LogLevel>(impl_->logger->level());
-}
-
-size_t Logger::sinkCount() const { return impl_->logger->sinks().size(); }
+size_t Logger::sinkCount() const { return impl_->sinks.size(); }
 
 void Logger::setFormatter(std::unique_ptr<Formatter> formatter)
 {
-  // spdlog does not have a get_formatter() method, so I clone the formatter
-  // here and save it in impl_ in case I want to get a pointer to the formatter
-  // at some point to do some formatting
-  auto clone = formatter->formatter_->clone();
-  impl_->logger->set_formatter(std::move(clone));
   impl_->formatter = std::move(formatter);
 }
 
 void Logger::setLogLevel(LogLevel level)
 {
   Assert(level <= impl_->error_level);
-  impl_->logger->set_level(static_cast<spdlog::level::level_enum>(level));
+  log_level_ = level;
 }
 
 void Logger::setErrorLevel(LogLevel level)
@@ -55,45 +41,107 @@ void Logger::setErrorLevel(LogLevel level)
   impl_->error_level = level;
 }
 
-void Logger::addSink(std::shared_ptr<Sink> sink)
+void Logger::logProgress(const std::string& formatted)
 {
-  impl_->logger->sinks().push_back(sink);
+  for (auto& entry : impl_->sinks)
+    entry->logProgress(formatted);
 }
 
-void Logger::clearSinks() { impl_->logger->sinks().clear(); }
+template <typename SinkType>
+void Logger::addSink(std::shared_ptr<SinkType> sink)
+{
+  impl_->sinks.push_back(
+    std::dynamic_pointer_cast<Sink<ThreadingPolicy>>(sink));
+}
+
+void Logger::clearSinks() { impl_->sinks.clear(); }
 
 #undef Throw
 void Logger::log(LogLevel           level,
-                 const char*        filename,
-                 int                line,
                  const char*        function,
+                 const char*        file,
+                 int                line,
                  const std::string& message)
 {
   if (level < logLevel()) {
     return;
   }
   else if (level >= impl_->error_level) {
-    detail::Throw(level, filename, line, function, message);
+    detail::Throw(level, function, file, line, message);
   }
   if (!impl_->formatter) {
     std::cerr << "PANIC: Logging has not been properly initialized\n";
     abort();
   }
+  std::string text{ impl_->formatter->format(
+    level, Thread::thread(), function, file, line, message) };
 
-  std::lock_guard<std::mutex> guard{ impl_->mutex };
-  impl_->logger->log(static_cast<spdlog::level::level_enum>(level), message);
+  for (auto& sink : impl_->sinks) {
+    (*sink)(level, message);
+  }
+}
+
+void Logger::Init()
+{
+  auto logger    = std::make_unique<Logger>(PassKey{}, Info);
+  auto sink      = std::make_shared<StreamSink<MultiThreaded>>(&std::cout);
+  auto formatter = std::make_unique<DefaultFormatter>();
+
+  logger->setFormatter(std::move(formatter));
+  logger->addSink(sink);
+
+  Thread::thread()->setLogger(std::move(logger));
+#ifdef DEBUG
+  logger->setLogLevel(Debug);
+#endif
 }
 
 namespace detail {
-#undef Throw
-void Throw(LogLevel level, const char* file, int line, const std::string& msg)
-{
-  auto formatter{ std::make_unique<spdlog::pattern_formatter>() };
-  //  [time] [Logger name] [Thread name] [color+level+endcolor] message
-  formatter->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v");
 
-  formatter->format();
+/// Extract the class name from a function signature
+std::string className(const char* function_sig)
+{
+  /// function sig is either a full signature like "int Class::name(A param)" or
+  /// simply "name" for compilers that don't support __PRETTY_FUNCTION__-like
+  /// variables
+  std::string  func_sig{ function_sig };
+  std::string  class_name;
+  const size_t colons{ func_sig.find("::") };
+  if (colons == std::string::npos)
+    return "Unknown";
+  const size_t begin{ func_sig.substr(0, colons).rfind(" ") + 1 };
+  const size_t end{ colons - begin };
+  return func_sig.substr(begin, end);
 }
+
+#undef Throw
+
+void Throw(LogLevel           level,
+           const char*        function,
+           const char*        file,
+           int                line,
+           const std::string& message)
+{
+
+  DefaultFormatter formatter;
+  formatter.setHasFile(true);
+  formatter.setClassFuncFormat(
+    DefaultFormatter::ClassFuncFormat::ClassOrFunction);
+
+  // Tag beginning of exception text with UTF8 zero width space
+  const std::string zerowidth_space = "\xe2\x80\x8b";
+
+  // Separate nested exceptions by a newline
+  std::string msg{ message };
+  size_t      pos{ msg.find(zerowidth_space) };
+  if (pos != std::string::npos)
+    msg = msg.substr(0, pos) + "\n  " + msg.substr(pos + 3);
+
+  std::string text =
+    formatter.format(level, Thread::thread(), function, file, line, msg);
+  throw std::runtime_error(zerowidth_space + text);
+}
+
 } // namespace detail
 
-} // namespace eldr::core::logging
+} // namespace eldr::core

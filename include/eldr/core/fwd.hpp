@@ -13,13 +13,14 @@ class Stream;
 class StopWatch;
 
 namespace core {
-namespace logging {
-class Logger;
 enum LogLevel : int;
+class Logger;
 class Formatter;
-// class Sink;
-} // namespace logging
-using Logger = logging::Logger;
+struct ThreadingPolicy;
+struct SingleThreaded;
+struct MultiThreaded;
+template <typename TPolicy> class Sink;
+class Thread;
 } // namespace core
 
 template <size_t size, typename T> using Color = glm::vec<size, T>;

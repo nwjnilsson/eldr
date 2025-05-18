@@ -25,8 +25,8 @@ EldrApp::EldrApp()
 
 EldrApp::~EldrApp() {}
 
-void EldrApp::keyCallback(GLFWwindow* /*window*/, int key, int, int action,
-                          int /*mods*/)
+void EldrApp::keyCallback(
+  GLFWwindow* /*window*/, int key, int, int action, int /*mods*/)
 {
   if (key < 0 || key > GLFW_KEY_LAST) {
     return;
@@ -44,14 +44,17 @@ void EldrApp::keyCallback(GLFWwindow* /*window*/, int key, int, int action,
   }
 }
 
-void EldrApp::cursorPositionCallback(GLFWwindow* /*window*/, double x_pos,
+void EldrApp::cursorPositionCallback(GLFWwindow* /*window*/,
+                                     double x_pos,
                                      double y_pos)
 {
   input_data_->setCursorPos(x_pos, y_pos);
 }
 
-void EldrApp::mouseButtonCallback(GLFWwindow* /*window*/, int button,
-                                  int action, int /*mods*/)
+void EldrApp::mouseButtonCallback(GLFWwindow* /*window*/,
+                                  int button,
+                                  int action,
+                                  int /*mods*/)
 {
   if (button < 0 || button > GLFW_MOUSE_BUTTON_LAST) {
     return;
@@ -68,7 +71,8 @@ void EldrApp::mouseButtonCallback(GLFWwindow* /*window*/, int button,
   }
 }
 
-void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/, double /*x_offset*/,
+void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/,
+                                  double /*x_offset*/,
                                   double y_offset)
 {
   // camera_->change_zoom(static_cast<float>(y_offset));
@@ -86,7 +90,7 @@ void EldrApp::run()
     // vk_engine_->newFrame();
     updateImGui();
     vk_engine_->drawFrame(scene);
-    frame_time_ = stop_watch_.seconds();
+    frame_time_ = stop_watch_.seconds<float>();
   }
 }
 
@@ -109,32 +113,32 @@ void EldrApp::setupWindowCallbacks()
 void EldrApp::setupInputCallbacks()
 {
 
-  auto lambda_key_callback = [](GLFWwindow* window, int key, int scancode,
-                                int action, int mods) {
-    auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
-    app->keyCallback(window, key, scancode, action, mods);
-  };
+  auto lambda_key_callback =
+    [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+      auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
+      app->keyCallback(window, key, scancode, action, mods);
+    };
   window_->setKeyboardButtonCallback(lambda_key_callback);
 
-  auto lambda_cursor_position_callback = [](GLFWwindow* window, double xpos,
-                                            double ypos) {
-    auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
-    app->cursorPositionCallback(window, xpos, ypos);
-  };
+  auto lambda_cursor_position_callback =
+    [](GLFWwindow* window, double xpos, double ypos) {
+      auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
+      app->cursorPositionCallback(window, xpos, ypos);
+    };
   window_->setCursorPositionCallback(lambda_cursor_position_callback);
 
-  auto lambda_mouse_button_callback = [](GLFWwindow* window, int button,
-                                         int action, int mods) {
-    auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
-    app->mouseButtonCallback(window, button, action, mods);
-  };
+  auto lambda_mouse_button_callback =
+    [](GLFWwindow* window, int button, int action, int mods) {
+      auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
+      app->mouseButtonCallback(window, button, action, mods);
+    };
   window_->setMouseButtonCallback(lambda_mouse_button_callback);
 
-  auto lambda_mouse_scroll_callback = [](GLFWwindow* window, double xoffset,
-                                         double yoffset) {
-    auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
-    app->mouseScrollCallback(window, xoffset, yoffset);
-  };
+  auto lambda_mouse_scroll_callback =
+    [](GLFWwindow* window, double xoffset, double yoffset) {
+      auto* app = static_cast<EldrApp*>(glfwGetWindowUserPointer(window));
+      app->mouseScrollCallback(window, xoffset, yoffset);
+    };
   window_->setMouseScrollCallback(lambda_mouse_scroll_callback);
 }
 
@@ -146,13 +150,13 @@ void EldrApp::updateImGui()
   ImGuiIO& io     = ImGui::GetIO();
   io.DeltaTime    = frame_time_;
   io.MousePos     = ImVec2(static_cast<float>(cursor_pos[0]),
-                           static_cast<float>(cursor_pos[1]));
+                       static_cast<float>(cursor_pos[1]));
   io.MouseDown[0] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
   io.MouseDown[1] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
   io.MouseDown[2] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
 
-  window_->setTitle(fmt::format("Eldr - {} - {} fps", vk_engine_->deviceName(),
-                                std::round(io.Framerate)));
+  window_->setTitle(fmt::format(
+    "Eldr - {} - {} fps", vk_engine_->deviceName(), std::round(io.Framerate)));
   static bool show_demo_window = true;
   vk_engine_->updateImGui([&]() {
     if (show_demo_window) {

@@ -4,43 +4,49 @@
 #include <eldr/core/thread.hpp>
 
 #include <fmt/format.h>
-#include <spdlog/fwd.h>
 
 #include <memory>
 
-namespace eldr::core::logging {
+namespace eldr::core {
 
-enum LogLevel : int { // log level type compatible with spdlog
-  Trace,
-  Debug,
-  Info,
-  Warn,
-  Error,
-  Critical,
-  Off,
+enum LogLevel : int {
+  Trace,    /// Verbose logging
+  Debug,    /// Debug message
+  Info,     /// Information / relevant debug info
+  Warn,     /// Warning message
+  Error,    /// Error message
+  Critical, /// Critical, causes an exception to be thrown
   n_levels
 };
 
 class Logger {
-  /// Only a `Thread` can create a `Logger`
+  /// PassKey class for `Logger`. `Thread`s can construct this object implicitly
+  /// with "{}"
   class PassKey {
     friend class Thread;
+    friend class Logger;
     PassKey() {}
+
+  public:
+    PassKey(const PassKey&) = default;
   };
 
 public:
-  explicit Logger(const std::string& name,
-                  PassKey,
-                  LogLevel log_level = LogLevel::Debug);
+  /// Constructs a Logger, e.g "Logger({}, Warn);"
+  explicit Logger(const PassKey&, LogLevel log_level = LogLevel::Debug);
 
   void log(LogLevel           level,
-           const char*        filename,
-           int                line,
            const char*        function,
+           const char*        file,
+           int                line,
            const std::string& message);
 
+  /// @brief Process a progress message
+  /// @param formatted Formatted string representation of the message
+  void logProgress(const std::string& formatted);
+
   /// Adds a sink to this logger.
-  void addSink(std::shared_ptr<spdlog::sinks::sink> sink);
+  template <typename SinkType> void addSink(std::shared_ptr<SinkType> sink);
 
   /// Clears all sinks from this logger.
   void clearSinks();
@@ -60,7 +66,7 @@ public:
   [[nodiscard]] const Formatter* formatter() const;
 
   /// Return the logger's log level
-  [[nodiscard]] LogLevel logLevel() const;
+  [[nodiscard]] LogLevel logLevel() const { return log_level_; }
 
   /// Return the logger's error level
   [[nodiscard]] LogLevel errorLevel() const;
@@ -68,50 +74,63 @@ public:
   /// Return the number of sinks for this logger
   [[nodiscard]] size_t sinkCount() const;
 
+  /// Initialize logging
+  static void Init();
+
 private:
-  // LogLevel log_level_;
+  LogLevel log_level_;
   struct LoggerImpl;
   std::shared_ptr<LoggerImpl> impl_;
 };
 
 namespace detail {
 
+[[nodiscard]] std::string className(const char* function_sig);
+
 [[noreturn]] void Throw(LogLevel           level,
+                        const char*        function,
                         const char*        file,
                         int                line,
-                        const char*        function,
-                        const std::string& msg);
+                        const std::string& message);
 
 template <typename... Args>
 static void Log(LogLevel    level,
-                const char* filename,
-                int         line,
                 const char* function,
+                const char* file,
+                int         line,
                 Args&&... args)
 {
   Logger* logger{ eldr::core::Thread::thread()->logger() };
   if (logger && level >= logger->logLevel()) {
-    logger->log(level,
-                filename,
-                line,
-                function,
-                fmt::format(std::forward<Args>(args)...));
+    logger->log(
+      level, function, file, line, fmt::format(std::forward<Args>(args)...));
   }
 }
 } // namespace detail
-} // namespace eldr::core::logging
+} // namespace eldr::core
 
-#define EL_FUNCTION static_cast<const char*>(__FUNCTION__)
+#if defined(__GNUC__) || defined(__clang__)
+#  define EL_FUNCTION static_cast<const char*>(__PRETTY_FUNCTION__)
+#elif defined(_MSC_VER)
+#  define EL_FUNCTION static_cast<const char*>(__FUNCSIG__)
+#else
+// __func__ should always be available regardless of compiler but we can't
+// extract class name from it
+#  define EL_FUNCTION static_cast<const char*>(__func__)
+#endif
+
+#define EL_CLASS_NAME eldr::core::detail::className(EL_FUNCTION)
+
 #define Log(level, ...)                                                        \
   do {                                                                         \
-    eldr::core::logging::detail::Log(                                          \
-      level, __FILE__, __LINE__, EL_FUNCTION, __VA_ARGS__);                    \
+    eldr::core::detail::Log(                                                   \
+      level, EL_FUNCTION, __FILE__, __LINE__, __VA_ARGS__);                    \
   } while (0)
 
 #define Throw(...)                                                             \
   do {                                                                         \
-    eldr::core::logging::detail::Throw(                                        \
-      Error, __FILE__, __LINE__, EL_FUNCTION, fmt::format(__VA_ARGS__));       \
+    eldr::core::detail::Throw(                                                 \
+      Critical, EL_FUNCTION, __FILE__, __LINE__, fmt::format(__VA_ARGS__));    \
   } while (0)
 
 #ifndef NDEBUG
@@ -139,5 +158,4 @@ static void Log(LogLevel    level,
 #endif // !defined(NDEBUG)
 
 /// Throw an exception reporting that the given function is not implemented
-#define NotImplementedError(Name)                                              \
-  Throw("%s::" Name "(): not implemented!", class_()->name());
+#define NotImplementedError Throw("%s: not implemented!", EL_FUNCTION);
