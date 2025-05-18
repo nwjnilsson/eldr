@@ -26,7 +26,6 @@ src = [
   'material.cpp',
   'pipelinebuilder.cpp',
   'rendergraph.cpp',
-  'exceptions.cpp'
   ]
 
 

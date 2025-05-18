@@ -1,5 +1,7 @@
+#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
+using namespace eldr::core;
 
 namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
@@ -20,7 +22,7 @@ CommandPool::CommandPoolImpl::CommandPoolImpl(
   if (const auto result =
         vkCreateCommandPool(device_.logical(), &pool_ci, nullptr, &pool_);
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateCommandPool(): ");
+    Throw("Failed to create command pool ({})", result);
 }
 
 CommandPool::CommandPoolImpl::~CommandPoolImpl()
@@ -40,7 +42,7 @@ CommandPool::CommandPool(const Device&                  device,
   pool_ci.queueFamilyIndex =
     device.queueFamilyIndices().graphics_family.value();
 
-  cp_data_ = std::make_shared<CommandPoolImpl>(device, pool_ci);
+  d_ = std::make_shared<CommandPoolImpl>(device, pool_ci);
 }
 
 const CommandBuffer& CommandPool::requestCommandBuffer()
@@ -65,12 +67,12 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   // this should not be a problem
   std::string name =
     fmt::format("command buffer #{}", command_buffers_.size() + 1);
-  cp_data_->device_.logger()->trace("Creating {}", name);
-  command_buffers_.emplace_back(cp_data_->device_, *this, name);
+  Log(Trace, "Creating {}", name);
+  command_buffers_.emplace_back(d_->device_, *this, name);
 
   command_buffers_.back().begin();
   return command_buffers_.back();
 }
 
-VkCommandPool CommandPool::get() const { return cp_data_->pool_; }
+VkCommandPool CommandPool::get() const { return d_->pool_; }
 } // namespace eldr::vk::wr

@@ -7,8 +7,6 @@
 #include <string>
 #include <vector>
 
-#include <spdlog/fmt/ostr.h>
-
 namespace eldr {
 class Struct {
 public:
@@ -149,9 +147,10 @@ public:
 
   /// Append a new field to the \c Struct; determines size and offset
   /// automatically
-  Struct& append(const std::string& name, Type type,
-                 uint32_t flags    = static_cast<uint32_t>(Flags::Empty),
-                 double   default_ = 0.0);
+  Struct& append(const std::string& name,
+                 Type               type,
+                 uint32_t           flags = static_cast<uint32_t>(Flags::Empty),
+                 double             default_ = 0.0);
 
   /// Append a new field to the \c Struct (manual version)
   Struct& append(Field field)
@@ -264,8 +263,6 @@ protected:
 
 ELDR_DECLARE_ENUM_OPERATORS(Struct::Flags)
 
-extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
+std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
 
 } // namespace eldr
-template <>
-struct fmt::formatter<eldr::Struct::Type> : fmt::ostream_formatter {};

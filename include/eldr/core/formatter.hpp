@@ -15,6 +15,7 @@ public:
 
   [[nodiscard]] virtual std::string format(LogLevel           level,
                                            const Thread*      thread,
+                                           const std::string& class_,
                                            const char*        function,
                                            const char*        file,
                                            int                line,
@@ -26,12 +27,13 @@ protected:
 class DefaultFormatter : public Formatter {
 public:
   enum class ClassFuncFormat {
-    None,            // Include neither
-    ClassOrFunction, // Include class in formatted text, fall back to function
-                     // signature if no class is available
-    ClassOnly, // Include class name in formatted text, "Unknown" if no class is
-               // available
-    FunctionOnly, // Include function signature only
+    None,         // Include neither
+    ClassAndFunc, // Include class name (if available) and short function
+                  // signature
+    ClassOrFunc, // Include class in formatted text, fall back to short function
+                 // signature if no class is available
+    ClassOnly,   // Include class name, "Unknown" if no class is available
+    FuncOnly,    // Include full function signature (if available)
   };
 
 public:
@@ -39,6 +41,7 @@ public:
 
   [[nodiscard]] std::string format(LogLevel           level,
                                    const Thread*      thread,
+                                   const std::string& class_,
                                    const char*        function,
                                    const char*        file,
                                    int                line,
@@ -57,6 +60,6 @@ protected:
   bool has_thread_{ true };
   bool has_file_{ false };
 
-  ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassOnly };
+  ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassAndFunc };
 };
 } // namespace eldr::core

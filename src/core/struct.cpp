@@ -1,12 +1,12 @@
 /**
  * Struct implementation adapted from the Mitsuba project
  */
-#include <eldr/core/common.hpp>
 #include <eldr/core/hash.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
-#include <spdlog/fmt/ostr.h>
+#include <sstream>
 
 #include <cmath>
 
@@ -54,8 +54,10 @@ bool Struct::hasField(const std::string& name) const
   return false;
 }
 
-Struct& Struct::append(const std::string& name, Struct::Type type,
-                       uint32_t flags, double default_)
+Struct& Struct::append(const std::string& name,
+                       Struct::Type       type,
+                       uint32_t           flags,
+                       double             default_)
 {
   Field f;
   f.name     = name;

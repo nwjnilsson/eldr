@@ -40,7 +40,7 @@ class Sampler;
 class Pipeline;
 // class GraphicsPipeline;
 // class ComputePipeline;
-template <typename T> class Buffer;
+template <typename T> class GpuBuffer;
 class Image;
 class Texture;
 class ImageView;

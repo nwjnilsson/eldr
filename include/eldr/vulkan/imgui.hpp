@@ -1,10 +1,6 @@
 #pragma once
-
-#include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
@@ -20,7 +16,9 @@ class ImGuiOverlay {
 
 public:
   ImGuiOverlay() = delete;
-  ImGuiOverlay(const wr::Device&, const wr::Swapchain&, RenderGraph*,
+  ImGuiOverlay(const wr::Device&,
+               const wr::Swapchain&,
+               RenderGraph*,
                TextureResource* back_buffer);
   ImGuiOverlay(ImGuiOverlay&&)      = delete;
   ImGuiOverlay(const ImGuiOverlay&) = delete;
@@ -34,7 +32,6 @@ private:
 private:
   const wr::Device    device_;
   const wr::Swapchain swapchain_;
-  Logger              log_{ requestLogger("imgui-overlay") };
   float               scale_{ 1.0f };
 
   BufferResource* ibuffer_{ nullptr };

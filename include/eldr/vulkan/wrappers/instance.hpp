@@ -1,7 +1,6 @@
 #pragma once
 #include <eldr/vulkan/common.hpp>
 
-#include <string>
 #include <vector>
 
 namespace eldr::vk::wr {
@@ -14,7 +13,6 @@ public:
   [[nodiscard]] VkInstance get() const;
 
 private:
-  Logger log_{ requestLogger("vulkan-engine") };
   class InstanceImpl;
   std::shared_ptr<InstanceImpl> i_data_;
 };

@@ -36,6 +36,7 @@ public:
   explicit Logger(const PassKey&, LogLevel log_level = LogLevel::Debug);
 
   void log(LogLevel           level,
+           const std::string& class_,
            const char*        function,
            const char*        file,
            int                line,
@@ -75,7 +76,7 @@ public:
   [[nodiscard]] size_t sinkCount() const;
 
   /// Initialize logging
-  static void Init();
+  static void createContext();
 
 private:
   LogLevel log_level_;
@@ -88,22 +89,28 @@ namespace detail {
 [[nodiscard]] std::string className(const char* function_sig);
 
 [[noreturn]] void Throw(LogLevel           level,
+                        const std::string& class_,
                         const char*        function,
                         const char*        file,
                         int                line,
                         const std::string& message);
 
 template <typename... Args>
-static void Log(LogLevel    level,
-                const char* function,
-                const char* file,
-                int         line,
+static void Log(LogLevel           level,
+                const std::string& class_,
+                const char*        function,
+                const char*        file,
+                int                line,
                 Args&&... args)
 {
   Logger* logger{ eldr::core::Thread::thread()->logger() };
   if (logger && level >= logger->logLevel()) {
-    logger->log(
-      level, function, file, line, fmt::format(std::forward<Args>(args)...));
+    logger->log(level,
+                class_,
+                function,
+                file,
+                line,
+                fmt::format(std::forward<Args>(args)...));
   }
 }
 } // namespace detail
@@ -119,18 +126,22 @@ static void Log(LogLevel    level,
 #  define EL_FUNCTION static_cast<const char*>(__func__)
 #endif
 
-#define EL_CLASS_NAME eldr::core::detail::className(EL_FUNCTION)
+#define EL_CLASS eldr::core::detail::className(EL_FUNCTION)
 
 #define Log(level, ...)                                                        \
   do {                                                                         \
     eldr::core::detail::Log(                                                   \
-      level, EL_FUNCTION, __FILE__, __LINE__, __VA_ARGS__);                    \
+      level, EL_CLASS, __func__, __FILE__, __LINE__, __VA_ARGS__);             \
   } while (0)
 
 #define Throw(...)                                                             \
   do {                                                                         \
-    eldr::core::detail::Throw(                                                 \
-      Critical, EL_FUNCTION, __FILE__, __LINE__, fmt::format(__VA_ARGS__));    \
+    eldr::core::detail::Throw(eldr::core::Critical,                            \
+                              EL_CLASS,                                        \
+                              __func__,                                        \
+                              __FILE__,                                        \
+                              __LINE__,                                        \
+                              fmt::format(__VA_ARGS__));                       \
   } while (0)
 
 #ifndef NDEBUG

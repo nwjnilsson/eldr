@@ -3,6 +3,8 @@
 #include <eldr/render/fwd.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
+// #include <eldr/core/math.hpp>
+
 #include <filesystem>
 #include <functional>
 #include <memory>

@@ -1,3 +1,4 @@
+#include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
@@ -27,7 +28,7 @@ CommandBuffer::CommandBufferImpl::CommandBufferImpl(
   if (const auto result = vkAllocateCommandBuffers(
         device_.logical(), &alloc_info, &command_buffer_);
       result != VK_SUCCESS)
-    ThrowVk(result, "vkAllocateCommandBuffers(): ");
+    Throw("Failed to allocate command buffers ({})", result);
 }
 
 CommandBuffer::CommandBufferImpl::~CommandBufferImpl()
@@ -64,11 +65,16 @@ const CommandBuffer& CommandBuffer::pipelineBarrier(
   assert(!(img_mem_barriers.empty() && mem_barriers.empty()) &&
          buf_mem_barriers.empty());
 
-  vkCmdPipelineBarrier(
-    cb_data_->command_buffer_, src_stage_flags, dst_stage_flags, dep_flags,
-    static_cast<uint32_t>(mem_barriers.size()), mem_barriers.data(),
-    static_cast<uint32_t>(buf_mem_barriers.size()), buf_mem_barriers.data(),
-    static_cast<uint32_t>(img_mem_barriers.size()), img_mem_barriers.data());
+  vkCmdPipelineBarrier(cb_data_->command_buffer_,
+                       src_stage_flags,
+                       dst_stage_flags,
+                       dep_flags,
+                       static_cast<uint32_t>(mem_barriers.size()),
+                       mem_barriers.data(),
+                       static_cast<uint32_t>(buf_mem_barriers.size()),
+                       buf_mem_barriers.data(),
+                       static_cast<uint32_t>(img_mem_barriers.size()),
+                       img_mem_barriers.data());
   return *this;
 }
 
@@ -85,15 +91,17 @@ CommandBuffer::pipelineMemoryBarrier(VkPipelineStageFlags   src_stage_flags,
                                      VkPipelineStageFlags   dst_stage_flags,
                                      const VkMemoryBarrier& mem_barrier) const
 {
-  return pipelineBarrier(src_stage_flags, dst_stage_flags, {},
-                         { &mem_barrier, 1 });
+  return pipelineBarrier(
+    src_stage_flags, dst_stage_flags, {}, { &mem_barrier, 1 });
 }
 
 const CommandBuffer&
 CommandBuffer::setViewport(std::span<const VkViewport> viewports,
                            uint32_t                    first_viewport) const
 {
-  vkCmdSetViewport(cb_data_->command_buffer_, first_viewport, viewports.size(),
+  vkCmdSetViewport(cb_data_->command_buffer_,
+                   first_viewport,
+                   viewports.size(),
                    viewports.data());
   return *this;
 }
@@ -102,8 +110,8 @@ const CommandBuffer&
 CommandBuffer::setScissor(std::span<const VkRect2D> scissors,
                           uint32_t                  first_scissor) const
 {
-  vkCmdSetScissor(cb_data_->command_buffer_, first_scissor, scissors.size(),
-                  scissors.data());
+  vkCmdSetScissor(
+    cb_data_->command_buffer_, first_scissor, scissors.size(), scissors.data());
   return *this;
 }
 
@@ -114,7 +122,8 @@ const CommandBuffer& CommandBuffer::fullBarrier() const
                                  .srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
                                  .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT };
   return pipelineMemoryBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, barrier);
+                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                               barrier);
 }
 
 const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
@@ -126,15 +135,15 @@ const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
   if (const auto result =
         vkBeginCommandBuffer(cb_data_->command_buffer_, &begin_info);
       result != VK_SUCCESS)
-    ThrowVk(result, "vkBeginCommandBuffer(): ");
+    Throw("Failed to begin command buffer ({})!", result);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::beginRenderPass(
   const VkRenderPassBeginInfo& render_pass_info) const
 {
-  vkCmdBeginRenderPass(cb_data_->command_buffer_, &render_pass_info,
-                       VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(
+    cb_data_->command_buffer_, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
   return *this;
 }
 
@@ -151,8 +160,12 @@ const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
                                                 int32_t  vert_offset,
                                                 uint32_t first_inst) const
 {
-  vkCmdDrawIndexed(cb_data_->command_buffer_, index_count, inst_count,
-                   first_index, vert_offset, first_inst);
+  vkCmdDrawIndexed(cb_data_->command_buffer_,
+                   index_count,
+                   inst_count,
+                   first_index,
+                   vert_offset,
+                   first_inst);
   return *this;
 }
 
@@ -172,7 +185,7 @@ const CommandBuffer& CommandBuffer::end() const
 {
   if (const auto result = vkEndCommandBuffer(cb_data_->command_buffer_);
       result != VK_SUCCESS)
-    ThrowVk(result, "vkEndCommandBuffer(): ");
+    Throw("Failed to end command buffer ({})!", result);
   return *this;
 }
 
@@ -180,10 +193,10 @@ const CommandBuffer&
 CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
-  if (const auto result = vkQueueSubmit(cb_data_->device_.graphicsQueue(), 1,
-                                        &submit_info, wait_fence_.get());
+  if (const auto result = vkQueueSubmit(
+        cb_data_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.get());
       result != VK_SUCCESS)
-    ThrowVk(result, "vkQueueSubmit(): ");
+    Throw("Failed to submit to queue ({})!", result);
   return *this;
 }
 
@@ -215,17 +228,25 @@ const CommandBuffer& CommandBuffer::reset() const
 {
   if (const auto result = vkResetCommandBuffer(cb_data_->command_buffer_, 0);
       result != VK_SUCCESS)
-    ThrowVk(result, "vkResetCommandBuffer(): ");
+    Throw("Failed to reset command buffer ({})", result);
   return *this;
 }
 
-const CommandBuffer&
-CommandBuffer::blitImage(const Image& src_image, VkImageLayout src_layout,
-                         const Image& dst_image, VkImageLayout dst_layout,
-                         const VkImageBlit& blit, VkFilter filter) const
+const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
+                                              VkImageLayout      src_layout,
+                                              const Image&       dst_image,
+                                              VkImageLayout      dst_layout,
+                                              const VkImageBlit& blit,
+                                              VkFilter           filter) const
 {
-  vkCmdBlitImage(cb_data_->command_buffer_, src_image.get(), src_layout,
-                 dst_image.get(), dst_layout, 1, &blit, filter);
+  vkCmdBlitImage(cb_data_->command_buffer_,
+                 src_image.get(),
+                 src_layout,
+                 dst_image.get(),
+                 dst_layout,
+                 1,
+                 &blit,
+                 filter);
   return *this;
 }
 
@@ -234,8 +255,8 @@ const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
                                                     VkDeviceSize offset) const
 {
   assert(buffer.get());
-  vkCmdBindIndexBuffer(cb_data_->command_buffer_, buffer.get(), offset,
-                       index_type);
+  vkCmdBindIndexBuffer(
+    cb_data_->command_buffer_, buffer.get(), offset, index_type);
   return *this;
 }
 
@@ -251,23 +272,31 @@ CommandBuffer::bindVertexBuffers(std::span<const VkBuffer>     buffers,
     assert(buffers.size() == offsets.size());
     p_offsets = offsets.data();
   }
-  vkCmdBindVertexBuffers(cb_data_->command_buffer_, first_binding,
-                         static_cast<uint32_t>(buffers.size()), buffers.data(),
+  vkCmdBindVertexBuffers(cb_data_->command_buffer_,
+                         first_binding,
+                         static_cast<uint32_t>(buffers.size()),
+                         buffers.data(),
                          p_offsets);
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindDescriptorSets(
-  std::span<const VkDescriptorSet> desc_sets, VkPipelineLayout layout,
-  VkPipelineBindPoint bind_point, uint32_t first_set,
-  std::span<const uint32_t> dyn_offsets) const
+const CommandBuffer&
+CommandBuffer::bindDescriptorSets(std::span<const VkDescriptorSet> desc_sets,
+                                  VkPipelineLayout                 layout,
+                                  VkPipelineBindPoint              bind_point,
+                                  uint32_t                         first_set,
+                                  std::span<const uint32_t> dyn_offsets) const
 {
   assert(layout);
   assert(!desc_sets.empty());
-  vkCmdBindDescriptorSets(
-    cb_data_->command_buffer_, bind_point, layout, first_set,
-    static_cast<uint32_t>(desc_sets.size()), desc_sets.data(),
-    static_cast<uint32_t>(dyn_offsets.size()), dyn_offsets.data());
+  vkCmdBindDescriptorSets(cb_data_->command_buffer_,
+                          bind_point,
+                          layout,
+                          first_set,
+                          static_cast<uint32_t>(desc_sets.size()),
+                          desc_sets.data(),
+                          static_cast<uint32_t>(dyn_offsets.size()),
+                          dyn_offsets.data());
   return *this;
 }
 
@@ -283,14 +312,12 @@ CommandBuffer::bindPipeline(const Pipeline&     pipeline,
 const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
 {
   VkFormatProperties format_props{};
-  vkGetPhysicalDeviceFormatProperties(cb_data_->device_.physical(),
-                                      image.format(), &format_props);
+  vkGetPhysicalDeviceFormatProperties(
+    cb_data_->device_.physical(), image.format(), &format_props);
   // Support for linear blitting is currently required
   if (!(format_props.optimalTilingFeatures &
         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-    ThrowVk(VkResult{},
-            "generateMipmaps(): texture image format does not support linear "
-            "blitting!");
+    Throw("Texture image format does not support linear blitting!");
   }
 
   VkImageMemoryBarrier barrier{};
@@ -312,8 +339,8 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
     barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    pipelineImageMemoryBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                               VK_PIPELINE_STAGE_TRANSFER_BIT, barrier);
+    pipelineImageMemoryBarrier(
+      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, barrier);
 
     const VkImageBlit blit{
       .srcSubresource = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -327,10 +354,15 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
                           .layerCount     = 1 },
       .dstOffsets     = { { 0, 0, 0 },
                           { mip_width > 1 ? mip_width / 2 : 1,
-                        mip_height > 1 ? mip_height / 2 : 1, 1 } },
+                        mip_height > 1 ? mip_height / 2 : 1,
+                            1 } },
     };
-    blitImage(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
-              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, blit, VK_FILTER_LINEAR);
+    blitImage(image,
+              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+              image,
+              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+              blit,
+              VK_FILTER_LINEAR);
 
     barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -338,7 +370,8 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     pipelineImageMemoryBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, barrier);
+                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                               barrier);
     if (mip_width > 1)
       mip_width /= 2;
     if (mip_height > 1)
@@ -398,22 +431,29 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
 
 template <typename T>
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const Buffer<T>& buffer, Image& image,
+CommandBuffer::copyBufferToImage(const Buffer<T>&         buffer,
+                                 Image&                   image,
                                  const VkBufferImageCopy& copy_region) const
 {
-  vkCmdCopyBufferToImage(cb_data_->command_buffer_, buffer.get(), image.get(),
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+  vkCmdCopyBufferToImage(cb_data_->command_buffer_,
+                         buffer.get(),
+                         image.get(),
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                         1,
+                         &copy_region);
   return *this;
 }
 
 const CommandBuffer&
-CommandBuffer::copyDataToImage(std::span<const byte> data, Image& image,
+CommandBuffer::copyDataToImage(std::span<const byte>    data,
+                               Image&                   image,
                                const VkBufferImageCopy& copy_region) const
 {
   return copyBufferToImage(
     createStagingBuffer(
       fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data),
-    image, copy_region);
+    image,
+    copy_region);
 }
 
 const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
@@ -425,8 +465,12 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   assert(layout);
   assert(size > 0);
   assert(data);
-  vkCmdPushConstants(cb_data_->command_buffer_, layout, stage,
-                     static_cast<uint32_t>(offset), size, data);
+  vkCmdPushConstants(cb_data_->command_buffer_,
+                     layout,
+                     stage,
+                     static_cast<uint32_t>(offset),
+                     size,
+                     data);
   return *this;
 }
 
@@ -434,7 +478,9 @@ const Buffer<std::byte>&
 CommandBuffer::createStagingBuffer(std::string_view      name,
                                    std::span<const byte> data) const
 {
-  staging_buffers_.emplace_back(cb_data_->device_, name, data,
+  staging_buffers_.emplace_back(cb_data_->device_,
+                                name,
+                                data,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                 VMA_MEMORY_USAGE_CPU_ONLY);
   return staging_buffers_.back();

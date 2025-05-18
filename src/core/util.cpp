@@ -1,4 +1,7 @@
 #include <eldr/core/util.hpp>
+#include <eldr/eldr.hpp>
+
+#include <sstream>
 
 #ifdef _WIN32
 #  include <windows.h>
@@ -8,6 +11,33 @@
 #endif
 
 namespace eldr::core::util {
+
+std::string infoBuild(int thread_count)
+{
+  std::ostringstream oss;
+  oss << EL_NAME << " version " << EL_VERSION_STR ", (";
+#if defined(_WIN32)
+  oss << "Windows, ";
+#elif defined(__linux__)
+  oss << "Linux, ";
+#elif defined(__APPLE__)
+  oss << "Mac OS, ";
+#else
+  oss << "Unknown, ";
+#endif
+  oss << (sizeof(size_t) * 8) << "bit, ";
+  oss << thread_count << " thread" << (thread_count > 1 ? "s" : "");
+  oss << ")";
+  return oss.str();
+}
+
+std::string infoCopyright()
+{
+  std::ostringstream oss;
+  oss << "Copyright " << EL_YEAR << ", " << EL_AUTHORS;
+  return oss.str();
+}
+
 int terminalWidth()
 {
   int width{ -1 };

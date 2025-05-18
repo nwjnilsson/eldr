@@ -6,13 +6,13 @@
 #include <span>
 
 namespace eldr::vk::wr {
-template <typename T> class Buffer {
+template <typename T> class GpuBuffer {
 private:
-  class BufferImpl : public GpuResourceAllocation {
+  class GpuBufferImpl : public GpuResourceAllocation {
   public:
-    BufferImpl(const Device&                  device,
-               const VkBufferCreateInfo&      buffer_ci,
-               const VmaAllocationCreateInfo& alloc_ci)
+    GpuBufferImpl(const Device&                  device,
+                  const VkBufferCreateInfo&      buffer_ci,
+                  const VmaAllocationCreateInfo& alloc_ci)
       : GpuResourceAllocation(device)
     {
       if (const VkResult result = vmaCreateBuffer(device_.allocator(),
@@ -22,9 +22,9 @@ private:
                                                   &allocation_,
                                                   &alloc_info_);
           result != VK_SUCCESS)
-        ThrowVk(result, "vmaCreateBuffer(): ");
+        Throw("vmaCreateBuffer(): {}", result);
     }
-    ~BufferImpl()
+    ~GpuBufferImpl()
     {
       vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
     }
@@ -33,8 +33,8 @@ private:
   };
 
 public:
-  Buffer() = default;
-  Buffer(
+  GpuBuffer() = default;
+  GpuBuffer(
     const Device&            device,
     std::string_view         name,
     size_t                   element_count,
@@ -65,20 +65,21 @@ public:
       .pUserData      = {},
       .priority       = {},
     };
-    b_data_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci);
+    b_data_ = std::make_shared<GpuBufferImpl>(device, buffer_ci, alloc_ci);
     vmaSetAllocationName(device.allocator(),
                          b_data_->allocation_,
                          fmt::format("{} allocation", name).c_str());
   }
 
-  Buffer(
+  GpuBuffer(
     const Device&            device,
     std::string_view         name,
     std::span<const T>       data,
     VkBufferUsageFlags       buffer_usage,
     VmaMemoryUsage           memory_usage,
     VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
-    : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
+    : GpuBuffer(
+        device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
   {
     uploadData(data);
   }
@@ -124,9 +125,9 @@ public:
   // void copyFromBuffer(const GpuBuffer&, const CommandPool&);
 
 private:
-  std::string                 name_;
-  std::shared_ptr<BufferImpl> b_data_;
-  size_t                      size_{ 0 };
+  std::string                    name_;
+  std::shared_ptr<GpuBufferImpl> b_data_;
+  size_t                         size_{ 0 };
   // TODO: not sure if still needed
   VkDeviceSize size_bytes_{ 0 };
 };

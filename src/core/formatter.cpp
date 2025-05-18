@@ -11,6 +11,7 @@ namespace eldr::core {
 
 std::string DefaultFormatter::format(LogLevel           level,
                                      const Thread*      thread,
+                                     const char*        class_,
                                      const char*        function,
                                      const char*        file,
                                      int                line,
@@ -73,29 +74,35 @@ std::string DefaultFormatter::format(LogLevel           level,
         oss << ' ';
     }
 
-    const std::string class_name{ detail::className(function) };
+    const std::string class_name{ class_ };
     switch (class_func_format_) {
       case ClassFuncFormat::None:
         break;
-      case ClassFuncFormat::ClassOrFunction:
-        if (class_name.compare("Unknown")) {
+      case ClassFuncFormat::ClassAndFunc:
+        if (not class_name.compare("Unknown")) {
+          oss << "[" << class_name << "] ";
+        }
+        oss << "[" << function << "()] ";
+        break;
+      case ClassFuncFormat::ClassOrFunc:
+        if (not class_name.compare("Unknown")) {
           oss << "[" << class_name << "] ";
         }
         else {
-          oss << "[" << function << "] ";
+          oss << "[" << function << "()] ";
         }
         break;
       case ClassFuncFormat::ClassOnly:
         oss << "[" << class_name << "] ";
         break;
-      case ClassFuncFormat::FunctionOnly:
-        oss << "[" << function << "] ";
+      case ClassFuncFormat::FuncOnly:
+        oss << "[" << function << "()] ";
         break;
     }
 
     if (has_file_) {
       oss << "[" << std::filesystem::path(file).filename() << ":" << line
-          << "]";
+          << "]: ";
     }
 
     oss << msg_line;

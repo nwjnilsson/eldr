@@ -1,8 +1,7 @@
 #pragma once
-#include <eldr/vulkan/fwd.hpp>
+#include <eldr/vulkan/common.hpp>
 
-#include <spdlog/fmt/ostr.h>
-#include <vulkan/vulkan.h>
+#include <fmt/ostream.h>
 
 namespace std {
 // Overloaded operator<< need to be in std namespace for ADL

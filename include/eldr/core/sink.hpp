@@ -18,10 +18,6 @@ struct MultiThreaded : ThreadingPolicy {
 
 template <typename TPolicy> class Sink {
 public:
-  template <typename T> struct isValidThreadingPolicy : std::false_type {};
-  template <> struct isValidThreadingPolicy<SingleThreaded> : std::true_type {};
-  template <> struct isValidThreadingPolicy<MultiThreaded> : std::true_type {};
-
 protected:
   Sink();
 
@@ -93,6 +89,10 @@ private:
 // -----------------------------------------------------------------------------
 // Sink
 // -----------------------------------------------------------------------------
+template <typename T> struct isValidThreadingPolicy : std::false_type {};
+template <> struct isValidThreadingPolicy<SingleThreaded> : std::true_type {};
+template <> struct isValidThreadingPolicy<MultiThreaded> : std::true_type {};
+
 template <typename TPolicy> Sink<TPolicy>::Sink()
 {
   static_assert(isValidThreadingPolicy<TPolicy>::value,

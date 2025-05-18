@@ -2,7 +2,6 @@
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 #include <eldr/vulkan/wrappers/renderpass.hpp>
@@ -71,8 +70,9 @@ class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  BufferResource(std::string&& name, VkBufferUsageFlags buffer_usage,
-                 VmaMemoryUsage memory_usage)
+  BufferResource(std::string&&      name,
+                 VkBufferUsageFlags buffer_usage,
+                 VmaMemoryUsage     memory_usage)
     : RenderResource(name), buffer_usage_(buffer_usage),
       memory_usage_(memory_usage)
   {
@@ -118,7 +118,9 @@ class TextureResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  TextureResource(std::string&& name, TextureUsage usage, VkFormat format,
+  TextureResource(std::string&&         name,
+                  TextureUsage          usage,
+                  VkFormat              format,
                   VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT)
     : RenderResource(name), usage_(usage), format_(format),
       sample_count_(sample_count)
@@ -173,9 +175,8 @@ public:
   /// @details This function can be used to specify other vulkan commands during
   /// command buffer recording. The most common use for this is for draw
   /// commands.
-  void setOnRecord(
-    std::function<void(const PhysicalStage&, const wr::CommandBuffer&)>
-      on_record)
+  void setOnRecord(std::function<void(const PhysicalStage&,
+                                      const wr::CommandBuffer&)> on_record)
   {
     on_record_ = std::move(on_record);
   }
@@ -283,8 +284,9 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  // Buffer of any kind of data. Can be used as index buffer or vertex buffer.
-  wr::Buffer<byte_t> buffer_;
+  // GpuBuffer of any kind of data. Can be used as index buffer or vertex
+  // buffer.
+  wr::GpuBuffer<byte_t> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -400,7 +402,6 @@ public:
 private:
   const wr::Device    device_;
   const wr::Swapchain swapchain_;
-  Logger              log_{ requestLogger("render-graph") };
 
   std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;

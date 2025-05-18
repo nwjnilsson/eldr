@@ -13,8 +13,9 @@ class CommandBuffer {
 
 public:
   CommandBuffer() = default;
-  CommandBuffer(const Device& device_, const CommandPool& command_pool,
-                std::string_view name);
+  CommandBuffer(const Device&      device_,
+                const CommandPool& command_pool,
+                std::string_view   name);
 
   const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
@@ -35,21 +36,24 @@ public:
   const CommandBuffer& reset() const;
 
   const CommandBuffer&
-  bindIndexBuffer(const Buffer<byte>& buffer,
-                  VkIndexType         index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize        offset     = 0) const;
+  bindIndexBuffer(const GpuBuffer<byte>& buffer,
+                  VkIndexType            index_type = VK_INDEX_TYPE_UINT32,
+                  VkDeviceSize           offset     = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
-  /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
+  /// GpuBuffer, because the underlying call to vkCmdBindVertexBuffers expects
   /// an array of VkBuffer.
   const CommandBuffer&
-  bindVertexBuffers(std::span<const VkBuffer>, uint32_t first_binding = 0,
-                    std::span<const VkDeviceSize> offsets = {}) const;
+  bindVertexBuffers(std::span<const VkBuffer>,
+                    uint32_t                      first_binding = 0,
+                    std::span<const VkDeviceSize> offsets       = {}) const;
 
   const CommandBuffer& bindDescriptorSets(
-    std::span<const VkDescriptorSet> desc_sets, VkPipelineLayout layout,
-    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS,
-    uint32_t first_set = 0, std::span<const uint32_t> dyn_offsets = {}) const;
+    std::span<const VkDescriptorSet> desc_sets,
+    VkPipelineLayout                 layout,
+    VkPipelineBindPoint       bind_point  = VK_PIPELINE_BIND_POINT_GRAPHICS,
+    uint32_t                  first_set   = 0,
+    std::span<const uint32_t> dyn_offsets = {}) const;
 
   const CommandBuffer& bindPipeline(
     const Pipeline&     pipeline,
@@ -80,24 +84,29 @@ public:
                                              VkImageLayout old_layout,
                                              VkImageLayout new_layout) const;
 
-  const CommandBuffer&
-  blitImage(const Image& src_image, VkImageLayout src_layout,
-            const Image& dst_image, VkImageLayout dst_layout,
-            const VkImageBlit& blit, VkFilter filter) const;
+  const CommandBuffer& blitImage(const Image&       src_image,
+                                 VkImageLayout      src_layout,
+                                 const Image&       dst_image,
+                                 VkImageLayout      dst_layout,
+                                 const VkImageBlit& blit,
+                                 VkFilter           filter) const;
 
   const CommandBuffer& generateMipmaps(const Image& image) const;
 
   template <typename T>
-  const CommandBuffer& copyBufferToImage(const Buffer<T>& buffer, Image& image,
+  const CommandBuffer& copyBufferToImage(const GpuBuffer<T>& buffer,
+                                         Image&              image,
                                          const VkBufferImageCopy&) const;
 
-  const CommandBuffer& copyDataToImage(std::span<const byte> data, Image& image,
+  const CommandBuffer& copyDataToImage(std::span<const byte> data,
+                                       Image&                image,
                                        const VkBufferImageCopy&) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
-                                     VkShaderStageFlags stage, uint32_t size,
-                                     const void*  data,
-                                     VkDeviceSize offset = 0) const;
+                                     VkShaderStageFlags stage,
+                                     uint32_t           size,
+                                     const void*        data,
+                                     VkDeviceSize       offset = 0) const;
   template <typename T>
   const CommandBuffer& pushConstant(const VkPipelineLayout   layout,
                                     const T&                 data,
@@ -107,7 +116,7 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const Buffer<byte>&
+  [[nodiscard]] const GpuBuffer<byte>&
   createStagingBuffer(std::string_view name, std::span<const byte> data) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
@@ -123,7 +132,7 @@ private:
   class CommandBufferImpl;
   std::shared_ptr<CommandBufferImpl> cb_data_;
 
-  Fence                             wait_fence_;
-  mutable std::vector<Buffer<byte>> staging_buffers_;
+  Fence                                wait_fence_;
+  mutable std::vector<GpuBuffer<byte>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

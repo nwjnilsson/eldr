@@ -8,7 +8,9 @@
 
 #pragma once
 
-#define EL_AUTHORS "Johannes Nilsson"
+#define EL_STRINGIFY(x) #x
+#define EL_TOSTRING(x) EL_STRINGIFY(x)
 
-#include <eldr/config.hpp>
+#include <eldr/buildinfo.hpp>
+// #include <eldr/gitinfo.hpp>
 #include <eldr/core/platform.hpp>

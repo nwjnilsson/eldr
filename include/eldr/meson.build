@@ -24,9 +24,16 @@ conf_data.set('ELDR_ENGINE_VERSION_MINOR', engine_version_minor)
 conf_data.set('ELDR_ENGINE_VERSION_PATCH', engine_version_patch)
 conf_data.set('MESON_BUILD_TYPE', get_option('buildtype'))
 
+# TODO: get this to work
+# vcs_tag(command: ['git', 'rev-parse', '--short', 'HEAD'], 
+#       input:'gitinfo.hpp.in',
+#       output:'gitinfo.hpp',
+#       install: true,
+#       replace_string:'@GIT_HASH@')
+
 configure_file(
-  input: meson.project_source_root() + '/include/eldr/config.hpp.in',
-  output: 'config.hpp',
+  input: 'buildinfo.hpp.in',
+  output: 'buildinfo.hpp',
   configuration: conf_data,
 )
 

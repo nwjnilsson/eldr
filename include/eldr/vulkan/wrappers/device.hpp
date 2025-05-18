@@ -25,8 +25,9 @@ struct QueueFamilyIndices {
 class Device {
 public:
   Device() = default;
-  Device(const Instance&, const Surface&,
-         const std::vector<const char*>& device_extensions, Logger logger);
+  Device(const Instance&,
+         const Surface&,
+         const std::vector<const char*>& device_extensions);
 
   [[nodiscard]] std::string name() const
   {
@@ -57,7 +58,6 @@ public:
   [[nodiscard]] VmaAllocator     allocator() const;
   [[nodiscard]] VkQueue          graphicsQueue() const { return g_queue_; }
   [[nodiscard]] VkQueue          presentQueue() const { return p_queue_; }
-  [[nodiscard]] Logger           logger() const { return log_; }
 
   void waitIdle() const;
   void execute(
@@ -69,12 +69,10 @@ private:
 private:
   class DeviceImpl;
   std::shared_ptr<DeviceImpl> d_data_;
-
-  Logger                     log_{ nullptr };
-  VkPhysicalDeviceProperties physical_device_props_;
-  QueueFamilyIndices         queue_family_indices_;
-  VkQueue                    p_queue_{ VK_NULL_HANDLE }; // present
-  VkQueue                    g_queue_{ VK_NULL_HANDLE }; // graphics
+  VkPhysicalDeviceProperties  physical_device_props_;
+  QueueFamilyIndices          queue_family_indices_;
+  VkQueue                     p_queue_{ VK_NULL_HANDLE }; // present
+  VkQueue                     g_queue_{ VK_NULL_HANDLE }; // graphics
 };
 // QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice, VkSurfaceKHR);
 } // namespace eldr::vk::wr

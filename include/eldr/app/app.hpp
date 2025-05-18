@@ -33,8 +33,8 @@ public:
   /// @param scancode The system-specific scancode of the key.
   /// @param action GLFW_PRESS, GLFW_RELEASE or GLFW_REPEAT.
   /// @param mods Bit field describing which modifier keys were held down.
-  void keyCallback(GLFWwindow* window, int key, int scancode, int action,
-                   int mods);
+  void
+  keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
   /// @brief Call glfwSetCursorPosCallback.
   /// @param window The window that received the event.
@@ -47,15 +47,15 @@ public:
   /// @param button The mouse button that was pressed or released.
   /// @param action One of GLFW_PRESS or GLFW_RELEASE.
   /// @param mods Bit field describing which modifier keys were held down.
-  void mouseButtonCallback(GLFWwindow* window, int button, int action,
-                           int mods);
+  void
+  mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
   /// @brief Call camera's process_mouse_scroll method.
   /// @param window The window that received the event.
   /// @param x_offset The change of x-offset of the mouse wheel.
   /// @param y_offset The change of y-offset of the mouse wheel.
-  void mouseScrollCallback(GLFWwindow* window, double x_offset,
-                           double y_offset);
+  void
+  mouseScrollCallback(GLFWwindow* window, double x_offset, double y_offset);
 
   void run();
 

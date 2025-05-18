@@ -20,7 +20,7 @@ private:
   // std::string name_;
 
   class CommandPoolImpl;
-  std::shared_ptr<CommandPoolImpl> cp_data_;
+  std::shared_ptr<CommandPoolImpl> d_;
 
   std::vector<CommandBuffer> command_buffers_{};
 };

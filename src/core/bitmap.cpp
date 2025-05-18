@@ -2,8 +2,8 @@
  * Bitmap implementation adapted from the Mitsuba3
  */
 #include <eldr/core/bitmap.hpp>
-#include <eldr/core/common.hpp>
 #include <eldr/core/fstream.hpp>
+#include <eldr/core/logger.hpp>
 
 extern "C" {
 #include <jerror.h>
@@ -16,11 +16,17 @@ extern "C" {
 #include <memory>
 #include <string>
 
+using namespace eldr::core;
+
 namespace eldr {
 
-Bitmap::Bitmap(std::string_view name, PixelFormat px_format,
-               Struct::Type component_format, Vec2u size, size_t channel_count,
-               const std::vector<std::string>& channel_names, byte* data)
+Bitmap::Bitmap(std::string_view                name,
+               PixelFormat                     px_format,
+               Struct::Type                    component_format,
+               Vec2u                           size,
+               size_t                          channel_count,
+               const std::vector<std::string>& channel_names,
+               byte*                           data)
   : name_(name), pixel_format_(px_format), component_format_(component_format),
     size_(size), data_(data), owns_data_(false)
 
@@ -53,10 +59,8 @@ Bitmap::Bitmap(const Bitmap& bitmap)
 }
 
 Bitmap::Bitmap(Bitmap&& other) noexcept
-  : name_(std::move(other.name_)), log_(std::move(other.log_)),
-    pixel_format_(other.pixel_format_),
-    component_format_(other.component_format_),
-    size_(std::exchange(other.size_, { 0, 0 })),
+  : name_(std::move(other.name_)), pixel_format_(other.pixel_format_),
+    component_format_(other.component_format_), size_(other.size_),
     struct_(std::move(other.struct_)), srgb_gamma_(other.srgb_gamma_),
     premultiplied_alpha_(other.premultiplied_alpha_),
     data_(std::move(other.data_)), owns_data_(other.owns_data_)
@@ -119,9 +123,9 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
   }
 
   if (channel_count != 0 && channel_count != channels.size())
-    Throw("Bitmap::rebuildStruct(): channel count (%i) does not match pixel "
-          "format (%s)",
-          channel_count, pixel_format_);
+    Throw("Channel count ({}) does not match pixel format ({})",
+          channel_count,
+          pixel_format_);
 
   struct_ = std::make_unique<Struct>();
   for (auto ch : channels) {
@@ -173,8 +177,7 @@ size_t Bitmap::bytesPerPixel() const
       result = 8;
       break;
     default:
-      Throw("bytesPerPixel(): Not implemented for component format '%s'",
-            component_format_);
+      Throw("Not implemented for component format '%s'", component_format_);
   }
   return result * channelCount();
 }
@@ -210,7 +213,7 @@ void Bitmap::read(Stream* stream, FileFormat format)
       readPng(stream);
       break;
     default:
-      Throw("read(): Not implemented for FileFormat::'%s'", format);
+      Throw("Not implemented for FileFormat::'%s'", format);
   }
 }
 
@@ -396,15 +399,19 @@ void Bitmap::readJpeg(Stream* stream)
       pixel_format_ = PixelFormat::RGBA;
       break;
     default:
-      Throw("readJpeg(): Unexpected number of components!");
+      Throw("Unexpected number of components!");
   }
 
   rebuildStruct();
 
   auto fs = dynamic_cast<FileStream*>(stream);
-  log_->debug("Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
-              fs ? fs->path().string() : "<stream>", size_.x, size_.y,
-              pixel_format_, component_format_);
+  Log(Debug,
+      "Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
+      fs ? fs->path().string() : "<stream>",
+      size_.x,
+      size_.y,
+      pixel_format_,
+      component_format_);
 
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
@@ -421,7 +428,8 @@ void Bitmap::readJpeg(Stream* stream)
   int counter = 0;
   while (cinfo.output_scanline < cinfo.output_height)
     counter += jpeg_read_scanlines(
-      &cinfo, reinterpret_cast<unsigned char**>(scanlines.get()) + counter,
+      &cinfo,
+      reinterpret_cast<unsigned char**>(scanlines.get()) + counter,
       (JDIMENSION) (size_.y - cinfo.output_scanline));
 
   // Release the libjpeg data structures
@@ -520,7 +528,7 @@ static void pngWarnFunc(png_structp, png_const_charp msg)
 {
   if (strstr(msg, "iCCP: known incorrect sRGB profile") != nullptr)
     return;
-  spdlog::warn("libpng warning: {}", msg);
+  Log(Warn, "libpng warning: {}", msg);
 }
 
 void Bitmap::readPng(Stream* stream)
@@ -528,22 +536,22 @@ void Bitmap::readPng(Stream* stream)
   png_bytepp rows = nullptr;
 
   // Create buffers
-  png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
-                                               &pngErrorFunc, &pngWarnFunc);
+  png_structp png_ptr = png_create_read_struct(
+    PNG_LIBPNG_VER_STRING, nullptr, &pngErrorFunc, &pngWarnFunc);
   if (png_ptr == nullptr)
-    Throw("readPng(): Unable to create PNG data structure");
+    Throw("Unable to create PNG data structure");
 
   png_infop info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == nullptr) {
     png_destroy_read_struct(&png_ptr, nullptr, nullptr);
-    Throw("readPng(): Unable to create PNG information structure");
+    Throw("Unable to create PNG information structure");
   }
 
   // Error handling
   if (setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
     delete[] rows;
-    Throw("readPng(): Error reading the PNG file!");
+    Throw("Error reading the PNG file!");
   }
 
   // Set read helper function
@@ -552,8 +560,15 @@ void Bitmap::readPng(Stream* stream)
   int bit_depth, color_type, interlace_type, compression_type, filter_type;
   png_read_info(png_ptr, info_ptr);
   png_uint_32 width = 0, height = 0;
-  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
-               &interlace_type, &compression_type, &filter_type);
+  png_get_IHDR(png_ptr,
+               info_ptr,
+               &width,
+               &height,
+               &bit_depth,
+               &color_type,
+               &interlace_type,
+               &compression_type,
+               &filter_type);
 
   if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
     png_set_expand_gray_1_2_4_to_8(png_ptr); // Expand 1-, 2- and 4-bit
@@ -576,8 +591,15 @@ void Bitmap::readPng(Stream* stream)
 
   // Update the information based on the transformations
   png_read_update_info(png_ptr, info_ptr);
-  png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
-               &interlace_type, &compression_type, &filter_type);
+  png_get_IHDR(png_ptr,
+               info_ptr,
+               &width,
+               &height,
+               &bit_depth,
+               &color_type,
+               &interlace_type,
+               &compression_type,
+               &filter_type);
   size_ = Vec2u(width, height);
 
   switch (color_type) {
@@ -594,7 +616,7 @@ void Bitmap::readPng(Stream* stream)
       pixel_format_ = PixelFormat::RGBA;
       break;
     default:
-      Throw("readPng(): Unknown color type %i", color_type);
+      Throw("Unknown color type %i", color_type);
       break;
   }
 
@@ -606,7 +628,7 @@ void Bitmap::readPng(Stream* stream)
       component_format_ = Struct::Type::UInt16;
       break;
     default:
-      Throw("readPng(): Unsupported bit depth: %i", bit_depth);
+      Throw("Unsupported bit depth: %i", bit_depth);
   }
 
   srgb_gamma_          = true;
@@ -624,9 +646,13 @@ void Bitmap::readPng(Stream* stream)
   //  metadata_.set_string(text_ptr->key, text_ptr->text);
 
   auto fs = dynamic_cast<FileStream*>(stream);
-  log_->debug("Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
-              fs ? fs->path().string() : "<stream>", size_.x, size_.y,
-              pixel_format_, component_format_);
+  Log(Debug,
+      "Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
+      fs ? fs->path().string() : "<stream>",
+      size_.x,
+      size_.y,
+      pixel_format_,
+      component_format_);
 
   const size_t size{ bufferSize() };
   data_      = std::make_unique<byte[]>(size);
@@ -648,7 +674,7 @@ void Bitmap::readPng(Stream* stream)
 void Bitmap::rgbToRgba()
 {
   if (pixel_format_ != PixelFormat::RGB)
-    Throw("rgbToRgba(): Unexpected pixel format ({})", pixel_format_);
+    Throw("Unexpected pixel format ({})", pixel_format_);
 
   pixel_format_ = PixelFormat::RGBA;
   rebuildStruct();
@@ -679,7 +705,7 @@ void Bitmap::rgbToRgba()
   else
     // TODO: One could simply allocate new data that the bitmap owns and copy
     // the old RGB data in this case
-    Throw("rgbToRgba(): Alpha channel cannot be added when the data isn't "
+    Throw("Alpha channel cannot be added when the data isn't "
           "owned by the bitmap");
 }
 
@@ -696,8 +722,10 @@ Bitmap Bitmap::createCheckerboard()
     { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
   };
 
-  const auto getColor = [](uint32_t x, uint32_t y, uint32_t square_dimension,
-                           size_t colors) -> int {
+  const auto getColor = [](uint32_t x,
+                           uint32_t y,
+                           uint32_t square_dimension,
+                           size_t   colors) -> int {
     return static_cast<int>((static_cast<std::size_t>(x / square_dimension) +
                              static_cast<std::size_t>(y / square_dimension)) %
                             colors);
@@ -705,12 +733,14 @@ Bitmap Bitmap::createCheckerboard()
 
   // Performance could be improved by copying complete rows after one or two
   // rows are created with the loops.
-  Bitmap checkerboard{ "Checkerboard", pixel_format, component_format, size,
-                       channel_count };
+  Bitmap checkerboard{
+    "Checkerboard", pixel_format, component_format, size, channel_count
+  };
   for (uint32_t y = 0; y < checkerboard.height(); y++) {
     for (uint32_t x = 0; x < checkerboard.width(); x++) {
       const int color_id = getColor(x, y, square_dimension, colors.size());
-      std::memcpy(checkerboard.data(), &colors[color_id][0],
+      std::memcpy(checkerboard.data(),
+                  &colors[color_id][0],
                   channel_count * sizeof(colors[color_id][0]));
     }
   }
@@ -726,11 +756,12 @@ Bitmap Bitmap::createDefaultWhite()
 
   // Performance could be improved by copying complete rows after one or two
   // rows are created with the loops.
-  Bitmap default_white{ "Default white", pixel_format, component_format, size,
-                        channel_count };
+  Bitmap default_white{
+    "Default white", pixel_format, component_format, size, channel_count
+  };
   std::vector<uint8_t> solid_white(default_white.bufferSize(), 0xFF);
-  std::memcpy(default_white.data(), solid_white.data(),
-              default_white.bufferSize());
+  std::memcpy(
+    default_white.data(), solid_white.data(), default_white.bufferSize());
   return default_white;
 }
 

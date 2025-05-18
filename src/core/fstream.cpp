@@ -1,8 +1,8 @@
 /**
  * FileStream implementation adapted from Mitsuba3
  */
-#include <eldr/core/common.hpp>
 #include <eldr/core/fstream.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <fstream>
@@ -32,7 +32,8 @@ FileStream::FileStream(const fs::path& p, EMode mode)
   file_->open(p.string(), detail::ios_flag(mode));
 
   if (!file_->good())
-    Throw("{}: I/O error while attempting to open file: {}", path_.string(),
+    Throw("{}: I/O error while attempting to open file: {}",
+          path_.string(),
           strerror(errno));
 }
 
@@ -51,12 +52,15 @@ void FileStream::read(void* p, size_t size)
     size_t gcount = file_->gcount();
     file_->clear();
     if (eof)
-      throw EOFException(fmt::format("\"%s\": read %zu out of %zu bytes",
-                                     path_.string(), gcount, size),
-                         gcount);
+      throw EOFException(
+        fmt::format(
+          "\"%s\": read %zu out of %zu bytes", path_.string(), gcount, size),
+        gcount);
     else
       Throw("\"%s\": I/O error while attempting to read %zu bytes: %s",
-            path_.string(), size, strerror(errno));
+            path_.string(),
+            size,
+            strerror(errno));
   }
 }
 
@@ -67,7 +71,9 @@ void FileStream::write(const void* p, size_t size)
   if (unlikely(!file_->good())) {
     file_->clear();
     Throw("\"%s\": I/O error while attempting to write %zu bytes: %s",
-          path_.string(), size, strerror(errno));
+          path_.string(),
+          size,
+          strerror(errno));
   }
 }
 
@@ -92,7 +98,8 @@ void FileStream::truncate(size_t size)
 #if defined(_WIN32)
   file_->open(path_, detail::ios_flag(EReadWrite));
   if (!file_->good())
-    Throw("\"%s\": I/O error while attempting to open file: %s", path_.string(),
+    Throw("\"%s\": I/O error while attempting to open file: %s",
+          path_.string(),
           strerror(errno));
 #endif
 
@@ -105,7 +112,9 @@ void FileStream::seek(size_t pos)
 
   if (unlikely(!file_->good()))
     Throw("\"%s\": I/O error while attempting to seek to offset %zu: %s",
-          path_.string(), pos, strerror(errno));
+          path_.string(),
+          pos,
+          strerror(errno));
 }
 
 size_t FileStream::tell() const
@@ -125,7 +134,8 @@ void FileStream::flush()
     file_->clear();
     Throw("\"%s\": I/O error while attempting flush "
           "file stream: %s",
-          path_.string(), strerror(errno));
+          path_.string(),
+          strerror(errno));
   }
 }
 
@@ -135,9 +145,10 @@ std::string FileStream::readLine()
 {
   std::string result;
   if (!std::getline(*file_, result))
-    requestLogger("FileStream")
-      ->error("\"%s\": I/O error while attempting to read a line of text: %s",
-              path_.string(), strerror(errno));
+    Log(core::Error,
+        "\"%s\": I/O error while attempting to read a line of text: %s",
+        path_.string(),
+        strerror(errno));
   return result;
 }
 

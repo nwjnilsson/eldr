@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/core/logger.hpp>
+#include <eldr/core/math.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
@@ -89,7 +89,6 @@ private:
 
 private:
   const Window& window_;
-  Logger        log_{ requestLogger("vulkan-engine") };
   const Scene*  scene_;
 
   bool     initialized_{ false };
@@ -109,7 +108,7 @@ private:
   // Hide vulkan implementation details to avoid pulling in every single vulkan
   // related type when including engine.hpp
   struct EngineData;
-  std::unique_ptr<EngineData> ed_;
+  std::unique_ptr<EngineData> d_;
 
   GpuSceneData scene_data_;
 

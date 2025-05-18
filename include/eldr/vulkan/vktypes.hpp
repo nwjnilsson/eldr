@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
+#include <eldr/core/math.hpp>
 #include <eldr/vulkan/common.hpp>
 
 // Misc Vulkan types

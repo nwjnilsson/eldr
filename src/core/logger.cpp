@@ -58,6 +58,7 @@ void Logger::clearSinks() { impl_->sinks.clear(); }
 
 #undef Throw
 void Logger::log(LogLevel           level,
+                 const std::string& class_,
                  const char*        function,
                  const char*        file,
                  int                line,
@@ -67,21 +68,21 @@ void Logger::log(LogLevel           level,
     return;
   }
   else if (level >= impl_->error_level) {
-    detail::Throw(level, function, file, line, message);
+    detail::Throw(level, class_, function, file, line, message);
   }
   if (!impl_->formatter) {
     std::cerr << "PANIC: Logging has not been properly initialized\n";
     abort();
   }
   std::string text{ impl_->formatter->format(
-    level, Thread::thread(), function, file, line, message) };
+    level, Thread::thread(), class_, function, file, line, message) };
 
   for (auto& sink : impl_->sinks) {
     (*sink)(level, message);
   }
 }
 
-void Logger::Init()
+void Logger::createContext()
 {
   auto logger    = std::make_unique<Logger>(PassKey{}, Info);
   auto sink      = std::make_shared<StreamSink<MultiThreaded>>(&std::cout);
@@ -117,6 +118,7 @@ std::string className(const char* function_sig)
 #undef Throw
 
 void Throw(LogLevel           level,
+           const std::string& class_,
            const char*        function,
            const char*        file,
            int                line,
@@ -125,8 +127,7 @@ void Throw(LogLevel           level,
 
   DefaultFormatter formatter;
   formatter.setHasFile(true);
-  formatter.setClassFuncFormat(
-    DefaultFormatter::ClassFuncFormat::ClassOrFunction);
+  formatter.setClassFuncFormat(DefaultFormatter::ClassFuncFormat::ClassAndFunc);
 
   // Tag beginning of exception text with UTF8 zero width space
   const std::string zerowidth_space = "\xe2\x80\x8b";
@@ -137,8 +138,8 @@ void Throw(LogLevel           level,
   if (pos != std::string::npos)
     msg = msg.substr(0, pos) + "\n  " + msg.substr(pos + 3);
 
-  std::string text =
-    formatter.format(level, Thread::thread(), function, file, line, msg);
+  std::string text = formatter.format(
+    level, Thread::thread(), class_, function, file, line, msg);
   throw std::runtime_error(zerowidth_space + text);
 }
 

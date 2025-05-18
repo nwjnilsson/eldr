@@ -5,7 +5,6 @@ src = [ 'bitmap.cpp',
         'dstream.cpp',
         'logger.cpp',
         'stopwatch.cpp',
-        'exceptions.cpp',
         'struct.cpp']
 
 # All libs can probably be just static but if anything should be shared, it's

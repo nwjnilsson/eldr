@@ -2,11 +2,11 @@
  * Bitmap class adapted from Mitsuba3
  */
 #pragma once
-
 #include <eldr/core/fwd.hpp>
-#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
+
+#include <fmt/ostream.h>
 
 #include <filesystem>
 #include <span>
@@ -46,8 +46,11 @@ public:
     Unknown
   };
 
-  Bitmap(std::string_view name, PixelFormat px_format,
-         Struct::Type component_format, Vec2u size, size_t channel_count,
+  Bitmap(std::string_view                name,
+         PixelFormat                     px_format,
+         Struct::Type                    component_format,
+         Vec2u                           size,
+         size_t                          channel_count,
          const std::vector<std::string>& channel_names = {},
          byte*                           data          = nullptr);
 
@@ -159,7 +162,6 @@ protected:
 
 private:
   std::string             name_{ "undefined" };
-  Logger                  log_{ requestLogger("bitmap") };
   PixelFormat             pixel_format_;
   Struct::Type            component_format_;
   Vec2u                   size_{};

@@ -1,6 +1,6 @@
 #pragma once
+#include <eldr/core/platform.hpp>
 
-#include <eldr/eldr.hpp>
 #include <glm/fwd.hpp>
 using Float = typename glm::float32_t;
 
