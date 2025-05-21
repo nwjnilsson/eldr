@@ -19,8 +19,8 @@ CommandPool::CommandPoolImpl::CommandPoolImpl(
   const Device& device, const VkCommandPoolCreateInfo& pool_ci)
   : device_(device)
 {
-  if (const auto result =
-        vkCreateCommandPool(device_.logical(), &pool_ci, nullptr, &pool_);
+  if (const VkResult result{
+        vkCreateCommandPool(device_.logical(), &pool_ci, nullptr, &pool_) };
       result != VK_SUCCESS)
     Throw("Failed to create command pool ({})", result);
 }
@@ -65,8 +65,8 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   // We need to create a new command buffer because no free one was found
   // Note that there is currently no method for shrinking command_buffers_, but
   // this should not be a problem
-  std::string name =
-    fmt::format("command buffer #{}", command_buffers_.size() + 1);
+  const std::string name{ fmt::format("command buffer #{}",
+                                      command_buffers_.size() + 1) };
   Log(Trace, "Creating {}", name);
   command_buffers_.emplace_back(d_->device_, *this, name);
 

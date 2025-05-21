@@ -47,12 +47,12 @@ VkExtent2D selectSwapExtent(VkExtent2D                      requested_extent,
     return capabilities.currentExtent;
   }
   else {
-    extent.width =
-      std::clamp(requested_extent.width, capabilities.minImageExtent.width,
-                 capabilities.maxImageExtent.width);
-    extent.height =
-      std::clamp(requested_extent.height, capabilities.minImageExtent.height,
-                 capabilities.maxImageExtent.height);
+    extent.width  = std::clamp(requested_extent.width,
+                              capabilities.minImageExtent.width,
+                              capabilities.maxImageExtent.width);
+    extent.height = std::clamp(requested_extent.height,
+                               capabilities.minImageExtent.height,
+                               capabilities.maxImageExtent.height);
     return extent;
   }
 }
@@ -74,10 +74,10 @@ Swapchain::SwapchainImpl::SwapchainImpl(
   const Device& device, const VkSwapchainCreateInfoKHR& swapchain_ci)
   : device_(device)
 {
-  if (const VkResult result = vkCreateSwapchainKHR(
-        device_.logical(), &swapchain_ci, nullptr, &swapchain_);
+  if (const VkResult result{ vkCreateSwapchainKHR(
+        device_.logical(), &swapchain_ci, nullptr, &swapchain_) };
       result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateSwapchainKHR(): ");
+    Throw("Failed to create swapchain! ({})", result);
   }
 }
 
@@ -89,8 +89,9 @@ Swapchain::SwapchainImpl::~SwapchainImpl()
 // -----------------------------------------------------------------------------
 // Swapchain
 // -----------------------------------------------------------------------------
-Swapchain::Swapchain(const Device& device, const Surface& surface,
-                     VkExtent2D extent)
+Swapchain::Swapchain(const Device&  device,
+                     const Surface& surface,
+                     VkExtent2D     extent)
 {
   setupSwapchain(device, surface, extent);
   // Create sync objects
@@ -100,8 +101,9 @@ Swapchain::Swapchain(const Device& device, const Surface& surface,
   }
 }
 
-void Swapchain::setupSwapchain(const Device& device, const Surface& surface,
-                               VkExtent2D requested_extent)
+void Swapchain::setupSwapchain(const Device&  device,
+                               const Surface& surface,
+                               VkExtent2D     requested_extent)
 {
   const SwapchainSupportDetails& support_details{
     device.swapchainSupportDetails(surface.get())
@@ -158,7 +160,7 @@ void Swapchain::setupSwapchain(const Device& device, const Surface& surface,
     swapchain_ci.pQueueFamilyIndices   = nullptr; // Optional
   }
 
-  device.logger()->trace("Creating swapchain...");
+  Log(core::Trace, "Creating swapchain...");
   sc_data_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
 
   // Clear data from old swapchain
@@ -167,17 +169,17 @@ void Swapchain::setupSwapchain(const Device& device, const Surface& surface,
 
   // Get new swapchain images
   uint32_t image_count;
-  if (const auto result = vkGetSwapchainImagesKHR(
-        device.logical(), sc_data_->swapchain_, &image_count, nullptr);
+  if (const VkResult result{ vkGetSwapchainImagesKHR(
+        device.logical(), sc_data_->swapchain_, &image_count, nullptr) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkGetSwapchainImagesKHR(): ");
+    Throw("Failed to get swapchain images! ({})", result);
 
   images_.resize(image_count);
 
-  if (const auto result = vkGetSwapchainImagesKHR(
-        device.logical(), sc_data_->swapchain_, &image_count, images_.data());
+  if (const VkResult result{ vkGetSwapchainImagesKHR(
+        device.logical(), sc_data_->swapchain_, &image_count, images_.data()) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkGetSwapchainImagesKHR(): ");
+    Throw("Failed to get swapchain images! ({})", result);
 
   //----------------------------------------------------------------------------
   // Create image views
@@ -202,16 +204,20 @@ const VkSemaphore* Swapchain::renderFinishedSemaphore(uint32_t index) const
 uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
                                      bool&    invalidate_swapchain) const
 {
-  uint32_t   image_index{ 0 };
-  const auto result{ vkAcquireNextImageKHR(
-    sc_data_->device_.logical(), sc_data_->swapchain_, UINT64_MAX,
-    image_available_sem_[frame_index].get(), VK_NULL_HANDLE, &image_index) };
+  uint32_t       image_index{ 0 };
+  const VkResult result{ vkAcquireNextImageKHR(
+    sc_data_->device_.logical(),
+    sc_data_->swapchain_,
+    UINT64_MAX,
+    image_available_sem_[frame_index].get(),
+    VK_NULL_HANDLE,
+    &image_index) };
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
     invalidate_swapchain = true;
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-    ThrowVk(result, "vkAcquireNextImageKHR(): ");
+    Throw("Failed to acquire next image! ({})", result);
 
   return image_index;
 }
@@ -219,13 +225,13 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 void Swapchain::present(const VkPresentInfoKHR& present_info,
                         bool&                   invalidate_swapchain) const
 {
-  const auto result =
-    vkQueuePresentKHR(sc_data_->device_.presentQueue(), &present_info);
+  const VkResult result{ vkQueuePresentKHR(sc_data_->device_.presentQueue(),
+                                           &present_info) };
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     invalidate_swapchain = true;
   }
   else if (result != VK_SUCCESS) {
-    ThrowVk(result, "vkQueuePresentKHR(): ");
+    Throw("Failed to present queue! ({})", result);
   }
 }
 

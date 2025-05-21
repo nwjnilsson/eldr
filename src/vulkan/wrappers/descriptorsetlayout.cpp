@@ -19,10 +19,10 @@ DescriptorSetLayout::DescriptorSetLayoutImpl::DescriptorSetLayoutImpl(
   : device_(device)
 {
 
-  if (const auto result = vkCreateDescriptorSetLayout(
-        device_.logical(), &layout_ci, nullptr, &layout_);
+  if (const VkResult result{ vkCreateDescriptorSetLayout(
+        device_.logical(), &layout_ci, nullptr, &layout_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateDescriptorSetLayout(): ");
+    Throw("Failed to create descriptor set layout! ({})", result);
 }
 
 DescriptorSetLayout::DescriptorSetLayoutImpl::~DescriptorSetLayoutImpl()
@@ -34,8 +34,9 @@ DescriptorSetLayout::DescriptorSetLayoutImpl::~DescriptorSetLayoutImpl()
 // DescriptorSetLayout
 //------------------------------------------------------------------------------
 DescriptorSetLayout::DescriptorSetLayout(
-  const Device& device, std::span<VkDescriptorSetLayoutBinding> bindings,
-  VkDescriptorSetLayoutCreateFlags flags)
+  const Device&                           device,
+  std::span<VkDescriptorSetLayoutBinding> bindings,
+  VkDescriptorSetLayoutCreateFlags        flags)
 {
   const VkDescriptorSetLayoutCreateInfo layout_ci{
     .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

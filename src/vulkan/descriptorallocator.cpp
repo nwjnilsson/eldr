@@ -3,6 +3,8 @@
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
+using namespace eldr::core;
+
 namespace eldr::vk {
 
 DescriptorAllocator::DescriptorAllocator(uint32_t max_sets,
@@ -84,8 +86,8 @@ VkDescriptorSet DescriptorAllocator::allocate(
   };
 
   VkDescriptorSet ds;
-  VkResult result{ vkAllocateDescriptorSets(device.logical(), &alloc_info,
-                                            &ds) };
+  VkResult        result{ vkAllocateDescriptorSets(
+    device.logical(), &alloc_info, &ds) };
   // allocation failed. Try again
   if (result == VK_ERROR_OUT_OF_POOL_MEMORY ||
       result == VK_ERROR_FRAGMENTED_POOL) {
@@ -94,10 +96,10 @@ VkDescriptorSet DescriptorAllocator::allocate(
     alloc_info.descriptorPool = pool_to_use.get();
     if (result = vkAllocateDescriptorSets(device.logical(), &alloc_info, &ds);
         result != VK_SUCCESS)
-      ThrowVk(result, "vkAllocateDescriptorSets(): ");
+      Throw("Failed to allocate descriptor sets! ({})", result);
   }
   else if (result != VK_SUCCESS) {
-    ThrowVk(result, "vkAllocateDescriptorSets(): ");
+    Throw("Failed to allocate descriptor sets! ({})", result);
   }
 
   ready_pools_.push_back(std::move(pool_to_use));

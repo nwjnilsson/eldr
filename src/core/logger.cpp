@@ -84,7 +84,10 @@ void Logger::log(LogLevel           level,
 
 void Logger::createContext()
 {
-  auto logger    = std::make_unique<Logger>(PassKey{}, Info);
+  auto logger = std::make_unique<Logger>(PassKey{}, Info);
+  // TODO: Multithreaded policy isn't bulletproof since different sink objects
+  // with the same destination can be created. Each object then gets its own
+  // lock. Would need a sink registry to keep track of destinations.
   auto sink      = std::make_shared<StreamSink<MultiThreaded>>(&std::cout);
   auto formatter = std::make_unique<DefaultFormatter>();
 

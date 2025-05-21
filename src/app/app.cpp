@@ -6,7 +6,6 @@
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
-#include <spdlog/spdlog.h>
 
 namespace eldr {
 

@@ -17,10 +17,10 @@ Sampler::SamplerImpl::SamplerImpl(const Device&              device,
                                   const VkSamplerCreateInfo& ci)
   : device_(device)
 {
-  if (const auto result =
-        vkCreateSampler(device.logical(), &ci, nullptr, &sampler_);
+  if (const VkResult result{
+        vkCreateSampler(device.logical(), &ci, nullptr, &sampler_) };
       result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateSampler(): ");
+    Throw("Failed to create sampler! ({})", result);
   }
 }
 
@@ -32,8 +32,11 @@ Sampler::SamplerImpl::~SamplerImpl()
 //------------------------------------------------------------------------------
 // Sampler
 //------------------------------------------------------------------------------
-Sampler::Sampler(const Device& device, VkFilter mag_filter, VkFilter min_filter,
-                 VkSamplerMipmapMode mipmap_mode, uint32_t mip_levels)
+Sampler::Sampler(const Device&       device,
+                 VkFilter            mag_filter,
+                 VkFilter            min_filter,
+                 VkSamplerMipmapMode mipmap_mode,
+                 uint32_t            mip_levels)
 {
   VkPhysicalDeviceProperties props{};
   vkGetPhysicalDeviceProperties(device.physical(), &props);

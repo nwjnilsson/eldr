@@ -3,6 +3,8 @@
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 
+#include <vector>
+
 namespace eldr::vk {
 class DescriptorSetLayoutBuilder {
 public:

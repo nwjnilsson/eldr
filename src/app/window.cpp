@@ -1,5 +1,5 @@
 #include <eldr/app/window.hpp>
-#include <eldr/core/common.hpp>
+#include <eldr/core/logger.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -7,7 +7,7 @@ namespace eldr {
 namespace {
 static void glfwErrorCallback(int error, const char* description)
 {
-  requestLogger("window")->error("GLFW Error {}: {}", error, description);
+  Log(core::Error, "GLFW Error {}: {}", error, description);
 }
 } // namespace
 
@@ -16,12 +16,12 @@ Window::Window(uint32_t width, uint32_t height) : width_(width), height_(height)
   // Initialize GLFW
   glfwSetErrorCallback(glfwErrorCallback);
   if (!glfwInit()) {
-    Throw("[GLFW]: Failed to initialize");
+    Throw("Failed to initialize GLFW!");
   }
 
   // Vulkan pre-check
   if (!glfwVulkanSupported()) {
-    Throw("[GLFW]: Vulkan not supported");
+    Throw("Vulkan is not supported!");
   }
 
   // Create GLFW Window with Vulkan context

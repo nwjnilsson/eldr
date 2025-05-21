@@ -6,7 +6,6 @@
 #include <mutex>
 
 namespace eldr::core {
-
 struct ThreadingPolicy {};
 struct SingleThreaded : ThreadingPolicy {
   void acquireLock() {}
@@ -66,21 +65,11 @@ public:
   void operator()(LogLevel level, const std::string& text) override;
 
 private:
-  std::ostream* openFile(const std::filesystem::path& file_path)
-  {
-    // fstream closes file automatically when destroyed
-    fstream_ = std::make_unique<std::fstream>(
-      file_path, std::fstream::in | std::fstream::out | std::fstream::trunc);
-
-    if (fstream_->fail()) {
-      Log(Error, "Failed to open target sink file");
-    }
-    return fstream_.get();
-  }
+  std::ofstream* openFile(const std::filesystem::path& file_path);
 
 private:
-  std::filesystem::path         file_path_;
-  std::unique_ptr<std::ostream> fstream_;
+  std::filesystem::path          file_path_;
+  std::unique_ptr<std::ofstream> ofstream_;
 };
 
 //------------------------------------------------------------------------------
@@ -259,8 +248,22 @@ void FileStreamSink<TPolicy>::operator()(LogLevel           level,
                                          const std::string& text)
 {
   StreamSink<TPolicy>::sink(level, text, false);
-  if (fstream_->fail()) {
+  if (ofstream_->fail()) {
     Log(Error, "Failed to write to file!");
   }
+}
+
+template <typename TPolicy>
+std::ofstream*
+FileStreamSink<TPolicy>::openFile(const std::filesystem::path& file_path)
+{
+  // fstream closes file automatically when destroyed
+  ofstream_ = std::make_unique<std::ofstream>(
+    file_path, std::fstream::in | std::fstream::out | std::fstream::trunc);
+
+  if (ofstream_->fail()) {
+    Log(Error, "Failed to open target sink file");
+  }
+  return ofstream_.get();
 }
 } // namespace eldr::core

@@ -20,10 +20,10 @@ Framebuffer::FramebufferImpl::FramebufferImpl(
   const Device& device, const VkFramebufferCreateInfo& framebuffer_ci)
   : device_(device)
 {
-  if (const auto result = vkCreateFramebuffer(
-        device_.logical(), &framebuffer_ci, nullptr, &framebuffer_);
+  if (const VkResult result{ vkCreateFramebuffer(
+        device_.logical(), &framebuffer_ci, nullptr, &framebuffer_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateFramebuffer(): ");
+    Throw("Failed to create framebuffer! ({})", result);
 }
 
 Framebuffer::FramebufferImpl::~FramebufferImpl()
@@ -34,7 +34,8 @@ Framebuffer::FramebufferImpl::~FramebufferImpl()
 //------------------------------------------------------------------------------
 // Framebuffer
 //------------------------------------------------------------------------------
-Framebuffer::Framebuffer(const Device& device, const RenderPass& render_pass,
+Framebuffer::Framebuffer(const Device&                   device,
+                         const RenderPass&               render_pass,
                          const std::vector<VkImageView>& attachments,
                          const Swapchain&                swapchain)
 {

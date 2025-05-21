@@ -2,16 +2,20 @@
 #include <eldr/vulkan/wrappers/instance.hpp>
 
 #ifdef ELDR_VULKAN_DEBUG_REPORT
+
+using namespace eldr::core;
+
 namespace eldr::vk::wr {
 
 //------------------------------------------------------------------------------
 // Debug report callback
 //------------------------------------------------------------------------------
 namespace {
-VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
-  VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
-  VkDebugUtilsMessageTypeFlagsEXT             messageType,
-  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+VKAPI_ATTR VkBool32 VKAPI_CALL
+vkDebugReportCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                      VkDebugUtilsMessageTypeFlagsEXT        messageType,
+                      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                      void*                                       pUserData)
 {
   (void) pUserData; // TODO: figure out how to use
   std::string type{};
@@ -33,19 +37,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugReportCallback(
       break;
   }
 
-  Logger logger{ requestLogger("vulkan-debug") };
   switch (messageSeverity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-      logger->debug("(type = {}): {}", type, pCallbackData->pMessage);
+      Log(Debug, "(type = {}): {}", type, pCallbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-      logger->info("(type = {}): {}", type, pCallbackData->pMessage);
+      Log(Info, "(type = {}): {}", type, pCallbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-      logger->warn("(type = {}): {}", type, pCallbackData->pMessage);
+      Log(Warn, "(type = {}): {}", type, pCallbackData->pMessage);
       break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-      logger->error("(type = {}): {}", type, pCallbackData->pMessage);
+      Log(Error, "(type = {}): {}", type, pCallbackData->pMessage);
       break;
     default:
       break;
@@ -74,11 +77,11 @@ DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
 {
   auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
     instance.get(), "vkCreateDebugUtilsMessengerEXT");
-  assert(func != nullptr);
-  VkResult err =
-    func(instance.get(), &debug_report_ci, nullptr, &debug_messenger_);
+  Assert(func != nullptr);
+  const VkResult err{ func(
+    instance.get(), &debug_report_ci, nullptr, &debug_messenger_) };
   if (err != VK_SUCCESS)
-    ThrowVk(err, "Failed to create debug utils messenger: ");
+    Throw("Failed to create debug utils messenger! ({})", err);
 }
 
 DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()

@@ -170,8 +170,8 @@ Device::DeviceImpl::DeviceImpl(VkPhysicalDevice          physical,
                                VmaAllocatorCreateInfo&   allocator_ci)
   : physical_device_(physical)
 {
-  if (const auto result =
-        vkCreateDevice(physical_device_, &device_ci, nullptr, &device_);
+  if (const VkResult result{
+        vkCreateDevice(physical_device_, &device_ci, nullptr, &device_) };
       result != VK_SUCCESS)
     Throw("vkCreateDevice(): {}", result);
 

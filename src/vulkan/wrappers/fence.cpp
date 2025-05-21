@@ -18,10 +18,10 @@ Fence::FenceImpl::FenceImpl(const Device&            device,
                             const VkFenceCreateInfo& fence_ci)
   : device_(device)
 {
-  if (const auto result =
-        vkCreateFence(device_.logical(), &fence_ci, nullptr, &fence_);
+  if (const VkResult result{
+        vkCreateFence(device_.logical(), &fence_ci, nullptr, &fence_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateFence(): ");
+    Throw("Failed to create fence! ({})", result);
 }
 
 Fence::FenceImpl::~FenceImpl()
@@ -48,14 +48,14 @@ VkResult Fence::reset() const
 
 VkResult Fence::wait(uint64_t timeout) const
 {
-  const VkResult result = vkWaitForFences(f_data_->device_.logical(), 1,
-                                          &f_data_->fence_, VK_TRUE, timeout);
+  const VkResult result{ vkWaitForFences(
+    f_data_->device_.logical(), 1, &f_data_->fence_, VK_TRUE, timeout) };
   switch (result) {
     case VK_SUCCESS:
     case VK_TIMEOUT:
       return result;
     default:
-      ThrowVk(result, "vkWaitForFences(): ");
+      Throw("Failed to wait for fences! ({})", result);
   }
 }
 

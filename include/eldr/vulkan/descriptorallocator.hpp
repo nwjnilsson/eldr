@@ -2,7 +2,7 @@
 #include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
 
-#include <span>
+#include <vector>
 
 namespace eldr::vk {
 class DescriptorAllocator {

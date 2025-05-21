@@ -5,6 +5,8 @@
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
+using namespace eldr::core;
+
 namespace eldr::vk {
 // void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
 // {
@@ -133,13 +135,14 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
           dynamic_pointer_cast<PhysicalBuffer>(buffer_resource->physical_) }) {
 
       if (unlikely(physical_buffer->buffer_.empty())) {
-        log_->debug("The PhysicalBuffer of '{}' in stage '{}' is empty. "
-                    "This can happen when RenderGraph::render(...) gets called "
-                    "before data has been uploaded to the buffer via "
-                    "BufferResource::uploadData(...), or it could be "
-                    "caused by some other bug.",
-                    buffer_resource->name_,
-                    stage->name_);
+        Log(Debug,
+            "The PhysicalBuffer of '{}' in stage '{}' is empty. "
+            "This can happen when RenderGraph::render(...) gets called "
+            "before data has been uploaded to the buffer via "
+            "BufferResource::uploadData(...), or it could be "
+            "caused by some other bug.",
+            buffer_resource->name_,
+            stage->name_);
         return;
       }
 
@@ -421,7 +424,7 @@ void RenderGraph::compile()
   // Does any node still have incoming edges? If so, the graph is invalid
   for (auto& kv : reads) {
     if (!kv.second.empty()) {
-      ThrowVk(VkResult{}, "Render Graph contains cyclic dependencies!");
+      Throw("Render Graph contains cyclic dependencies!");
     }
   }
 #ifdef DEBUG
@@ -435,18 +438,18 @@ void RenderGraph::compile()
     ss << stage_stack_[i].back()->name() << "}\n";
   }
   ss << "}";
-  log_->debug("Proposed stage order:\n{}", ss.str());
+  Log(Debug, "Proposed stage order:\n{}", ss.str());
 #endif
 
-  log_->trace("Allocating physical resource for buffers:");
+  Log(Trace, "Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
-    log_->trace("   - {}", buffer_resource->name_);
+    Log(Trace, "   - {}", buffer_resource->name_);
     buffer_resource->physical_ = std::make_shared<PhysicalBuffer>();
   }
 
-  log_->trace("Allocating physical resource for texture:");
+  Log(Trace, "Allocating physical resource for texture:");
   for (auto& texture_resource : texture_resources_) {
-    log_->trace("   - {}", texture_resource->name());
+    Log(Trace, "   - {}", texture_resource->name());
 
     if (texture_resource->usage_ == TextureUsage::BackBuffer) {
       texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
@@ -578,11 +581,11 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
           physical.buffer_ =
-            wr::Buffer<byte_t>{ device_,
-                                buffer_resource->name(),
-                                data_size,
-                                buffer_resource->buffer_usage_,
-                                buffer_resource->memory_usage_ };
+            wr::GpuBuffer<byte_t>{ device_,
+                                   buffer_resource->name(),
+                                   data_size,
+                                   buffer_resource->buffer_usage_,
+                                   buffer_resource->memory_usage_ };
         }
       }
       // Upload data

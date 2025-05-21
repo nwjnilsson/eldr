@@ -10,7 +10,7 @@
 namespace eldr {
 
 namespace detail {
-inline std::ios::openmode ios_flag(FileStream::EMode mode)
+inline std::ios::openmode iosFlag(FileStream::EMode mode)
 {
   switch (mode) {
     case FileStream::ERead:
@@ -26,11 +26,9 @@ inline std::ios::openmode ios_flag(FileStream::EMode mode)
 } // namespace detail
 
 FileStream::FileStream(const fs::path& p, EMode mode)
-  : Stream(), mode_(mode), path_(p), file_(std::make_unique<std::fstream>())
+  : Stream(), mode_(mode), path_(p),
+    file_(std::make_unique<std::fstream>(p.string(), detail::iosFlag(mode)))
 {
-
-  file_->open(p.string(), detail::ios_flag(mode));
-
   if (!file_->good())
     Throw("{}: I/O error while attempting to open file: {}",
           path_.string(),

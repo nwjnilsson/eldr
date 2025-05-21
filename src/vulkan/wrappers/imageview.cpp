@@ -18,10 +18,10 @@ ImageView::ImageViewImpl::ImageViewImpl(
   const Device& device, const VkImageViewCreateInfo& image_view_ci)
   : device_(device)
 {
-  if (const VkResult result = vkCreateImageView(
-        device_.logical(), &image_view_ci, nullptr, &image_view_);
+  if (const VkResult result{ vkCreateImageView(
+        device_.logical(), &image_view_ci, nullptr, &image_view_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateImageView(): ");
+    Throw("Failed to create image view! ({})", result);
 }
 
 ImageView::ImageViewImpl::~ImageViewImpl()
@@ -38,7 +38,8 @@ ImageView::ImageView(const Device&                device,
   iv_data_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
 }
 
-ImageView::ImageView(const Device& device, const Image& image,
+ImageView::ImageView(const Device&      device,
+                     const Image&       image,
                      VkImageAspectFlags aspect_flags)
 {
   const VkImageViewCreateInfo image_view_ci{
@@ -67,7 +68,8 @@ ImageView::ImageView(const Device& device, const Image& image,
 VkImageView ImageView::get() const { return iv_data_->image_view_; }
 
 ImageView ImageView::createSwapchainImageView(const Device& device,
-                                              VkImage image, VkFormat format)
+                                              VkImage       image,
+                                              VkFormat      format)
 {
   VkImageViewCreateInfo image_view_ci{
     .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,

@@ -6,6 +6,13 @@
 #include <span>
 
 namespace eldr::vk::wr {
+
+// TODO: untemplatize this wrapper class? The template does provide some type
+// safety and indicates purpose, but not sure if that will be worth it when
+// integrating with the render graph, which generalizes the buffer anyway. Can
+// have a templatized constructor maybe, and a templatized upload function.
+// Should probably support uploading to a specific section of the buffer, and
+// not just overwriting from the beginning of the mapped data
 template <typename T> class GpuBuffer {
 private:
   class GpuBufferImpl : public GpuResourceAllocation {
@@ -15,12 +22,12 @@ private:
                   const VmaAllocationCreateInfo& alloc_ci)
       : GpuResourceAllocation(device)
     {
-      if (const VkResult result = vmaCreateBuffer(device_.allocator(),
-                                                  &buffer_ci,
-                                                  &alloc_ci,
-                                                  &buffer_,
-                                                  &allocation_,
-                                                  &alloc_info_);
+      if (const VkResult result{ vmaCreateBuffer(device_.allocator(),
+                                                 &buffer_ci,
+                                                 &alloc_ci,
+                                                 &buffer_,
+                                                 &allocation_,
+                                                 &alloc_info_) };
           result != VK_SUCCESS)
         Throw("vmaCreateBuffer(): {}", result);
     }

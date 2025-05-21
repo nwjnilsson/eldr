@@ -19,10 +19,10 @@ RenderPass::RenderPassImpl::RenderPassImpl(
   const Device& device, const VkRenderPassCreateInfo& render_pass_ci)
   : device_(device)
 {
-  if (const auto result = vkCreateRenderPass(device.logical(), &render_pass_ci,
-                                             nullptr, &render_pass_);
+  if (const VkResult result{ vkCreateRenderPass(
+        device.logical(), &render_pass_ci, nullptr, &render_pass_) };
       result != VK_SUCCESS) {
-    ThrowVk(result, "vkCreateRenderPass(): ");
+    Throw("Failed to create render pass! ({})", result);
   }
 }
 

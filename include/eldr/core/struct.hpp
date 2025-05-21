@@ -4,6 +4,8 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 
+#include <fmt/ostream.h>
+
 #include <string>
 #include <vector>
 
@@ -263,6 +265,9 @@ protected:
 
 ELDR_DECLARE_ENUM_OPERATORS(Struct::Flags)
 
-std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
+extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
 
 } // namespace eldr
+
+template <>
+struct fmt::formatter<eldr::Struct::Type> : fmt::ostream_formatter {};

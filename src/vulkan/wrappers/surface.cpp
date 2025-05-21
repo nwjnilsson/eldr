@@ -19,10 +19,10 @@ public:
 Surface::SurfaceImpl::SurfaceImpl(const Instance& instance, GLFWwindow* window)
   : instance_(instance)
 {
-  if (const auto result =
-        glfwCreateWindowSurface(instance.get(), window, nullptr, &surface_);
+  if (const VkResult result{
+        glfwCreateWindowSurface(instance.get(), window, nullptr, &surface_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "glfwCreateWindowSurface(): ");
+    Throw("Failed to create window surface! ({})", result);
 }
 
 Surface::SurfaceImpl::~SurfaceImpl()

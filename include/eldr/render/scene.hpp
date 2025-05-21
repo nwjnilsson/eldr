@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
+#include <eldr/core/math.hpp>
 #include <eldr/render/fwd.hpp>
 #include <eldr/vulkan/fwd.hpp>
 

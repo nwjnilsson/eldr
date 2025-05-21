@@ -96,11 +96,12 @@ namespace detail {
                         const std::string& message);
 
 template <typename... Args>
-static void Log(LogLevel           level,
-                const std::string& class_,
-                const char*        function,
-                const char*        file,
-                int                line,
+static void Log(LogLevel                    level,
+                const std::string&          class_,
+                const char*                 function,
+                const char*                 file,
+                int                         line,
+                fmt::format_string<Args...> fmt,
                 Args&&... args)
 {
   Logger* logger{ eldr::core::Thread::thread()->logger() };
@@ -110,7 +111,7 @@ static void Log(LogLevel           level,
                 function,
                 file,
                 line,
-                fmt::format(std::forward<Args>(args)...));
+                fmt::format(fmt, std::forward<Args>(args)...));
   }
 }
 } // namespace detail
@@ -131,7 +132,7 @@ static void Log(LogLevel           level,
 #define Log(level, ...)                                                        \
   do {                                                                         \
     eldr::core::detail::Log(                                                   \
-      level, EL_CLASS, __func__, __FILE__, __LINE__, __VA_ARGS__);             \
+      level, EL_CLASS, __func__, __FILE__, __LINE__, ##__VA_ARGS__);           \
   } while (0)
 
 #define Throw(...)                                                             \

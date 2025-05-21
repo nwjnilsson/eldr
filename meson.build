@@ -76,9 +76,6 @@ glm_dep          = dependency('glm',
 cxxopts_dep      = dependency('cxxopts',
   default_options: 'warning_level=0')
 
-spdlog_dep       = dependency('spdlog',
-  default_options: 'warning_level=0')
-
 # xkbcommon_dep = dependency('xkbcommon',
 #   default_options: 'warning_level=0')
 

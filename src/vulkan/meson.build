@@ -33,6 +33,6 @@ vulkan_engine = static_library(
   'vulkan-engine',
   sources : src,
   include_directories : [eldr_headers],
-  dependencies : [glfw_dep, vulkan_dep, spdlog_dep, vma_dep, imgui_dep],
+  dependencies : [glfw_dep, vulkan_dep, vma_dep, imgui_dep],
   link_with : [eldr_core])
   

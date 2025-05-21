@@ -24,30 +24,32 @@ public:
 
 // Graphics Pipeline creation
 Pipeline::PipelineImpl::PipelineImpl(
-  const Device& device, const VkPipelineLayoutCreateInfo& layout_ci,
-  VkGraphicsPipelineCreateInfo& pipeline_ci)
+  const Device&                     device,
+  const VkPipelineLayoutCreateInfo& layout_ci,
+  VkGraphicsPipelineCreateInfo&     pipeline_ci)
   : device_(device)
 {
   createPipelineLayout(layout_ci);
   pipeline_ci.layout = pipeline_layout_;
-  if (const auto result = vkCreateGraphicsPipelines(
-        device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_);
+  if (const VkResult result{ vkCreateGraphicsPipelines(
+        device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateGraphicsPipelines(): ");
+    Throw("Failed to create graphics pipeline! ({})", result);
 }
 
 // Compute Pipeline creation
 Pipeline::PipelineImpl::PipelineImpl(
-  const Device& device, const VkPipelineLayoutCreateInfo& layout_ci,
-  VkComputePipelineCreateInfo& pipeline_ci)
+  const Device&                     device,
+  const VkPipelineLayoutCreateInfo& layout_ci,
+  VkComputePipelineCreateInfo&      pipeline_ci)
   : device_(device)
 {
   createPipelineLayout(layout_ci);
   pipeline_ci.layout = pipeline_layout_;
-  if (const auto result = vkCreateComputePipelines(
-        device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_);
+  if (const VkResult result{ vkCreateComputePipelines(
+        device_.logical(), nullptr, 1, &pipeline_ci, nullptr, &pipeline_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateComputePipelines(): ");
+    Throw("Failed to create compute pipelines! ({})", result);
 }
 
 Pipeline::PipelineImpl::~PipelineImpl()
@@ -59,16 +61,17 @@ Pipeline::PipelineImpl::~PipelineImpl()
 void Pipeline::PipelineImpl::createPipelineLayout(
   const VkPipelineLayoutCreateInfo& layout_ci)
 {
-  if (const auto result = vkCreatePipelineLayout(device_.logical(), &layout_ci,
-                                                 nullptr, &pipeline_layout_);
+  if (const VkResult result{ vkCreatePipelineLayout(
+        device_.logical(), &layout_ci, nullptr, &pipeline_layout_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreatePipelineLayout(): ");
+    Throw("Failed to create pipeline layout! ({})", result);
 }
 
 //------------------------------------------------------------------------------
 // Pipeline
 //------------------------------------------------------------------------------
-Pipeline::Pipeline(const Device& device, std::string_view name,
+Pipeline::Pipeline(const Device&                     device,
+                   std::string_view                  name,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkGraphicsPipelineCreateInfo&     pipeline_ci)
   : name_(name),
@@ -76,7 +79,8 @@ Pipeline::Pipeline(const Device& device, std::string_view name,
 {
 }
 
-Pipeline::Pipeline(const Device& device, std::string_view name,
+Pipeline::Pipeline(const Device&                     device,
+                   std::string_view                  name,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkComputePipelineCreateInfo&      pipeline_ci)
   : name_(name),

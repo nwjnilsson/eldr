@@ -18,10 +18,10 @@ Semaphore::SemaphoreImpl::SemaphoreImpl(
   const Device& device, const VkSemaphoreCreateInfo& semaphore_ci)
   : device_(device)
 {
-  if (const auto result = vkCreateSemaphore(device_.logical(), &semaphore_ci,
-                                            nullptr, &semaphore_);
+  if (const VkResult result{ vkCreateSemaphore(
+        device_.logical(), &semaphore_ci, nullptr, &semaphore_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateSemaphore(): ");
+    Throw("Failed to create semaphore ({})", result);
 }
 
 Semaphore::SemaphoreImpl::~SemaphoreImpl()

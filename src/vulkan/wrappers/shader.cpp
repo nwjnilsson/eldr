@@ -38,23 +38,23 @@ std::vector<char> loadShader(std::string_view filename)
 //------------------------------------------------------------------------------
 class Shader::ShaderImpl {
 public:
-  ShaderImpl(const Device& device, std::string_view name,
+  ShaderImpl(const Device&                   device,
+             std::string_view                name,
              const VkShaderModuleCreateInfo& shader_module_ci);
   ~ShaderImpl();
   const Device   device_;
   VkShaderModule shader_module_{ VK_NULL_HANDLE };
 };
 
-Shader::ShaderImpl::ShaderImpl(const Device& device, std::string_view filename,
+Shader::ShaderImpl::ShaderImpl(const Device&                   device,
+                               std::string_view                filename,
                                const VkShaderModuleCreateInfo& shader_module_ci)
   : device_(device)
 {
-  if (const VkResult result = vkCreateShaderModule(
-        device_.logical(), &shader_module_ci, nullptr, &shader_module_);
+  if (const VkResult result{ vkCreateShaderModule(
+        device_.logical(), &shader_module_ci, nullptr, &shader_module_) };
       result != VK_SUCCESS)
-    ThrowVk(result,
-            "vkCreateShaderModule(): failed to create shader module {}!",
-            filename);
+    Throw("Failed to create shader module '{}'! ({})", filename, result);
 }
 
 Shader::ShaderImpl::~ShaderImpl()
@@ -65,8 +65,10 @@ Shader::ShaderImpl::~ShaderImpl()
 //------------------------------------------------------------------------------
 // Shader
 //------------------------------------------------------------------------------
-Shader::Shader(const Device& device, std::string_view name,
-               std::string_view filename, VkShaderStageFlagBits stage)
+Shader::Shader(const Device&         device,
+               std::string_view      name,
+               std::string_view      filename,
+               VkShaderStageFlagBits stage)
   : name_(name), stage_(stage)
 {
   auto                           bytecode = loadShader(filename);

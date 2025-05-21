@@ -31,10 +31,11 @@ ProgressReporter::ProgressReporter(std::string_view label, void* payload)
     line_[bar_start_ + bar_size_] = ']';
   }
 }
+
 void ProgressReporter::update(float progress)
 {
   if (progress < 0.f or progress > 1.f) {
-    Log(Warn, "'progress' is outside the range [0, 100]!");
+    Log(Debug, "'progress' is outside the range [0, 100]!");
     progress = std::min(1.f, std::max(0.f, progress));
   }
 
@@ -42,7 +43,7 @@ void ProgressReporter::update(float progress)
     return;
   }
 
-  const size_t elapsed{ timer_.millis(false) };
+  const long elapsed{ timer_.millis(false) };
   if (progress != 1.f and (elapsed - last_update_ < 500 or
                            std::abs(progress - last_progress_) < 0.01f)) {
     return;

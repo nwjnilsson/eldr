@@ -20,10 +20,10 @@ DescriptorPool::DescriptorPoolImpl::DescriptorPoolImpl(
   : device_(device)
 {
 
-  if (const auto result =
-        vkCreateDescriptorPool(device_.logical(), &pool_ci, nullptr, &pool_);
+  if (const VkResult result{
+        vkCreateDescriptorPool(device_.logical(), &pool_ci, nullptr, &pool_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateDescriptorPool(): ");
+    Throw("Failed to create descriptor pool! ({})", result);
 }
 
 DescriptorPool::DescriptorPoolImpl::~DescriptorPoolImpl()
@@ -34,7 +34,8 @@ DescriptorPool::DescriptorPoolImpl::~DescriptorPoolImpl()
 //------------------------------------------------------------------------------
 // DescriptorPool
 //------------------------------------------------------------------------------
-DescriptorPool::DescriptorPool(const Device& device, uint32_t max_sets,
+DescriptorPool::DescriptorPool(const Device&                         device,
+                               uint32_t                              max_sets,
                                std::span<const VkDescriptorPoolSize> pool_sizes,
                                VkDescriptorPoolCreateFlags           flags)
 {

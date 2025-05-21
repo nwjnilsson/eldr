@@ -11,7 +11,7 @@ namespace eldr::core {
 
 std::string DefaultFormatter::format(LogLevel           level,
                                      const Thread*      thread,
-                                     const char*        class_,
+                                     const std::string& class_,
                                      const char*        function,
                                      const char*        file,
                                      int                line,

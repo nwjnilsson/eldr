@@ -10,6 +10,8 @@
 #include <eldr/vulkan/wrappers/texture.hpp>
 #include <vulkan/vulkan_core.h>
 
+using namespace eldr::core;
+
 namespace eldr::vk {
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                            const wr::Swapchain& swapchain,
@@ -18,7 +20,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   : device_(device), swapchain_(swapchain)
 {
   IMGUI_CHECKVERSION();
-  log_->trace("Creating ImGUI context");
+  Log(Trace, "Creating ImGUI context");
   ImGui::CreateContext();
 
   // ImGui style
@@ -46,12 +48,14 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   io.FontGlobalScale = scale_;
   // style.ScaleAllSizes(scale_);
 
-  log_->trace("Loading ImGUI shaders");
-  vertex_shader_ = wr::Shader{ device_, "ImGUI vertex shader", "imgui.vert.spv",
-                               VK_SHADER_STAGE_VERTEX_BIT };
-  fragment_shader_ =
-    wr::Shader{ device_, "ImGUI fragment shader", "imgui.frag.spv",
-                VK_SHADER_STAGE_FRAGMENT_BIT };
+  Log(Trace, "Loading ImGUI shaders");
+  vertex_shader_ = wr::Shader{
+    device_, "ImGUI vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
+  };
+  fragment_shader_ = wr::Shader{ device_,
+                                 "ImGUI fragment shader",
+                                 "imgui.frag.spv",
+                                 VK_SHADER_STAGE_FRAGMENT_BIT };
 
   // Load font texture
   // TODO: Move this data into a container class; have container class also
@@ -65,7 +69,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   std::string           font_file_path =
     fmt::format("{}/assets/fonts/{}", std::string(env_p), font);
 
-  log_->trace("Loading font {}", font_file_path);
+  Log(Trace, "Loading font {}", font_file_path);
 
   ImFont* im_font =
     io.Fonts->AddFontFromFileTTF(font_file_path.c_str(), font_size);
@@ -73,8 +77,8 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   uint8_t* font_texture_data;
   int      font_texture_width{ 0 };
   int      font_texture_height{ 0 };
-  io.Fonts->GetTexDataAsRGBA32(&font_texture_data, &font_texture_width,
-                               &font_texture_height);
+  io.Fonts->GetTexDataAsRGBA32(
+    &font_texture_data, &font_texture_width, &font_texture_height);
 
   // Our font textures always have 4 channels and a single mip level by
   // definition.
@@ -82,13 +86,14 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   constexpr uint32_t font_mip_levels{ 1 };
 
   if (im_font == nullptr || font_texture_data == nullptr) {
-    log_->error("Unable to load font {}.  Falling back to error texture",
-                font_file_path);
+    Log(Error,
+        "Unable to load font {}.  Falling back to error texture",
+        font_file_path);
     imgui_texture_ =
       wr::Texture{ device_, Bitmap::createCheckerboard(), font_mip_levels };
   }
   else {
-    log_->trace("Creating ImGUI font texture");
+    Log(Trace, "Creating ImGUI font texture");
 
     imgui_texture_ = wr::Texture{
       device_,
@@ -102,16 +107,20 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       font_mip_levels,
     };
   }
-  font_sampler_ = wr::Sampler{ device_, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-                               VK_SAMPLER_MIPMAP_MODE_LINEAR, font_mip_levels };
+  font_sampler_ = wr::Sampler{ device_,
+                               VK_FILTER_LINEAR,
+                               VK_FILTER_LINEAR,
+                               VK_SAMPLER_MIPMAP_MODE_LINEAR,
+                               font_mip_levels };
 
   ibuffer_ = render_graph->add<BufferResource>("imgui index buffer",
                                                VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                                                VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-  vbuffer_ = render_graph->add<BufferResource>(
-    "imgui vertex buffer", VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    VMA_MEMORY_USAGE_CPU_TO_GPU);
+  vbuffer_ =
+    render_graph->add<BufferResource>("imgui vertex buffer",
+                                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                      VMA_MEMORY_USAGE_CPU_TO_GPU);
 
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
   //                                      offsetof(ImDrawVert, pos));
@@ -161,9 +170,12 @@ void ImGuiOverlay::buildPipeline()
   descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
   imgui_layout_ = descriptor_builder.build(device_);
 
-  wr::Shader vert_shader{ device_, "ImGui vertex shader", "imgui.vert.spv",
-                          VK_SHADER_STAGE_VERTEX_BIT };
-  wr::Shader frag_shader{ device_, "ImGui fragment shader", "imgui.frag.spv",
+  wr::Shader vert_shader{
+    device_, "ImGui vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
+  };
+  wr::Shader      frag_shader{ device_,
+                          "ImGui fragment shader",
+                          "imgui.frag.spv",
                           VK_SHADER_STAGE_FRAGMENT_BIT };
   PipelineBuilder pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(imgui_layout_)
@@ -255,7 +267,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       Vec2f(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
     push_const_block_.translate = Vec2f(-1.0f);
     VkDescriptorSet  descriptor_set{ descriptors.allocate(device_,
-                                                          imgui_layout_) };
+                                                         imgui_layout_) };
     DescriptorWriter writer;
     writer.writeCombinedImageSampler(1, imgui_texture_, font_sampler_)
       .updateSet(device_, descriptor_set);
@@ -263,8 +275,10 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     VkDescriptorSet im_descriptors[]{ descriptor_set };
     cb.bindPipeline(imgui_pipeline_);
     cb.bindDescriptorSets(im_descriptors, imgui_pipeline_.layout());
-    cb.pushConstants(imgui_pipeline_.layout(), VK_SHADER_STAGE_VERTEX_BIT,
-                     sizeof(PushConstantBlock), &push_const_block_);
+    cb.pushConstants(imgui_pipeline_.layout(),
+                     VK_SHADER_STAGE_VERTEX_BIT,
+                     sizeof(PushConstantBlock),
+                     &push_const_block_);
 
     const VkViewport viewports[] = { {
       .x        = 0.0f,
@@ -286,9 +300,9 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
             .offset = { std::max(static_cast<int32_t>(draw_cmd.ClipRect.x), 0),
                         std::max(static_cast<int32_t>(draw_cmd.ClipRect.y), 0) },
             .extent = { static_cast<uint32_t>(draw_cmd.ClipRect.z -
-                                              draw_cmd.ClipRect.x),
+                                            draw_cmd.ClipRect.x),
                         static_cast<uint32_t>(draw_cmd.ClipRect.w -
-                                              draw_cmd.ClipRect.y) },
+                                            draw_cmd.ClipRect.y) },
         } };
         cb.setScissor(scissors, 0);
         cb.drawIndexed(draw_cmd.ElemCount, 1, index_offset, vertex_offset, 0);

@@ -25,8 +25,8 @@ CommandBuffer::CommandBufferImpl::CommandBufferImpl(
   const Device& device, const VkCommandBufferAllocateInfo alloc_info)
   : device_(device), command_pool_(alloc_info.commandPool)
 {
-  if (const auto result = vkAllocateCommandBuffers(
-        device_.logical(), &alloc_info, &command_buffer_);
+  if (const VkResult result{ vkAllocateCommandBuffers(
+        device_.logical(), &alloc_info, &command_buffer_) };
       result != VK_SUCCESS)
     Throw("Failed to allocate command buffers ({})", result);
 }
@@ -132,8 +132,8 @@ const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
   begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   begin_info.flags            = usage;
   begin_info.pInheritanceInfo = nullptr;
-  if (const auto result =
-        vkBeginCommandBuffer(cb_data_->command_buffer_, &begin_info);
+  if (const VkResult result{
+        vkBeginCommandBuffer(cb_data_->command_buffer_, &begin_info) };
       result != VK_SUCCESS)
     Throw("Failed to begin command buffer ({})!", result);
   return *this;
@@ -183,7 +183,7 @@ const CommandBuffer& CommandBuffer::endRendering() const
 
 const CommandBuffer& CommandBuffer::end() const
 {
-  if (const auto result = vkEndCommandBuffer(cb_data_->command_buffer_);
+  if (const VkResult result{ vkEndCommandBuffer(cb_data_->command_buffer_) };
       result != VK_SUCCESS)
     Throw("Failed to end command buffer ({})!", result);
   return *this;
@@ -193,8 +193,10 @@ const CommandBuffer&
 CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
-  if (const auto result = vkQueueSubmit(
-        cb_data_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.get());
+  if (const VkResult result{ vkQueueSubmit(cb_data_->device_.graphicsQueue(),
+                                           1,
+                                           &submit_info,
+                                           wait_fence_.get()) };
       result != VK_SUCCESS)
     Throw("Failed to submit to queue ({})!", result);
   return *this;
@@ -226,7 +228,8 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
 
 const CommandBuffer& CommandBuffer::reset() const
 {
-  if (const auto result = vkResetCommandBuffer(cb_data_->command_buffer_, 0);
+  if (const VkResult result{
+        vkResetCommandBuffer(cb_data_->command_buffer_, 0) };
       result != VK_SUCCESS)
     Throw("Failed to reset command buffer ({})", result);
   return *this;
@@ -250,9 +253,10 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
-                                                    VkIndexType  index_type,
-                                                    VkDeviceSize offset) const
+const CommandBuffer&
+CommandBuffer::bindIndexBuffer(const GpuBuffer<byte>& buffer,
+                               VkIndexType            index_type,
+                               VkDeviceSize           offset) const
 {
   assert(buffer.get());
   vkCmdBindIndexBuffer(
@@ -423,7 +427,7 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
     destination_stage     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   }
   else {
-    ThrowVk(VkResult{}, "Unsupported layout transition!");
+    Throw("Unsupported layout transition!");
   }
 
   return pipelineImageMemoryBarrier(source_stage, destination_stage, barrier);
@@ -431,7 +435,7 @@ const CommandBuffer& CommandBuffer::transitionImageLayout(
 
 template <typename T>
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const Buffer<T>&         buffer,
+CommandBuffer::copyBufferToImage(const GpuBuffer<T>&      buffer,
                                  Image&                   image,
                                  const VkBufferImageCopy& copy_region) const
 {
@@ -474,7 +478,7 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const Buffer<std::byte>&
+const GpuBuffer<std::byte>&
 CommandBuffer::createStagingBuffer(std::string_view      name,
                                    std::span<const byte> data) const
 {
@@ -492,8 +496,7 @@ void     CommandBuffer::waitFence() const
   // 5 seconds, vulkan timeout is in nanoseconds
   constexpr const uint64_t timeout = 5e9;
   if (wait_fence_.wait(timeout) == VK_TIMEOUT)
-    cb_data_->device_.logger()->debug(
-      "{} timed out waiting for its internal fence!", name_);
+    Log(core::Debug, "{} timed out waiting for its internal fence!", name_);
 }
 
 void CommandBuffer::resetFence() const { wait_fence_.reset(); }

@@ -13,7 +13,6 @@ executable('eldr',
     vulkan_dep,
     vma_dep,
     imgui_dep,
-    spdlog_dep,
     cxxopts_dep
     ],
   link_with : [vulkan_engine, eldr_render])

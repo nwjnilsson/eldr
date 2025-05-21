@@ -10,7 +10,8 @@ namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
 class Image::ImageImpl : public GpuResourceAllocation {
 public:
-  ImageImpl(const Device& device, const VkImageCreateInfo& image_ci,
+  ImageImpl(const Device&                  device,
+            const VkImageCreateInfo&       image_ci,
             const VmaAllocationCreateInfo& alloc_ci);
   ~ImageImpl();
   VkImage image_{ VK_NULL_HANDLE };
@@ -21,11 +22,14 @@ Image::ImageImpl::ImageImpl(const Device&                  device,
                             const VmaAllocationCreateInfo& alloc_ci)
   : GpuResourceAllocation(device)
 {
-  if (const VkResult result =
-        vmaCreateImage(device_.allocator(), &image_ci, &alloc_ci, &image_,
-                       &allocation_, &alloc_info_);
+  if (const VkResult result{ vmaCreateImage(device_.allocator(),
+                                            &image_ci,
+                                            &alloc_ci,
+                                            &image_,
+                                            &allocation_,
+                                            &alloc_info_) };
       result != VK_SUCCESS)
-    ThrowVk(result, "vmaCreateImage(): ");
+    Throw("Failed to create image! ({})", result);
 }
 
 Image::ImageImpl::~ImageImpl()
