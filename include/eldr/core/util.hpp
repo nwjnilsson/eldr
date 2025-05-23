@@ -7,6 +7,6 @@ int terminalWidth();
 
 std::string infoCopyright();
 
-std::string infoBuild();
+std::string infoBuild(int thread_count);
 
 } // namespace eldr::core::util

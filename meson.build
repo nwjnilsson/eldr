@@ -50,6 +50,9 @@ endif
 # ------------------------------------------------------------------------------
 vulkan_dep       = dependency('vulkan',  version: '>=1.2.131')
 
+fmt_dep = dependency('fmt',
+  default_options: 'warning_level=0')
+
 vma_proj         = subproject('vulkan-memory-allocator',
   default_options: 'warning_level=0')
 vma_dep          = vma_proj.get_variable('vma_allocator_dep')

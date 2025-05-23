@@ -47,7 +47,7 @@ public:
   void logProgress(const std::string& formatted);
 
   /// Adds a sink to this logger.
-  template <typename SinkType> void addSink(std::shared_ptr<SinkType> sink);
+  void addSink(std::shared_ptr<Sink> sink);
 
   /// Clears all sinks from this logger.
   void clearSinks();
@@ -88,8 +88,7 @@ namespace detail {
 
 [[nodiscard]] std::string className(const char* function_sig);
 
-[[noreturn]] void Throw(LogLevel           level,
-                        const std::string& class_,
+[[noreturn]] void Throw(const std::string& class_,
                         const char*        function,
                         const char*        file,
                         int                line,
@@ -137,12 +136,8 @@ static void Log(LogLevel                    level,
 
 #define Throw(...)                                                             \
   do {                                                                         \
-    eldr::core::detail::Throw(eldr::core::Critical,                            \
-                              EL_CLASS,                                        \
-                              __func__,                                        \
-                              __FILE__,                                        \
-                              __LINE__,                                        \
-                              fmt::format(__VA_ARGS__));                       \
+    eldr::core::detail::Throw(                                                 \
+      EL_CLASS, __func__, __FILE__, __LINE__, fmt::format(__VA_ARGS__));       \
   } while (0)
 
 #ifndef NDEBUG

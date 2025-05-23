@@ -14,7 +14,7 @@ using namespace eldr::core;
 namespace {
 void help(std::string_view help)
 {
-  std::cout << util::infoBuild() << "\n";
+  std::cout << util::infoBuild(1) << "\n";
   std::cout << util::infoCopyright() << "\n";
   std::cout << help << "\n";
 }
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   options.add_options()
     ("t,threads",
     "Number of threads to render with. 0 will maximize performance.",
-    cxxopts::value<int>()->default_value(0))
+    cxxopts::value<int>()->default_value("0"))
     ("h,help", "Prints help.");
   // clang-format on
 

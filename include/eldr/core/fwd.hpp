@@ -19,7 +19,7 @@ class Formatter;
 struct ThreadingPolicy;
 struct SingleThreaded;
 struct MultiThreaded;
-template <typename TPolicy> class Sink;
+class Sink;
 class Thread;
 } // namespace core
 

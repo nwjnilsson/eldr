@@ -8,9 +8,9 @@
 
 namespace eldr::core {
 struct Logger::LoggerImpl {
-  LogLevel                   error_level{ LogLevel::Error };
-  std::unique_ptr<Formatter> formatter;
-  std::vector<std::shared_ptr<Sink<ThreadingPolicy>>> sinks;
+  LogLevel                           error_level{ LogLevel::Error };
+  std::unique_ptr<Formatter>         formatter;
+  std::vector<std::shared_ptr<Sink>> sinks;
 };
 
 Logger::Logger(const PassKey&, LogLevel level)
@@ -47,11 +47,9 @@ void Logger::logProgress(const std::string& formatted)
     entry->logProgress(formatted);
 }
 
-template <typename SinkType>
-void Logger::addSink(std::shared_ptr<SinkType> sink)
+void Logger::addSink(std::shared_ptr<Sink> sink)
 {
-  impl_->sinks.push_back(
-    std::dynamic_pointer_cast<Sink<ThreadingPolicy>>(sink));
+  impl_->sinks.push_back(std::move(sink));
 }
 
 void Logger::clearSinks() { impl_->sinks.clear(); }
@@ -68,17 +66,17 @@ void Logger::log(LogLevel           level,
     return;
   }
   else if (level >= impl_->error_level) {
-    detail::Throw(level, class_, function, file, line, message);
+    detail::Throw(class_, function, file, line, message);
   }
   if (!impl_->formatter) {
     std::cerr << "PANIC: Logging has not been properly initialized\n";
     abort();
   }
-  std::string text{ impl_->formatter->format(
-    level, Thread::thread(), class_, function, file, line, message) };
+  const std::string text{ impl_->formatter->format(
+    Thread::thread(), class_, function, file, line, message) };
 
   for (auto& sink : impl_->sinks) {
-    (*sink)(level, message);
+    (*sink)(level, text);
   }
 }
 
@@ -92,12 +90,11 @@ void Logger::createContext()
   auto formatter = std::make_unique<DefaultFormatter>();
 
   logger->setFormatter(std::move(formatter));
-  logger->addSink(sink);
-
-  Thread::thread()->setLogger(std::move(logger));
+  logger->addSink(std::move(sink));
 #ifdef DEBUG
   logger->setLogLevel(Debug);
 #endif
+  Thread::thread()->setLogger(std::move(logger));
 }
 
 namespace detail {
@@ -105,23 +102,32 @@ namespace detail {
 /// Extract the class name from a function signature
 std::string className(const char* function_sig)
 {
-  /// function sig is either a full signature like "int Class::name(A param)" or
-  /// simply "name" for compilers that don't support __PRETTY_FUNCTION__-like
-  /// variables
+  /// function sig is either a full signature like
+  /// "void namespace::Class::function(A param)" or simply "function" for
+  /// compilers that don't support __PRETTY_FUNCTION__-like variables
   std::string  func_sig{ function_sig };
   std::string  class_name;
-  const size_t colons{ func_sig.find("::") };
-  if (colons == std::string::npos)
+  const size_t r_colons{ func_sig.rfind("::") };
+  if (r_colons == std::string::npos)
     return "Unknown";
-  const size_t begin{ func_sig.substr(0, colons).rfind(" ") + 1 };
-  const size_t end{ colons - begin };
-  return func_sig.substr(begin, end);
+  const size_t l_colons{ func_sig.rfind("::", r_colons - 1) };
+  if (l_colons == std::string::npos) {
+    const size_t space{ func_sig.rfind(" ", r_colons) };
+    if (space == std::string::npos) {
+      return "Unknown";
+    }
+    else {
+      return func_sig.substr(space + 1, r_colons - (space + 1));
+    }
+  }
+  else {
+    return func_sig.substr(l_colons + 2, r_colons - (l_colons + 2));
+  }
 }
 
 #undef Throw
 
-void Throw(LogLevel           level,
-           const std::string& class_,
+void Throw(const std::string& class_,
            const char*        function,
            const char*        file,
            int                line,
@@ -129,7 +135,10 @@ void Throw(LogLevel           level,
 {
 
   DefaultFormatter formatter;
-  formatter.setHasFile(true);
+  formatter.setHasDate(false);
+  formatter.setHasFile(false);
+  formatter.setHasThread(false);
+  formatter.setHasLogLevel(false);
   formatter.setClassFuncFormat(DefaultFormatter::ClassFuncFormat::ClassAndFunc);
 
   // Tag beginning of exception text with UTF8 zero width space
@@ -141,8 +150,8 @@ void Throw(LogLevel           level,
   if (pos != std::string::npos)
     msg = msg.substr(0, pos) + "\n  " + msg.substr(pos + 3);
 
-  std::string text = formatter.format(
-    level, Thread::thread(), class_, function, file, line, msg);
+  const std::string text{ formatter.format(
+    Thread::thread(), class_, function, file, line, msg) };
   throw std::runtime_error(zerowidth_space + text);
 }
 

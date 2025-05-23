@@ -14,12 +14,11 @@ static std::unordered_map<std::string, Thread*> thread_map;
 static std::mutex                               thread_map_mutex;
 
 class MainThread : public Thread {
+public:
   MainThread() : Thread("Main") {};
+  virtual ~MainThread() = default;
 
   virtual void run() override { Log(Error, "Main thread is already running!"); }
-
-protected:
-  virtual ~MainThread() = default;
 };
 
 class WorkerThread : public Thread {

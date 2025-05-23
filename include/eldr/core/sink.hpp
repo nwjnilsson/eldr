@@ -7,18 +7,19 @@
 
 namespace eldr::core {
 struct ThreadingPolicy {};
+
 struct SingleThreaded : ThreadingPolicy {
   void acquireLock() {}
 };
+
 struct MultiThreaded : ThreadingPolicy {
   std::mutex                   mutex;
   std::unique_lock<std::mutex> acquireLock() { return std::unique_lock(mutex); }
 };
 
-template <typename TPolicy> class Sink {
-public:
+class Sink {
 protected:
-  Sink();
+  Sink() = default;
 
 public:
   virtual ~Sink() = default;
@@ -31,12 +32,9 @@ public:
 
   template <typename Derived> [[nodiscard]] Derived*       as();
   template <typename Derived> [[nodiscard]] const Derived* as() const;
-
-protected:
-  TPolicy threading_;
 };
 
-template <typename TPolicy> class StreamSink : public Sink<TPolicy> {
+template <typename TPolicy> class StreamSink : public Sink {
 public:
   StreamSink(std::ostream* stream);
 
@@ -52,6 +50,7 @@ protected:
   void sink(LogLevel level, const std::string& text, bool color_output);
 
 protected:
+  TPolicy       threading_;
   std::ostream* stream_;
   bool          last_message_was_progress_{ false };
 };
@@ -78,26 +77,12 @@ private:
 // -----------------------------------------------------------------------------
 // Sink
 // -----------------------------------------------------------------------------
-template <typename T> struct isValidThreadingPolicy : std::false_type {};
-template <> struct isValidThreadingPolicy<SingleThreaded> : std::true_type {};
-template <> struct isValidThreadingPolicy<MultiThreaded> : std::true_type {};
-
-template <typename TPolicy> Sink<TPolicy>::Sink()
-{
-  static_assert(isValidThreadingPolicy<TPolicy>::value,
-                "Invalid threading policy type");
-};
-
-template <typename TPolicy>
-template <typename Derived>
-[[nodiscard]] Derived* Sink<TPolicy>::as()
+template <typename Derived> [[nodiscard]] Derived* Sink::as()
 {
   return dynamic_cast<Derived*>(this);
 }
 
-template <typename TPolicy>
-template <typename Derived>
-[[nodiscard]] const Derived* Sink<TPolicy>::as() const
+template <typename Derived> [[nodiscard]] const Derived* Sink::as() const
 {
   return dynamic_cast<const Derived*>(this);
 }
@@ -105,10 +90,15 @@ template <typename Derived>
 // -----------------------------------------------------------------------------
 // StreamSink
 // -----------------------------------------------------------------------------
+template <typename T> struct isValidThreadingPolicy : std::false_type {};
+template <> struct isValidThreadingPolicy<SingleThreaded> : std::true_type {};
+template <> struct isValidThreadingPolicy<MultiThreaded> : std::true_type {};
+
 template <typename TPolicy>
-StreamSink<TPolicy>::StreamSink(std::ostream* stream)
-  : Sink<TPolicy>(), stream_(stream)
+StreamSink<TPolicy>::StreamSink(std::ostream* stream) : Sink(), stream_(stream)
 {
+  static_assert(isValidThreadingPolicy<TPolicy>::value,
+                "Invalid threading policy type");
 }
 
 template <typename TPolicy>
@@ -125,96 +115,96 @@ void StreamSink<TPolicy>::sink(LogLevel           level,
   this->threading_.acquireLock();
 
   if (color_output) {
-    size_t level_pos{ 0 };
-    size_t count{ 0 };
-    auto   findPosAndCount = [&](std::string_view word) {
-      level_pos = text.find(word);
-      count     = word.length();
-      if (unlikely(level_pos == std::string::npos)) {
-        level_pos = 0;
-        count     = 0;
-      }
-    };
     // Paint output
     // Insert a newline if the last message was a progress message
     if (last_message_was_progress_)
       (*stream_) << "\n";
-    //  Append first part up to log level
-    (*stream_) << text.substr(0, level_pos);
+
+    // The position of %L (if present) is the same on every line. Find the first
+    // occurrence.
+    size_t level_pos{ text.find("%L") };
+    if (unlikely(level_pos == std::string::npos)) {
+      level_pos = 0;
+    }
+
+    std::istringstream iss{ text };
+    std::string        text_line;
+    while (std::getline(iss, text_line)) {
+      //  Append first part up to log level
+      (*stream_) << text_line.substr(0, level_pos);
 #if defined(_WIN32)
-    HANDLE                     console = nullptr;
-    CONSOLE_SCREEN_BUFFER_INFO console_info;
-    memset(&console_info, 0, sizeof(CONSOLE_SCREEN_BUFFER_INFO));
-    console = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleScreenBufferInfo(console, &console_info);
-    switch (level) {
-      case Trace:
-        findPosAndCount("TRACE");
-        SetConsoleTextAttribute(console, CYAN);
-        break;
-      case Debug:
-        findPosAndCount("DEBUG");
-        SetConsoleTextAttribute(console, BLUE);
-        break;
-      case Info:
-        findPosAndCount("INFO");
-        SetConsoleTextAttribute(console, FOREGROUND_INTENSITY);
-        break;
-      case Warn:
-        findPosAndCount("WARNING");
-        SetConsoleTextAttribute(console, YELLOW);
-        break;
-      case Error:
-        findPosAndCount("ERROR");
-        SetConsoleTextAttribute(console, RED);
-        break;
-      case Critical:
-        findPosAndCount("CRITICAL");
-        SetConsoleTextAttribute(console, DARKRED);
-        break;
-      default:
-        break;
-    }
+      HANDLE                     console = nullptr;
+      CONSOLE_SCREEN_BUFFER_INFO console_info;
+      memset(&console_info, 0, sizeof(CONSOLE_SCREEN_BUFFER_INFO));
+      console = GetStdHandle(STD_OUTPUT_HANDLE);
+      GetConsoleScreenBufferInfo(console, &console_info);
+      switch (level) {
+        case Trace:
+          SetConsoleTextAttribute(console, CYAN);
+          (*stream_) << "TRACE";
+          break;
+        case Debug:
+          SetConsoleTextAttribute(console, BLUE);
+          (*stream_) << "DEBUG";
+          break;
+        case Info:
+          SetConsoleTextAttribute(console, FOREGROUND_INTENSITY);
+          (*stream_) << "INFO";
+          break;
+        case Warn:
+          SetConsoleTextAttribute(console, YELLOW);
+          (*stream_) << "WARNING";
+          break;
+        case Error:
+          SetConsoleTextAttribute(console, RED);
+          (*stream_) << "ERROR";
+          break;
+        case Critical:
+          SetConsoleTextAttribute(console, DARKRED);
+          (*stream_) << "CRITICAL";
+          break;
+        default:
+          break;
+      }
 #else
-    switch (level) {
-      case Trace:
-        findPosAndCount("TRACE");
-        (*stream_) << "\x1b[1;36m";
-        break;
-      case Debug:
-        findPosAndCount("DEBUG");
-        (*stream_) << "\x1b[1;34m";
-        break;
-      case Info:
-        findPosAndCount("INFO");
-        (*stream_) << "\x1b[38;5;245m";
-        break;
-      case Warn:
-        findPosAndCount("WARNING");
-        (*stream_) << "\x1b[1;33m";
-        break;
-      case Error:
-        findPosAndCount("ERROR");
-        (*stream_) << "\x1b[1;31m";
-        break;
-      case Critical:
-        findPosAndCount("CRITICAL");
-        (*stream_) << "\x1b[0;31m";
-        break;
-      default:
-        break;
-    }
+      switch (level) {
+        case Trace:
+          (*stream_) << "\x1b[1;36m";
+          (*stream_) << "TRACE";
+          break;
+        case Debug:
+          (*stream_) << "\x1b[1;34m";
+          (*stream_) << "DEBUG";
+          break;
+        case Info:
+          (*stream_) << "\x1b[38;5;245m";
+          (*stream_) << "INFO";
+          break;
+        case Warn:
+          (*stream_) << "\x1b[1;33m";
+          (*stream_) << "WARNING";
+          break;
+        case Error:
+          (*stream_) << "\x1b[1;31m";
+          (*stream_) << "ERROR";
+          break;
+        case Critical:
+          (*stream_) << "\x1b[0;31m";
+          (*stream_) << "CRITICAL";
+          break;
+        default:
+          break;
+      }
 #endif
-    // Append log level
-    (*stream_) << text.substr(level_pos, count);
-    // Reset text color
+        // Reset text color
 #if defined(_WIN32)
-    SetConsoleTextAttribute(console, console_info.wAttributes);
+      SetConsoleTextAttribute(console, console_info.wAttributes);
 #else
-    (*stream_) << "\x1b[0m";
+      (*stream_) << "\x1b[0m";
 #endif
 
-    (*stream_) << text.substr(level_pos + count, text.length() - 1) << "\n";
+      (*stream_) << text_line.substr(level_pos + 2, text.length() - 1) << "\n";
+    }
   }
   else {
     // No painting, print as is

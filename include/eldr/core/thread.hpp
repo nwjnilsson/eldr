@@ -7,7 +7,7 @@
 namespace eldr::core {
 /// Mock thread class for now until I have time to implement it
 class Thread {
-protected:
+public:
   Thread(std::string_view name) : name_(name) {};
 
   virtual ~Thread() = default;
@@ -20,7 +20,7 @@ public:
 
   [[nodiscard]] const std::string& name() const { return name_; }
 
-  [[nodiscard]] Logger* logger();
+  [[nodiscard]] Logger* logger() { return logger_.get(); }
 
   [[nodiscard]] static Thread* thread();
 

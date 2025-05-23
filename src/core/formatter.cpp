@@ -6,11 +6,11 @@
 
 #include <chrono>
 #include <filesystem>
+#include <iostream>
 
 namespace eldr::core {
 
-std::string DefaultFormatter::format(LogLevel           level,
-                                     const Thread*      thread,
+std::string DefaultFormatter::format(const Thread*      thread,
                                      const std::string& class_,
                                      const char*        function,
                                      const char*        file,
@@ -18,17 +18,21 @@ std::string DefaultFormatter::format(LogLevel           level,
                                      const std::string& message)
 {
   using namespace std::chrono;
-  // std::chrono in C++20 can do all this in a cleaner way but I need GCC13,
-  // which I don't have atm
+  // TODO: std::chrono in C++20 can do all this in a cleaner way but I need
+  // GCC13, which I don't have atm
   char   buffer[128];
   time_t time{ std::time(nullptr) };
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S.", std::localtime(&time));
   time_point now{ system_clock::now() };
   hh_mm_ss   time_of_day{ now - floor<days>(now) };
-  auto       millis = duration_cast<milliseconds>(time_of_day.subseconds());
+  long millis = duration_cast<milliseconds>(time_of_day.subseconds()).count();
 
   std::ostringstream oss;
-  oss << buffer << millis.count() << " ";
+  oss << buffer;
+  if (unlikely(millis < 100)) {
+    oss << "0";
+  }
+  oss << millis;
   const std::string time_full{ oss.str() };
   oss.str("");
   oss.clear();
@@ -41,31 +45,12 @@ std::string DefaultFormatter::format(LogLevel           level,
     }
 
     if (has_date_) {
-      oss << time_full;
+      oss << "[" << time_full << "] ";
     }
 
-    switch (level) {
-      case Trace:
-        oss << "[TRACE] ";
-        break;
-      case Debug:
-        oss << "[DEBUG] ";
-        break;
-      case Info:
-        oss << "[INFO] ";
-        break;
-      case Warn:
-        oss << "[WARNING] ";
-        break;
-      case Error:
-        oss << "[ERROR] ";
-        break;
-      case Critical:
-        oss << "[CRITICAL] ";
-        break;
-      default:
-        oss << "[UNKNOWN] ";
-        break;
+    if (has_log_level_) {
+      oss << "[%L] "; // replaced in sink
+                      // TODO: pad like thread names below using log level?
     }
 
     if (thread and has_thread_) {
@@ -79,13 +64,13 @@ std::string DefaultFormatter::format(LogLevel           level,
       case ClassFuncFormat::None:
         break;
       case ClassFuncFormat::ClassAndFunc:
-        if (not class_name.compare("Unknown")) {
+        if (class_name.compare("Unknown") != 0) {
           oss << "[" << class_name << "] ";
         }
         oss << "[" << function << "()] ";
         break;
       case ClassFuncFormat::ClassOrFunc:
-        if (not class_name.compare("Unknown")) {
+        if (class_name.compare("Unknown") != 0) {
           oss << "[" << class_name << "] ";
         }
         else {

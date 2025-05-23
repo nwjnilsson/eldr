@@ -1,27 +1,24 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 
-#include <memory>
+#include <string>
 
 namespace eldr::core {
 class Formatter {
   friend Logger;
 
 protected:
-  Formatter();
+  Formatter() = default;
 
 public:
-  virtual ~Formatter();
+  virtual ~Formatter() = default;
 
-  [[nodiscard]] virtual std::string format(LogLevel           level,
-                                           const Thread*      thread,
+  [[nodiscard]] virtual std::string format(const Thread*      thread,
                                            const std::string& class_,
                                            const char*        function,
                                            const char*        file,
                                            int                line,
                                            const std::string& message) = 0;
-
-protected:
 };
 
 class DefaultFormatter : public Formatter {
@@ -39,8 +36,7 @@ public:
 public:
   DefaultFormatter() : Formatter() {};
 
-  [[nodiscard]] std::string format(LogLevel           level,
-                                   const Thread*      thread,
+  [[nodiscard]] std::string format(const Thread*      thread,
                                    const std::string& class_,
                                    const char*        function,
                                    const char*        file,
@@ -48,6 +44,7 @@ public:
                                    const std::string& message) override;
 
   void setHasDate(bool has_date) { has_date_ = has_date; }
+  void setHasLogLevel(bool has_log_level) { has_log_level_ = has_log_level; }
   void setHasFile(bool has_file) { has_file_ = has_file; }
   void setHasThread(bool has_thread) { has_thread_ = has_thread; }
   void setClassFuncFormat(ClassFuncFormat format)
@@ -57,6 +54,7 @@ public:
 
 protected:
   bool has_date_{ true };
+  bool has_log_level_{ true };
   bool has_thread_{ true };
   bool has_file_{ false };
 

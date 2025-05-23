@@ -8,7 +8,7 @@ src = [ 'bitmap.cpp',
         'stopwatch.cpp',
         'stream.cpp',
         'struct.cpp',
-        #'thread.cpp',
+        'thread.cpp',
         'util.cpp',
         ]
 
@@ -19,6 +19,7 @@ eldr_core = library(
   sources : src,
   include_directories : [eldr_headers],
   dependencies : [
+          fmt_dep,
           libjpeg_dep,
           libpng_dep,
           rapidobj_dep
