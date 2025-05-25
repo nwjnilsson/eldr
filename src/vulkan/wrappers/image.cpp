@@ -44,7 +44,7 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
   : name_(image_info.name), size_(image_info.extent),
     format_(image_info.format), mip_levels_(image_info.mip_levels)
 {
-  VkImageCreateInfo image_ci{
+  const VkImageCreateInfo image_ci{
     .sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
     .pNext                 = nullptr,
     .flags                 = 0,
@@ -72,10 +72,15 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
     .pUserData      = {},
     .priority       = {},
   };
-  i_data_ = std::make_shared<ImageImpl>(device, image_ci, alloc_ci);
-
+  d_          = std::make_shared<ImageImpl>(device, image_ci, alloc_ci);
   image_view_ = ImageView{ device, *this, image_info.aspect_flags };
+
+  if (image_info.final_layout != VK_IMAGE_LAYOUT_UNDEFINED) {
+    device.execute([&](const CommandBuffer& cb) {
+      cb.transitionImageLayout(*this, image_info.final_layout);
+    });
+  }
 }
 
-VkImage Image::get() const { return i_data_->image_; }
+VkImage Image::get() const { return d_->image_; }
 } // namespace eldr::vk::wr

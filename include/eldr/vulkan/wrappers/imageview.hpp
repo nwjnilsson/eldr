@@ -20,6 +20,6 @@ private:
 
 protected:
   class ImageViewImpl;
-  std::shared_ptr<ImageViewImpl> iv_data_;
+  std::shared_ptr<ImageViewImpl> d_;
 };
 } // namespace eldr::vk::wr

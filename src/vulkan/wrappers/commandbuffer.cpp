@@ -50,59 +50,58 @@ CommandBuffer::CommandBuffer(const Device&      device,
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = 1;
 
-  cb_data_ = std::make_shared<CommandBufferImpl>(device, alloc_info);
+  d_ = std::make_shared<CommandBufferImpl>(device, alloc_info);
 }
 
 const CommandBuffer& CommandBuffer::pipelineBarrier(
-  const VkPipelineStageFlags                   src_stage_flags,
-  const VkPipelineStageFlags                   dst_stage_flags,
-  const std::span<const VkImageMemoryBarrier>  img_mem_barriers,
-  const std::span<const VkMemoryBarrier>       mem_barriers,
-  const std::span<const VkBufferMemoryBarrier> buf_mem_barriers,
-  const VkDependencyFlags                      dep_flags) const
+  const std::span<const VkImageMemoryBarrier2>  img_mem_barriers,
+  const std::span<const VkMemoryBarrier2>       mem_barriers,
+  const std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const
 {
   // One barrier must be set at least
   assert(!(img_mem_barriers.empty() && mem_barriers.empty()) &&
          buf_mem_barriers.empty());
 
-  vkCmdPipelineBarrier(cb_data_->command_buffer_,
-                       src_stage_flags,
-                       dst_stage_flags,
-                       dep_flags,
-                       static_cast<uint32_t>(mem_barriers.size()),
-                       mem_barriers.data(),
-                       static_cast<uint32_t>(buf_mem_barriers.size()),
-                       buf_mem_barriers.data(),
-                       static_cast<uint32_t>(img_mem_barriers.size()),
-                       img_mem_barriers.data());
+  VkDependencyInfo dep_info{
+    .sType                    = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+    .pNext                    = {},
+    .dependencyFlags          = {},
+    .memoryBarrierCount       = static_cast<uint32_t>(mem_barriers.size()),
+    .pMemoryBarriers          = mem_barriers.data(),
+    .bufferMemoryBarrierCount = static_cast<uint32_t>(buf_mem_barriers.size()),
+    .pBufferMemoryBarriers    = buf_mem_barriers.data(),
+    .imageMemoryBarrierCount  = static_cast<uint32_t>(img_mem_barriers.size()),
+    .pImageMemoryBarriers     = img_mem_barriers.data(),
+  };
+
+  vkCmdPipelineBarrier2(d_->command_buffer_, &dep_info);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::pipelineImageMemoryBarrier(
-  const VkPipelineStageFlags  src_stage_flags,
-  const VkPipelineStageFlags  dst_stage_flags,
-  const VkImageMemoryBarrier& img_barrier) const
+  const VkImageMemoryBarrier2& img_barrier) const
 {
-  return pipelineBarrier(src_stage_flags, dst_stage_flags, { &img_barrier, 1 });
+  return pipelineBarrier({ &img_barrier, 1 }, {}, {});
 }
 
 const CommandBuffer&
-CommandBuffer::pipelineMemoryBarrier(VkPipelineStageFlags   src_stage_flags,
-                                     VkPipelineStageFlags   dst_stage_flags,
-                                     const VkMemoryBarrier& mem_barrier) const
+CommandBuffer::pipelineMemoryBarrier(const VkMemoryBarrier2& mem_barrier) const
 {
-  return pipelineBarrier(
-    src_stage_flags, dst_stage_flags, {}, { &mem_barrier, 1 });
+  return pipelineBarrier({}, { &mem_barrier, 1 }, {});
+}
+
+const CommandBuffer& CommandBuffer::pipelineBufferMemoryBarrier(
+  const VkBufferMemoryBarrier2& buff_mem_barrier) const
+{
+  return pipelineBarrier({}, {}, { &buff_mem_barrier, 1 });
 }
 
 const CommandBuffer&
 CommandBuffer::setViewport(std::span<const VkViewport> viewports,
                            uint32_t                    first_viewport) const
 {
-  vkCmdSetViewport(cb_data_->command_buffer_,
-                   first_viewport,
-                   viewports.size(),
-                   viewports.data());
+  vkCmdSetViewport(
+    d_->command_buffer_, first_viewport, viewports.size(), viewports.data());
   return *this;
 }
 
@@ -111,19 +110,21 @@ CommandBuffer::setScissor(std::span<const VkRect2D> scissors,
                           uint32_t                  first_scissor) const
 {
   vkCmdSetScissor(
-    cb_data_->command_buffer_, first_scissor, scissors.size(), scissors.data());
+    d_->command_buffer_, first_scissor, scissors.size(), scissors.data());
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::fullBarrier() const
 {
-  const VkMemoryBarrier barrier{ .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-                                 .pNext = {},
-                                 .srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
-                                 .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT };
-  return pipelineMemoryBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                               barrier);
+  const VkMemoryBarrier2 barrier{
+    .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+    .pNext         = {},
+    .srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
+    .dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT
+  };
+  return pipelineMemoryBarrier(barrier);
 }
 
 const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
@@ -133,7 +134,7 @@ const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
   begin_info.flags            = usage;
   begin_info.pInheritanceInfo = nullptr;
   if (const VkResult result{
-        vkBeginCommandBuffer(cb_data_->command_buffer_, &begin_info) };
+        vkBeginCommandBuffer(d_->command_buffer_, &begin_info) };
       result != VK_SUCCESS)
     Throw("Failed to begin command buffer ({})!", result);
   return *this;
@@ -143,14 +144,14 @@ const CommandBuffer& CommandBuffer::beginRenderPass(
   const VkRenderPassBeginInfo& render_pass_info) const
 {
   vkCmdBeginRenderPass(
-    cb_data_->command_buffer_, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    d_->command_buffer_, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
   return *this;
 }
 
 const CommandBuffer&
 CommandBuffer::beginRendering(const VkRenderingInfoKHR& render_info) const
 {
-  vkCmdBeginRendering(cb_data_->command_buffer_, &render_info);
+  vkCmdBeginRendering(d_->command_buffer_, &render_info);
   return *this;
 }
 
@@ -160,7 +161,7 @@ const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
                                                 int32_t  vert_offset,
                                                 uint32_t first_inst) const
 {
-  vkCmdDrawIndexed(cb_data_->command_buffer_,
+  vkCmdDrawIndexed(d_->command_buffer_,
                    index_count,
                    inst_count,
                    first_index,
@@ -171,19 +172,19 @@ const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
 
 const CommandBuffer& CommandBuffer::endRenderPass() const
 {
-  vkCmdEndRenderPass(cb_data_->command_buffer_);
+  vkCmdEndRenderPass(d_->command_buffer_);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::endRendering() const
 {
-  vkCmdEndRendering(cb_data_->command_buffer_);
+  vkCmdEndRendering(d_->command_buffer_);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::end() const
 {
-  if (const VkResult result{ vkEndCommandBuffer(cb_data_->command_buffer_) };
+  if (const VkResult result{ vkEndCommandBuffer(d_->command_buffer_) };
       result != VK_SUCCESS)
     Throw("Failed to end command buffer ({})!", result);
   return *this;
@@ -193,10 +194,8 @@ const CommandBuffer&
 CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
-  if (const VkResult result{ vkQueueSubmit(cb_data_->device_.graphicsQueue(),
-                                           1,
-                                           &submit_info,
-                                           wait_fence_.get()) };
+  if (const VkResult result{ vkQueueSubmit(
+        d_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.get()) };
       result != VK_SUCCESS)
     Throw("Failed to submit to queue ({})!", result);
   return *this;
@@ -219,7 +218,7 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
     .pWaitSemaphores      = {},
     .pWaitDstStageMask    = {},
     .commandBufferCount   = 1,
-    .pCommandBuffers      = &cb_data_->command_buffer_,
+    .pCommandBuffers      = &d_->command_buffer_,
     .signalSemaphoreCount = 0,
     .pSignalSemaphores    = {},
   };
@@ -228,8 +227,7 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
 
 const CommandBuffer& CommandBuffer::reset() const
 {
-  if (const VkResult result{
-        vkResetCommandBuffer(cb_data_->command_buffer_, 0) };
+  if (const VkResult result{ vkResetCommandBuffer(d_->command_buffer_, 0) };
       result != VK_SUCCESS)
     Throw("Failed to reset command buffer ({})", result);
   return *this;
@@ -242,7 +240,7 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
                                               const VkImageBlit& blit,
                                               VkFilter           filter) const
 {
-  vkCmdBlitImage(cb_data_->command_buffer_,
+  vkCmdBlitImage(d_->command_buffer_,
                  src_image.get(),
                  src_layout,
                  dst_image.get(),
@@ -259,8 +257,7 @@ CommandBuffer::bindIndexBuffer(const GpuBuffer<byte>& buffer,
                                VkDeviceSize           offset) const
 {
   assert(buffer.get());
-  vkCmdBindIndexBuffer(
-    cb_data_->command_buffer_, buffer.get(), offset, index_type);
+  vkCmdBindIndexBuffer(d_->command_buffer_, buffer.get(), offset, index_type);
   return *this;
 }
 
@@ -276,7 +273,7 @@ CommandBuffer::bindVertexBuffers(std::span<const VkBuffer>     buffers,
     assert(buffers.size() == offsets.size());
     p_offsets = offsets.data();
   }
-  vkCmdBindVertexBuffers(cb_data_->command_buffer_,
+  vkCmdBindVertexBuffers(d_->command_buffer_,
                          first_binding,
                          static_cast<uint32_t>(buffers.size()),
                          buffers.data(),
@@ -293,7 +290,7 @@ CommandBuffer::bindDescriptorSets(std::span<const VkDescriptorSet> desc_sets,
 {
   assert(layout);
   assert(!desc_sets.empty());
-  vkCmdBindDescriptorSets(cb_data_->command_buffer_,
+  vkCmdBindDescriptorSets(d_->command_buffer_,
                           bind_point,
                           layout,
                           first_set,
@@ -309,7 +306,7 @@ CommandBuffer::bindPipeline(const Pipeline&     pipeline,
                             VkPipelineBindPoint bind_point) const
 {
   assert(pipeline.get());
-  vkCmdBindPipeline(cb_data_->command_buffer_, bind_point, pipeline.get());
+  vkCmdBindPipeline(d_->command_buffer_, bind_point, pipeline.get());
   return *this;
 }
 
@@ -317,22 +314,31 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
 {
   VkFormatProperties format_props{};
   vkGetPhysicalDeviceFormatProperties(
-    cb_data_->device_.physical(), image.format(), &format_props);
+    d_->device_.physical(), image.format(), &format_props);
   // Support for linear blitting is currently required
   if (!(format_props.optimalTilingFeatures &
         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
     Throw("Texture image format does not support linear blitting!");
   }
 
-  VkImageMemoryBarrier barrier{};
-  barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.image                       = image.get();
-  barrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = 1;
-  barrier.subresourceRange.levelCount     = 1;
+  VkImageMemoryBarrier2 barrier{
+    .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+    .pNext               = {},
+    .srcStageMask        = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    .srcAccessMask       = {},
+    .dstStageMask        = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    .dstAccessMask       = {},
+    .oldLayout           = {},
+    .newLayout           = {},
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image               = image.get(),
+    .subresourceRange    = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                             .baseMipLevel   = 0,
+                             .levelCount     = 1,
+                             .baseArrayLayer = 0,
+                             .layerCount     = 1 },
+  };
 
   int32_t mip_width  = image.size().width;
   int32_t mip_height = image.size().height;
@@ -341,10 +347,11 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
     barrier.subresourceRange.baseMipLevel = i - 1;
     barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    pipelineImageMemoryBarrier(
-      VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, barrier);
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    pipelineImageMemoryBarrier(barrier);
 
     const VkImageBlit blit{
       .srcSubresource = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -370,12 +377,12 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
 
     barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    pipelineImageMemoryBarrier(barrier);
 
-    pipelineImageMemoryBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                               VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                               barrier);
     if (mip_width > 1)
       mip_width /= 2;
     if (mip_height > 1)
@@ -385,52 +392,67 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
   barrier.subresourceRange.baseMipLevel = image.mipLevels() - 1;
   barrier.oldLayout                     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+  barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+  barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  barrier.dstStageMask  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-  return pipelineImageMemoryBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                    barrier);
+  return pipelineImageMemoryBarrier(barrier);
 }
 
-const CommandBuffer& CommandBuffer::transitionImageLayout(
-  const Image& image, VkImageLayout old_layout, VkImageLayout new_layout) const
+const CommandBuffer&
+CommandBuffer::transitionImageLayout(Image&        image,
+                                     VkImageLayout new_layout) const
 {
-  VkImageMemoryBarrier barrier{};
-  barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout                   = old_layout;
-  barrier.newLayout                   = new_layout;
-  barrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image                       = image.get();
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = image.mipLevels();
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = 1;
+  VkImageMemoryBarrier2 barrier{
+    .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+    .pNext               = {},
+    .srcStageMask = {},
+    .srcAccessMask       = 0,
+    .dstStageMask = {},
+    .dstAccessMask       = 0,
+    .oldLayout           = image.layout(),
+    .newLayout           = new_layout,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image               = image.get(),
+    .subresourceRange = {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .baseMipLevel   = 0,
+      .levelCount     = image.mipLevels(),
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+  };
 
-  VkPipelineStageFlags source_stage;
-  VkPipelineStageFlags destination_stage;
-
-  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+  if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
       new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    source_stage          = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destination_stage     = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
   }
-  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+  else if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
+           new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+  }
+  else if (image.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
            new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    source_stage          = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destination_stage     = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
   }
   else {
-    Throw("Unsupported layout transition!");
+    Throw(
+      "Unsupported layout transition! ({} -> {})", image.layout(), new_layout);
   }
 
-  return pipelineImageMemoryBarrier(source_stage, destination_stage, barrier);
+  image.setLayout(new_layout);
+  return pipelineImageMemoryBarrier(barrier);
 }
 
 template <typename T>
@@ -439,7 +461,7 @@ CommandBuffer::copyBufferToImage(const GpuBuffer<T>&      buffer,
                                  Image&                   image,
                                  const VkBufferImageCopy& copy_region) const
 {
-  vkCmdCopyBufferToImage(cb_data_->command_buffer_,
+  vkCmdCopyBufferToImage(d_->command_buffer_,
                          buffer.get(),
                          image.get(),
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -469,7 +491,7 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   assert(layout);
   assert(size > 0);
   assert(data);
-  vkCmdPushConstants(cb_data_->command_buffer_,
+  vkCmdPushConstants(d_->command_buffer_,
                      layout,
                      stage,
                      static_cast<uint32_t>(offset),
@@ -482,7 +504,7 @@ const GpuBuffer<std::byte>&
 CommandBuffer::createStagingBuffer(std::string_view      name,
                                    std::span<const byte> data) const
 {
-  staging_buffers_.emplace_back(cb_data_->device_,
+  staging_buffers_.emplace_back(d_->device_,
                                 name,
                                 data,
                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -501,10 +523,7 @@ void     CommandBuffer::waitFence() const
 
 void CommandBuffer::resetFence() const { wait_fence_.reset(); }
 
-VkCommandBuffer CommandBuffer::get() const { return cb_data_->command_buffer_; }
+VkCommandBuffer CommandBuffer::get() const { return d_->command_buffer_; }
 
-VkCommandBuffer* CommandBuffer::ptr() const
-{
-  return &cb_data_->command_buffer_;
-}
+VkCommandBuffer* CommandBuffer::ptr() const { return &d_->command_buffer_; }
 } // namespace eldr::vk::wr

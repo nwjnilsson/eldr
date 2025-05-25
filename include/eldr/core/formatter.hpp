@@ -27,10 +27,10 @@ public:
     None,         // Include neither
     ClassAndFunc, // Include class name (if available) and short function
                   // signature
-    ClassOrFunc, // Include class in formatted text, fall back to short function
-                 // signature if no class is available
-    ClassOnly,   // Include class name, "Unknown" if no class is available
-    FuncOnly,    // Include full function signature (if available)
+    ClassOrFunc,  // Include class, fall back to short function
+                  // signature if no class is available
+    ClassOnly,    // Include class name, may be Unknown/anonymous
+    FuncOnly,     // Include full function signature (gcc and msvc)
   };
 
 public:
@@ -44,6 +44,7 @@ public:
                                    const std::string& message) override;
 
   void setHasDate(bool has_date) { has_date_ = has_date; }
+  void setHasTime(bool has_time) { has_time_ = has_time; }
   void setHasLogLevel(bool has_log_level) { has_log_level_ = has_log_level; }
   void setHasFile(bool has_file) { has_file_ = has_file; }
   void setHasThread(bool has_thread) { has_thread_ = has_thread; }
@@ -54,10 +55,11 @@ public:
 
 protected:
   bool has_date_{ true };
+  bool has_time_{ true };
   bool has_log_level_{ true };
   bool has_thread_{ true };
   bool has_file_{ false };
 
-  ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassAndFunc };
+  ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassOrFunc };
 };
 } // namespace eldr::core

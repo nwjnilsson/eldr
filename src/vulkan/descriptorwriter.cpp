@@ -42,30 +42,41 @@ DescriptorWriter& DescriptorWriter::writeImage(uint32_t         binding,
 DescriptorWriter& DescriptorWriter::writeSampler(uint32_t           binding,
                                                  const wr::Sampler& sampler)
 {
-  return writeImage(binding, VK_NULL_HANDLE, sampler.get(),
-                    VK_DESCRIPTOR_TYPE_SAMPLER, {});
+  return writeImage(
+    binding, VK_NULL_HANDLE, sampler.get(), VK_DESCRIPTOR_TYPE_SAMPLER, {});
 }
 
 DescriptorWriter& DescriptorWriter::writeSampledImage(
   uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
-  return writeImage(binding, image.get(), VK_NULL_HANDLE,
-                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, layout);
+  return writeImage(binding,
+                    image.get(),
+                    VK_NULL_HANDLE,
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                    layout);
 }
 
-DescriptorWriter& DescriptorWriter::writeCombinedImageSampler(
-  uint32_t binding, const wr::Image& image, const wr::Sampler& sampler,
-  VkImageLayout layout)
+DescriptorWriter&
+DescriptorWriter::writeCombinedImageSampler(uint32_t           binding,
+                                            const wr::Image&   image,
+                                            const wr::Sampler& sampler,
+                                            VkImageLayout      layout)
 {
-  return writeImage(binding, image.imageView().get(), sampler.get(),
-                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, layout);
+  return writeImage(binding,
+                    image.view().get(),
+                    sampler.get(),
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    layout);
 }
 
 DescriptorWriter& DescriptorWriter::writeStorageImage(
   uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
-  return writeImage(binding, image.get(), VK_NULL_HANDLE,
-                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, layout);
+  return writeImage(binding,
+                    image.get(),
+                    VK_NULL_HANDLE,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                    layout);
 }
 
 void DescriptorWriter::updateSet(const wr::Device& device, VkDescriptorSet set)
@@ -75,6 +86,8 @@ void DescriptorWriter::updateSet(const wr::Device& device, VkDescriptorSet set)
 
   vkUpdateDescriptorSets(device.logical(),
                          static_cast<uint32_t>(write_sets_.size()),
-                         write_sets_.data(), 0, nullptr);
+                         write_sets_.data(),
+                         0,
+                         nullptr);
 }
 } // namespace eldr::vk

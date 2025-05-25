@@ -20,20 +20,37 @@ std::string DefaultFormatter::format(const Thread*      thread,
   using namespace std::chrono;
   // TODO: std::chrono in C++20 can do all this in a cleaner way but I need
   // GCC13, which I don't have atm
-  char   buffer[128];
-  time_t time{ std::time(nullptr) };
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S.", std::localtime(&time));
-  time_point now{ system_clock::now() };
-  hh_mm_ss   time_of_day{ now - floor<days>(now) };
-  long millis = duration_cast<milliseconds>(time_of_day.subseconds()).count();
+  char        buffer[128];
+  time_t      time{ std::time(nullptr) };
+  std::string fmt;
+  if (has_date_ and has_time_) {
+    fmt = "%Y-%m-%d %H:%M:%S.";
+  }
+  else if (has_date_) {
+    fmt = "%Y-%m-%d";
+  }
+  else if (has_time_) {
+    fmt = "%H:%M:%S.";
+  }
+  strftime(buffer, sizeof(buffer), fmt.c_str(), std::localtime(&time));
 
   std::ostringstream oss;
-  oss << buffer;
-  if (unlikely(millis < 100)) {
-    oss << "0";
+  if (has_time_) {
+    // Get millisecond precision
+    const time_point now{ system_clock::now() };
+    const hh_mm_ss   time_of_day{ now - floor<days>(now) };
+    const long       millis{
+      duration_cast<milliseconds>(time_of_day.subseconds()).count()
+    };
+
+    oss << buffer;
+    if (unlikely(millis < 100)) {
+      oss << "0";
+    }
+    oss << millis;
   }
-  oss << millis;
   const std::string time_full{ oss.str() };
+
   oss.str("");
   oss.clear();
   std::istringstream iss{ message };
@@ -44,7 +61,7 @@ std::string DefaultFormatter::format(const Thread*      thread,
       oss << '\n';
     }
 
-    if (has_date_) {
+    if (has_date_ or has_time_) {
       oss << "[" << time_full << "] ";
     }
 
@@ -64,13 +81,15 @@ std::string DefaultFormatter::format(const Thread*      thread,
       case ClassFuncFormat::None:
         break;
       case ClassFuncFormat::ClassAndFunc:
-        if (class_name.compare("Unknown") != 0) {
+        if (class_name.compare("Unknown") != 0 and
+            class_name.compare("{anonymous}") != 0) {
           oss << "[" << class_name << "] ";
         }
         oss << "[" << function << "()] ";
         break;
       case ClassFuncFormat::ClassOrFunc:
-        if (class_name.compare("Unknown") != 0) {
+        if (class_name.compare("Unknown") != 0 and
+            class_name.compare("{anonymous}") != 0) {
           oss << "[" << class_name << "] ";
         }
         else {

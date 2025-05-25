@@ -15,12 +15,11 @@ using namespace eldr::core;
 namespace eldr::vk {
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                            const wr::Swapchain& swapchain,
-                           RenderGraph*         render_graph,
-                           TextureResource*     back_buffer)
+                           RenderGraph*         render_graph)
   : device_(device), swapchain_(swapchain)
 {
   IMGUI_CHECKVERSION();
-  Log(Trace, "Creating ImGUI context");
+  Log(Trace, "Creating ImGui context");
   ImGui::CreateContext();
 
   // ImGui style
@@ -48,12 +47,12 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   io.FontGlobalScale = scale_;
   // style.ScaleAllSizes(scale_);
 
-  Log(Trace, "Loading ImGUI shaders");
+  Log(Trace, "Loading ImGui shaders");
   vertex_shader_ = wr::Shader{
-    device_, "ImGUI vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
+    device_, "ImGui vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
   };
   fragment_shader_ = wr::Shader{ device_,
-                                 "ImGUI fragment shader",
+                                 "ImGui fragment shader",
                                  "imgui.frag.spv",
                                  VK_SHADER_STAGE_FRAGMENT_BIT };
 
@@ -93,11 +92,11 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       wr::Texture{ device_, Bitmap::createCheckerboard(), font_mip_levels };
   }
   else {
-    Log(Trace, "Creating ImGUI font texture");
+    Log(Trace, "Creating ImGui font texture");
 
     imgui_texture_ = wr::Texture{
       device_,
-      Bitmap{ "ImGUI font texture",
+      Bitmap{ "ImGui font texture",
               Bitmap::PixelFormat::RGBA,
               Struct::Type::UInt8,
               { font_texture_width, font_texture_height },
@@ -113,14 +112,17 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                VK_SAMPLER_MIPMAP_MODE_LINEAR,
                                font_mip_levels };
 
-  ibuffer_ = render_graph->add<BufferResource>("imgui index buffer",
+  ibuffer_ = render_graph->add<BufferResource>("ImGui index buffer",
                                                VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                                                VMA_MEMORY_USAGE_CPU_TO_GPU);
 
   vbuffer_ =
-    render_graph->add<BufferResource>("imgui vertex buffer",
+    render_graph->add<BufferResource>("ImGui vertex buffer",
                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                                       VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+  auto* texture = render_graph->add<TextureResource>(
+    "ImGui color buffer", TextureUsage::ColorBuffer, swapchain_.imageFormat());
 
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
   //                                      offsetof(ImDrawVert, pos));
@@ -129,9 +131,10 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
   //                                      offsetof(ImDrawVert, col));
   stage_ = render_graph->add<GraphicsStage>("imgui stage");
-  stage_->writesTo(back_buffer);
   stage_->readsFrom(ibuffer_);
   stage_->readsFrom(vbuffer_);
+  stage_->writesTo(texture);
+
   //  TODO: what to do with imgui pipeline?
   // stage_->bindBuffer(vertex_buffer_, 0);
   //   stage_->usesShader(vertex_shader_);

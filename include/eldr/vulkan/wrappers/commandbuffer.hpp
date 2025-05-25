@@ -59,29 +59,25 @@ public:
     const Pipeline&     pipeline,
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
 
+  const CommandBuffer& pipelineBarrier(
+    std::span<const VkImageMemoryBarrier2>  img_mem_barriers,
+    std::span<const VkMemoryBarrier2>       mem_barriers,
+    std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const;
+
   const CommandBuffer&
-  pipelineBarrier(VkPipelineStageFlags                   src_stage_flags,
-                  VkPipelineStageFlags                   dst_stage_flags,
-                  std::span<const VkImageMemoryBarrier>  img_mem_barriers,
-                  std::span<const VkMemoryBarrier>       mem_barriers     = {},
-                  std::span<const VkBufferMemoryBarrier> buf_mem_barriers = {},
-                  VkDependencyFlags                      dep_flags = 0) const;
+  pipelineImageMemoryBarrier(const VkImageMemoryBarrier2& barrier) const;
   const CommandBuffer&
-  pipelineImageMemoryBarrier(VkPipelineStageFlags        src_stage_flags,
-                             VkPipelineStageFlags        dst_stage_flags,
-                             const VkImageMemoryBarrier& barrier) const;
+  pipelineMemoryBarrier(const VkMemoryBarrier2& barrier) const;
   const CommandBuffer&
-  pipelineMemoryBarrier(VkPipelineStageFlags   src_stage_flags,
-                        VkPipelineStageFlags   dst_stage_flags,
-                        const VkMemoryBarrier& barrier) const;
+  pipelineBufferMemoryBarrier(const VkBufferMemoryBarrier2& barrier) const;
+
   const CommandBuffer& setViewport(std::span<const VkViewport> viewports,
                                    uint32_t first_viewport) const;
   const CommandBuffer& setScissor(std::span<const VkRect2D> scissors,
                                   uint32_t first_scissor) const;
   const CommandBuffer& fullBarrier() const;
 
-  const CommandBuffer& transitionImageLayout(const Image&,
-                                             VkImageLayout old_layout,
+  const CommandBuffer& transitionImageLayout(Image&,
                                              VkImageLayout new_layout) const;
 
   const CommandBuffer& blitImage(const Image&       src_image,
@@ -130,7 +126,7 @@ private:
   std::string name_;
 
   class CommandBufferImpl;
-  std::shared_ptr<CommandBufferImpl> cb_data_;
+  std::shared_ptr<CommandBufferImpl> d_;
 
   Fence                                wait_fence_;
   mutable std::vector<GpuBuffer<byte>> staging_buffers_;

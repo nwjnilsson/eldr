@@ -48,7 +48,8 @@ getTextureCreateInfo(const Bitmap&                  bitmap,
 }
 } // namespace
 
-Texture::Texture(const Device& device, const Bitmap& bitmap,
+Texture::Texture(const Device&           device,
+                 const Bitmap&           bitmap,
                  std::optional<uint32_t> mip_levels)
   : Image(device, getTextureCreateInfo(bitmap, mip_levels))
 {
@@ -71,8 +72,7 @@ Texture::Texture(const Device& device, const Bitmap& bitmap,
                      .depth  = 1 },
   };
   device.execute([&](const CommandBuffer& cb) {
-    cb.transitionImageLayout(*this, VK_IMAGE_LAYOUT_UNDEFINED,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    cb.transitionImageLayout(*this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
       .copyDataToImage(bitmap.bytes(), *this, copy_region)
       // The transition below is not necessary when generating mipmaps using the
       // blit command, since each level will be transitioned to

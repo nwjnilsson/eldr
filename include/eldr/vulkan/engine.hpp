@@ -98,7 +98,6 @@ private:
   //  std::vector<GpuVertex> vertices_;
   //  std::vector<uint32_t>  indices_;
 
-  TextureResource* back_buffer_;
   TextureResource* msaa_buffer_;
   // BufferResource*  vertex_buffer_;
   // BufferResource*  index_buffer_;

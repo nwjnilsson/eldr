@@ -16,10 +16,7 @@ class ImGuiOverlay {
 
 public:
   ImGuiOverlay() = delete;
-  ImGuiOverlay(const wr::Device&,
-               const wr::Swapchain&,
-               RenderGraph*,
-               TextureResource* back_buffer);
+  ImGuiOverlay(const wr::Device&, const wr::Swapchain&, RenderGraph*);
   ImGuiOverlay(ImGuiOverlay&&)      = delete;
   ImGuiOverlay(const ImGuiOverlay&) = delete;
   ~ImGuiOverlay();

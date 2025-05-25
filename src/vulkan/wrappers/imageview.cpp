@@ -35,7 +35,7 @@ ImageView::ImageViewImpl::~ImageViewImpl()
 ImageView::ImageView(const Device&                device,
                      const VkImageViewCreateInfo& image_view_ci)
 {
-  iv_data_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
+  d_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
 }
 
 ImageView::ImageView(const Device&      device,
@@ -62,10 +62,10 @@ ImageView::ImageView(const Device&      device,
       .layerCount     = 1,
     },
   };
-  iv_data_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
+  d_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
 }
 
-VkImageView ImageView::get() const { return iv_data_->image_view_; }
+VkImageView ImageView::get() const { return d_->image_view_; }
 
 ImageView ImageView::createSwapchainImageView(const Device& device,
                                               VkImage       image,

@@ -351,6 +351,7 @@ void VulkanEngine::setupRenderGraph()
 
   auto*    graph{ d_->render_graph.get() };
   VkFormat color_format{ d_->swapchain.imageFormat() };
+
   msaa_buffer_ = graph->add<TextureResource>(
     "MSAA color buffer", TextureUsage::ColorBuffer, color_format, sample_count);
 
@@ -359,10 +360,6 @@ void VulkanEngine::setupRenderGraph()
     TextureUsage::DepthStencilBuffer,
     d_->device.findDepthFormat(),
     sample_count) };
-
-  // TODO: handle resolve buffers implicitly in render graph
-  back_buffer_ = graph->add<TextureResource>(
-    "back buffer", TextureUsage::BackBuffer, color_format);
 
   // index_buffer_ =
   //   graph->add<BufferResource>("index buffer", BufferUsage::IndexBuffer);
@@ -392,14 +389,16 @@ void VulkanEngine::setupRenderGraph()
                                       // clear color
   main_stage->writesTo(depth_buffer); // clear value index 1 is
                                       // depth stencil
-  main_stage->writesTo(back_buffer_);
+
+  // main_stage->writesTo(graph->backBuffer());
   // main_stage->readsFrom(index_buffer_);
   // main_stage->readsFrom(vertex_buffer_);
-  // main_stage->bindBuffer(vertex_buffer_,
-  // 0); main_stage->setClearsScreen(true);
+  // main_stage->bindBuffer(vertex_buffer_, 0);
+  main_stage->setClearsScreen(true);
   // main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
+      // graph->bindOutput();
       drawGeometry(cb);
     });
 
@@ -439,8 +438,7 @@ void VulkanEngine::recreateSwapchain()
   setupRenderGraph();
   // Reset first to destroy ImGui context
   overlay.reset();
-  overlay = std::make_unique<ImGuiOverlay>(
-    device, swapchain, graph.get(), back_buffer_);
+  overlay = std::make_unique<ImGuiOverlay>(device, swapchain, graph.get());
   graph->compile();
 }
 
@@ -647,7 +645,7 @@ void VulkanEngine::drawFrame(const Scene& scene)
 
   const auto& cb{ device.requestCommandBuffer() };
   frame.cmd_buf = &cb;
-  d_->render_graph->render(cb);
+  d_->render_graph->render(cb, frame_index_);
 
   VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT

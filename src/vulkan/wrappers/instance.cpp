@@ -1,5 +1,4 @@
 #include <eldr/buildinfo.hpp>
-#include <eldr/vulkan/vktools/format.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 

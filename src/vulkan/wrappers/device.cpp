@@ -6,6 +6,7 @@
 
 #include <mutex>
 #include <set>
+#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk::wr {
 namespace {
@@ -228,9 +229,15 @@ Device::Device(const Instance&                 instance,
   device_features.samplerAnisotropy = VK_TRUE;
   device_features.sampleRateShading = VK_TRUE;
 
-  VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_features{
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+  VkPhysicalDeviceSynchronization2Features sync2_features{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
     .pNext = {},
+    .synchronization2 = VK_TRUE
+  };
+
+  VkPhysicalDeviceBufferDeviceAddressFeatures buffer_address_features{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+    .pNext = &sync2_features,
     .bufferDeviceAddress              = VK_TRUE,
     .bufferDeviceAddressCaptureReplay = VK_FALSE,
     .bufferDeviceAddressMultiDevice   = VK_FALSE,
@@ -238,7 +245,7 @@ Device::Device(const Instance&                 instance,
 
   const VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features{
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-    .pNext = &buffer_device_features,
+    .pNext = &buffer_address_features,
     .dynamicRendering = VK_TRUE,
   };
 

@@ -1,4 +1,5 @@
 #include <eldr/core/platform.hpp>
+#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
@@ -43,12 +44,12 @@ bool RenderStage::hasReadDependency(
   return false;
 }
 
-void GraphicsStage::bindBuffer(const BufferResource* buffer,
-                               const uint32_t        binding)
-{
-  buffer_bindings_.emplace(buffer, binding);
-}
-//
+// void GraphicsStage::bindBuffer(const BufferResource* buffer,
+//                                const uint32_t        binding)
+// {
+//   buffer_bindings_.emplace(buffer, binding);
+// }
+
 // void GraphicsStage::usesShader(const wr::Shader& shader)
 // {
 //   shaders_.push_back({
@@ -61,7 +62,8 @@ void GraphicsStage::bindBuffer(const BufferResource* buffer,
 // }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
-                                      const wr::CommandBuffer& cb) const
+                                      const wr::CommandBuffer& cb,
+                                      uint32_t frame_index) const
 {
   const PhysicalStage& physical = *stage->physical_;
 
@@ -71,43 +73,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     const auto* phys_graphics_stage = physical.as<PhysicalGraphicsStage>();
     assert(phys_graphics_stage != nullptr);
 
-    // TODO: fix
-    // This array of clear value works, and is efficient, but restricts
-    // the order in which TextureResource write dependencies can be added, as
-    // the creation of attachments are done in the order of the stage->writes_
-    // vector.
-    //  - Since the color clear value is on index 0, and the
-    //  back buffer/color buffer uses VK_ATTACHMENT_LOAD_OP_CLEAR, this
-    //  buffer must be added as a write dependency first, giving it attachment
-    //  index 0.
-    //  - By the same token, the depth stencil buffer has to be added second
-    // A better implementation is outlined in the comment in the RenderPass
-    // constructor (renderpass.cpp)
-    //
-    // Note that fixing this problem will also most likely involve changing how
-    // the framebuffers are created, as the image_views array order should
-    // correspond to the attachment order.
-    // std::array<VkClearValue, 2> clear_values{};
-    // if (graphics_stage->clears_screen_) {
-    //   // Black with 100% opacity
-    //   clear_values[0].color        = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-    //   clear_values[1].depthStencil = { 1.0f, 0 };
-    // }
-
-    // const VkRenderPassBeginInfo render_pass_bi{
-    //   .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-    //   .pNext       = nullptr,
-    //   .renderPass  = phys_graphics_stage->render_pass_.get(),
-    //   .framebuffer =
-    //   phys_graphics_stage->framebuffers_.at(image_index).get(), .renderArea{
-    //     .offset = {},
-    //     .extent = swapchain_.extent(),
-    //   },
-    //   .clearValueCount = static_cast<uint32_t>(clear_values.size()),
-    //   .pClearValues    = clear_values.data(),
-    // };
-
-    const VkRenderingInfoKHR render_info{
+    const VkRenderingInfo render_info{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
       .pNext = nullptr,
       .flags = 0,
@@ -115,12 +81,14 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
         .offset{},
         .extent{ swapchain_.extent() },
       },
-      .layerCount           = 0,
+      .layerCount           = 1,
       .viewMask             = 0,
-      .colorAttachmentCount = 1,
-      .pColorAttachments    = VK_NULL_HANDLE, // FIXME
-      .pDepthAttachment     = VK_NULL_HANDLE, // FIXME
-      .pStencilAttachment   = VK_NULL_HANDLE,
+      .colorAttachmentCount = static_cast<uint32_t>(
+        phys_graphics_stage->color_attachments_[frame_index].size()),
+      .pColorAttachments =
+        phys_graphics_stage->color_attachments_[frame_index].data(),
+      .pDepthAttachment   = phys_graphics_stage->depth_attachment_.get(),
+      .pStencilAttachment = VK_NULL_HANDLE,
     };
     cb.beginRendering(render_info);
   }
@@ -171,6 +139,56 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   // TODO: Find a more performant solution instead of placing a full memory
   // barrier after each stage!
   cb.fullBarrier();
+}
+
+void RenderGraph::buildAttachments(const GraphicsStage*   stage,
+                                   PhysicalGraphicsStage& physical) const
+{
+  for (uint32_t i{ 0 }; i < max_frames_in_flight; ++i) {
+    auto& attachments = physical.color_attachments_[i];
+    attachments.clear();
+    for (const auto* resource : stage->writes_) {
+      const auto* texture = resource->as<TextureResource>();
+      if (texture == nullptr) {
+        continue;
+      }
+      if (const auto* image = texture->physical_->as<PhysicalImage>()) {
+        VkRenderingAttachmentInfo attachment{
+          .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+          .pNext              = {},
+          .imageView          = image->image_.view().get(),
+          .imageLayout        = image->image_.layout(),
+          .resolveMode        = texture->sample_count_ == VK_SAMPLE_COUNT_1_BIT
+                                  ? VK_RESOLVE_MODE_NONE
+                                  : VK_RESOLVE_MODE_AVERAGE_BIT,
+          .resolveImageView   = {},
+          .resolveImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+          .loadOp     = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                              : VK_ATTACHMENT_LOAD_OP_LOAD,
+          .storeOp    = VK_ATTACHMENT_STORE_OP_STORE,
+          .clearValue = {}
+        };
+
+        attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+        switch (texture->usage_) {
+          case TextureUsage::ColorBuffer:
+            attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+            // TODO: Other resolve targets than swapchain image should be
+            // possible
+            attachment.resolveImageView = swapchain_.imageView(i).get();
+            attachments.push_back(attachment);
+            break;
+          case TextureUsage::DepthStencilBuffer:
+            attachment.clearValue.depthStencil = { 1.0f, 0 };
+            physical.depth_attachment_ =
+              std::make_unique<VkRenderingAttachmentInfo>(attachment);
+            break;
+          default:
+            Assert(false);
+        }
+      }
+    }
+  }
 }
 
 // void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
@@ -448,36 +466,33 @@ void RenderGraph::compile()
   }
 
   Log(Trace, "Allocating physical resource for texture:");
-  for (auto& texture_resource : texture_resources_) {
-    Log(Trace, "   - {}", texture_resource->name());
+  for (auto& texture : texture_resources_) {
+    Log(Trace, "   - {}", texture->name());
 
-    if (texture_resource->usage_ == TextureUsage::BackBuffer) {
-      texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
-      continue;
-    }
-
-    const wr::Image::ImageCreateInfo texture_info = {
-      .name   = fmt::format("{} image", texture_resource->name_),
-      .extent = swapchain_.extent(),
-      .format = texture_resource->format_,
-      .tiling = VK_IMAGE_TILING_OPTIMAL,
-      .usage_flags =
-        texture_resource->usage_ == TextureUsage::DepthStencilBuffer
-          ? static_cast<VkImageUsageFlags>(
-              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-          : static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    // if (texture_resource->usage_ == TextureUsage::BackBuffer) {
+    //   texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
+    //   continue;
+    // }
+    const bool color_usage{ texture->usage_ == TextureUsage::ColorBuffer };
+    const wr::Image::ImageCreateInfo texture_info{
+      .name        = fmt::format("{} image", texture->name_),
+      .extent      = swapchain_.extent(),
+      .format      = texture->format_,
+      .tiling      = VK_IMAGE_TILING_OPTIMAL,
+      .usage_flags = color_usage ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                                 : VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       .aspect_flags =
-        texture_resource->usage_ == TextureUsage::DepthStencilBuffer
-          ? VK_IMAGE_ASPECT_DEPTH_BIT
-          : VK_IMAGE_ASPECT_COLOR_BIT,
-      .sample_count = texture_resource->sample_count_,
+        color_usage ? VK_IMAGE_ASPECT_COLOR_BIT : VK_IMAGE_ASPECT_DEPTH_BIT,
+      .sample_count = texture->sample_count_,
       .mip_levels   = 1,
       .memory_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+      .final_layout = color_usage ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                                  : VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
     };
 
-    auto physical               = std::make_shared<PhysicalImage>();
-    physical->image_            = wr::Image{ device_, texture_info };
-    texture_resource->physical_ = physical;
+    auto physical      = std::make_shared<PhysicalImage>();
+    physical->image_   = wr::Image{ device_, texture_info };
+    texture->physical_ = physical;
   }
 
   for (auto substages : stage_stack_) {
@@ -489,67 +504,28 @@ void RenderGraph::compile()
         graphics_stage->physical_ = std::move(g_stage_ptr); // upcasts
 
         // Deduce sample count to be used in stage
-        VkSampleCountFlagBits sample_count{ VK_SAMPLE_COUNT_1_BIT };
-        for (auto* resource : stage->writes_) {
-          if (const auto* texture = resource->as<TextureResource>()) {
-            if (texture->sample_count_ > sample_count) {
-              sample_count = texture->sample_count_;
-            }
-          }
-        }
+        // VkSampleCountFlagBits sample_count{ VK_SAMPLE_COUNT_1_BIT };
+        // for (auto* resource : stage->writes_) {
+        //   if (const auto* texture = resource->as<TextureResource>()) {
+        //     if (texture->sample_count_ > sample_count) {
+        //       sample_count = texture->sample_count_;
+        //     }
+        //   }
+        // }
         // graphics_stage->sample_count_ = sample_count;
         //  log_->debug("Stage '{}' sample count: {}", graphics_stage->name_,
         //              static_cast<uint32_t>(sample_count));
 
+        buildAttachments(graphics_stage, physical);
         // buildRenderPass(graphics_stage, physical);
         // buildPipelineLayout(graphics_stage, physical);
         // buildGraphicsPipeline(graphics_stage, physical);
-
-        // If we write to at least one texture, we need to make framebuffers.
-        if (!stage->writes_.empty()) {
-          // For every texture that this stage writes to, we need to attach it
-          // to the framebuffer.
-          std::vector<const PhysicalBackBuffer*> back_buffers;
-          std::vector<const PhysicalImage*>      images;
-          for (const auto* resource : stage->writes_) {
-            if (const auto* texture = resource->as<TextureResource>()) {
-              const auto& physical_texture = *texture->physical_;
-              if (const auto* BackBuffer =
-                    physical_texture.as<PhysicalBackBuffer>()) {
-                back_buffers.push_back(BackBuffer);
-              }
-              else if (const auto* image =
-                         physical_texture.as<PhysicalImage>()) {
-                images.push_back(image);
-              }
-            }
-          }
-
-          std::vector<VkImageView> image_views;
-          // The render graph renders to a single target
-          // TODO: test if this is actually correct when using more images
-          image_views.reserve(back_buffers.size() + images.size());
-          for (auto& img_view : swapchain_.imageViews()) {
-            // the order of the image views need to correspond with the
-            // attachment order in the VkRenderPass
-            for (const auto* image : images) {
-              image_views.push_back(image->image_.imageView().get());
-            }
-            std::fill_n(std::back_inserter(image_views),
-                        back_buffers.size(),
-                        img_view.get());
-            // physical.framebuffers_.emplace_back(device_,
-            // physical.render_pass_,
-            //                                     image_views, swapchain_);
-            image_views.clear();
-          }
-        }
       }
     }
   }
 }
 
-void RenderGraph::render(const wr::CommandBuffer& cb)
+void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
 {
   for (auto& buffer_resource : buffer_resources_) {
     if (buffer_resource->data_.data() != nullptr) {
@@ -598,7 +574,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb)
   // TODO: full memory barrier is not needed between nodes in same subset
   for (const auto& subset : stage_stack_) {
     for (const auto& stage : subset)
-      recordCommandBuffer(stage, cb);
+      recordCommandBuffer(stage, cb, frame_index);
   }
 }
 

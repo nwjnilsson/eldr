@@ -101,9 +101,7 @@ private:
 };
 
 enum class TextureUsage {
-  /// @brief Specifies that this texture is the output of the render graph.
-  BackBuffer,
-
+  // BackBuffer,
   /// @brief Specifies that this texture is a combined depth/stencil buffer.
   /// @note This may mean that this texture is completely GPU-sided and cannot
   /// be accessed by the CPU in any way.
@@ -128,8 +126,9 @@ public:
   }
 
 private:
-  const TextureUsage          usage_;
-  const VkFormat              format_{ VK_FORMAT_UNDEFINED };
+  const TextureUsage usage_;
+  const VkFormat     format_{ VK_FORMAT_UNDEFINED };
+  // not sure if this will be used, sample count is set in pipeline
   const VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
 };
 
@@ -213,8 +212,7 @@ public:
   GraphicsStage& operator=(GraphicsStage&&)      = delete;
 
   /// @brief Specifies that this stage should clear the screen before rendering.
-  // void setClearsScreen(bool clears_screen) { clears_screen_ = clears_screen;
-  // }
+  void setClearsScreen(bool clears_screen) { clears_screen_ = clears_screen; }
 
   /// @brief Specifies the depth options for this stage.
   /// @param depth_test Whether depth testing should be performed
@@ -246,13 +244,13 @@ public:
   // void usesShader(const wr::Shader& shader);
 
 private:
-  // bool                                clears_screen_{ false };
+  bool clears_screen_{ false };
   // bool                                depth_test_{ false };
   // bool                                depth_write_{ false };
-  // VkSampleCountFlagBits               sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  // VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
   // VkPipelineColorBlendAttachmentState blend_attachment_{};
   // VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
-  std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
+  // std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
   // std::vector<VkPipelineShaderStageCreateInfo>             shaders_;
 };
 
@@ -355,6 +353,9 @@ public:
   PhysicalGraphicsStage& operator=(PhysicalGraphicsStage&&)      = delete;
 
 private:
+  std::array<std::vector<VkRenderingAttachmentInfo>, max_frames_in_flight>
+                                             color_attachments_;
+  std::unique_ptr<VkRenderingAttachmentInfo> depth_attachment_;
   // wr::RenderPass               render_pass_;
   // std::vector<wr::Framebuffer> framebuffers_;
 };
@@ -366,6 +367,8 @@ public:
   explicit RenderGraph(const wr::Device& device, const wr::Swapchain& swapchain)
     : device_(device), swapchain_(swapchain)
   {
+    // back_buffer_ = std::make_unique<TextureResource>(
+    //   "Back buffer", TextureUsage::BackBuffer, swapchain_.imageFormat());
   }
 
   template <typename T, typename... Args> T* add(Args&&... args)
@@ -388,21 +391,24 @@ public:
     }
   }
 
+  void buildAttachments(const GraphicsStage*, PhysicalGraphicsStage&) const;
   // void buildRenderPass(const GraphicsStage*, PhysicalGraphicsStage&) const;
   // void buildPipelineLayout(const RenderStage*, PhysicalStage&) const;
   // void buildGraphicsPipeline(const GraphicsStage*,
   //                            PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
-                           const wr::CommandBuffer& cb) const;
+                           const wr::CommandBuffer& cb,
+                           uint32_t                 frame_index) const;
   void compile();
 
-  void render(const wr::CommandBuffer& cb);
+  void render(const wr::CommandBuffer& cb, uint32_t frame_index);
 
 private:
-  const wr::Device    device_;
-  const wr::Swapchain swapchain_;
+  const wr::Device&    device_;
+  const wr::Swapchain& swapchain_;
 
+  // std::unique_ptr<TextureResource>              back_buffer_;
   std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;
   std::vector<std::unique_ptr<RenderStage>>     stages_;
