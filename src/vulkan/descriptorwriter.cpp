@@ -43,14 +43,14 @@ DescriptorWriter& DescriptorWriter::writeSampler(uint32_t           binding,
                                                  const wr::Sampler& sampler)
 {
   return writeImage(
-    binding, VK_NULL_HANDLE, sampler.get(), VK_DESCRIPTOR_TYPE_SAMPLER, {});
+    binding, VK_NULL_HANDLE, sampler.vk(), VK_DESCRIPTOR_TYPE_SAMPLER, {});
 }
 
 DescriptorWriter& DescriptorWriter::writeSampledImage(
   uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
   return writeImage(binding,
-                    image.get(),
+                    image.vk(),
                     VK_NULL_HANDLE,
                     VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                     layout);
@@ -63,8 +63,8 @@ DescriptorWriter::writeCombinedImageSampler(uint32_t           binding,
                                             VkImageLayout      layout)
 {
   return writeImage(binding,
-                    image.view().get(),
-                    sampler.get(),
+                    image.view().vk(),
+                    sampler.vk(),
                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     layout);
 }
@@ -73,7 +73,7 @@ DescriptorWriter& DescriptorWriter::writeStorageImage(
   uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
 {
   return writeImage(binding,
-                    image.get(),
+                    image.vk(),
                     VK_NULL_HANDLE,
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     layout);

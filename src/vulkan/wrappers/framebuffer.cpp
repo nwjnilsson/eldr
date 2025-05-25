@@ -43,7 +43,7 @@ Framebuffer::Framebuffer(const Device&                   device,
     .sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
     .pNext           = nullptr,
     .flags           = 0,
-    .renderPass      = render_pass.get(),
+    .renderPass      = render_pass.vk(),
     .attachmentCount = static_cast<uint32_t>(attachments.size()),
     .pAttachments    = attachments.data(),
     .width           = swapchain.extent().width,
@@ -53,5 +53,5 @@ Framebuffer::Framebuffer(const Device&                   device,
   fb_data_ = std::make_shared<FramebufferImpl>(device, framebuffer_ci);
 }
 
-VkFramebuffer Framebuffer::get() const { return fb_data_->framebuffer_; }
+VkFramebuffer Framebuffer::vk() const { return fb_data_->framebuffer_; }
 } // namespace eldr::vk::wr

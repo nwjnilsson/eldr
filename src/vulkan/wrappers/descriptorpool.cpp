@@ -50,7 +50,7 @@ DescriptorPool::DescriptorPool(const Device&                         device,
   dp_data_ = std::make_shared<DescriptorPoolImpl>(device, pool_ci);
 }
 
-VkDescriptorPool DescriptorPool::get() const { return dp_data_->pool_; }
+VkDescriptorPool DescriptorPool::vk() const { return dp_data_->pool_; }
 
 void DescriptorPool::reset(VkDescriptorPoolResetFlags flags)
 {

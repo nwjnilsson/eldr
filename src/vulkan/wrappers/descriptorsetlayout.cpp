@@ -48,7 +48,7 @@ DescriptorSetLayout::DescriptorSetLayout(
   dsl_data_ = std::make_shared<DescriptorSetLayoutImpl>(device, layout_ci);
 }
 
-VkDescriptorSetLayout DescriptorSetLayout::get() const
+VkDescriptorSetLayout DescriptorSetLayout::vk() const
 {
   return dsl_data_->layout_;
 }

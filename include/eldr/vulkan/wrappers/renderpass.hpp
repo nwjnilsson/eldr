@@ -14,7 +14,7 @@ public:
              const VkSubpassDescription&        subpass_description,
              const VkSubpassDependency&         subpass_dependency);
 
-  [[nodiscard]] VkRenderPass get() const;
+  [[nodiscard]] VkRenderPass vk() const;
 
 private:
   class RenderPassImpl;

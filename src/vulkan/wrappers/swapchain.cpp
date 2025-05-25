@@ -106,7 +106,7 @@ void Swapchain::setupSwapchain(const Device&  device,
                                VkExtent2D     requested_extent)
 {
   const SwapchainSupportDetails& support_details{
-    device.swapchainSupportDetails(surface.get())
+    device.swapchainSupportDetails(surface.vk())
   };
   extent_ = selectSwapExtent(requested_extent, support_details.capabilities);
   surface_format_ = selectSwapSurfaceFormat(support_details.formats);
@@ -128,7 +128,7 @@ void Swapchain::setupSwapchain(const Device&  device,
     .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .pNext                 = {},
     .flags                 = {},
-    .surface               = surface.get(),
+    .surface               = surface.vk(),
     .minImageCount         = min_image_count,
     .imageFormat           = surface_format_.format,
     .imageColorSpace       = surface_format_.colorSpace,
@@ -185,20 +185,25 @@ void Swapchain::setupSwapchain(const Device&  device,
   // Create image views
   //----------------------------------------------------------------------------
   image_views_.reserve(image_count);
-  for (const VkImage& image : images_) {
-    image_views_.emplace_back(ImageView::createSwapchainImageView(
-      device, image, surface_format_.format));
+  ImageViewCreateInfo image_view_ci{};
+  image_view_ci.format       = surface_format_.format;
+  image_view_ci.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+  image_view_ci.mip_levels   = 1;
+
+  for (const VkImage image : images_) {
+    image_view_ci.image = image;
+    image_views_.emplace_back(device, image_view_ci);
   }
 }
 
 const VkSemaphore* Swapchain::imageAvailableSemaphore(uint32_t index) const
 {
-  return image_available_sem_[index].ptr();
+  return image_available_sem_[index].vkp();
 }
 
 const VkSemaphore* Swapchain::renderFinishedSemaphore(uint32_t index) const
 {
-  return render_finished_sem_[index].ptr();
+  return render_finished_sem_[index].vkp();
 }
 
 uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
@@ -209,7 +214,7 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
     sc_data_->device_.logical(),
     sc_data_->swapchain_,
     UINT64_MAX,
-    image_available_sem_[frame_index].get(),
+    image_available_sem_[frame_index].vk(),
     VK_NULL_HANDLE,
     &image_index) };
 
@@ -235,8 +240,8 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
   }
 }
 
-VkSwapchainKHR   Swapchain::get() const { return sc_data_->swapchain_; }
-VkSwapchainKHR*  Swapchain::ptr() const { return &sc_data_->swapchain_; }
+VkSwapchainKHR   Swapchain::vk() const { return sc_data_->swapchain_; }
+VkSwapchainKHR*  Swapchain::vkp() const { return &sc_data_->swapchain_; }
 const ImageView& Swapchain::imageView(uint32_t index) const
 {
   return image_views_[index];

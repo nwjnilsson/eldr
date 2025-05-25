@@ -58,8 +58,8 @@ public:
   };
 
   GltfMetallicRoughness& metalRoughMaterial() const;
-  const wr::Texture&     whiteImage() const;
-  const wr::Texture&     errorImage() const;
+  const wr::Image&       whiteImage() const;
+  const wr::Image&       errorImage() const;
   const wr::Sampler&     defaultSamplerLinear() const;
 
   void updateImGui(std::function<void()> const& lambda);

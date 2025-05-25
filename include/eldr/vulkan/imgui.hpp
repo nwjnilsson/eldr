@@ -1,10 +1,11 @@
 #pragma once
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <eldr/vulkan/wrappers/sampler.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
-#include <eldr/vulkan/wrappers/texture.hpp>
 
 #include <imgui.h>
 
@@ -37,7 +38,7 @@ private:
   // wr::Buffer<uint32_t>   index_buffer_;
   // wr::Buffer<ImDrawVert> vertex_buffer_;
 
-  wr::Texture             imgui_texture_;
+  wr::Image               imgui_texture_;
   wr::Sampler             font_sampler_;
   wr::Shader              vertex_shader_;
   wr::Shader              fragment_shader_;

@@ -7,7 +7,8 @@
 
 namespace eldr {
 MaterialInstance GltfMetallicRoughness::writeMaterial(
-  const vk::wr::Device& device, MaterialPass pass,
+  const vk::wr::Device&    device,
+  MaterialPass             pass,
   const MaterialResources& resources,
   vk::DescriptorAllocator& descriptor_allocator)
 {
@@ -25,10 +26,12 @@ MaterialInstance GltfMetallicRoughness::writeMaterial(
 
   writer.reset();
   writer.writeUniformBuffer(0, *resources.data_buffer, resources.data_index);
-  writer.writeCombinedImageSampler(1, *resources.color_texture,
+  writer.writeCombinedImageSampler(1,
+                                   *resources.color_texture,
                                    *resources.color_sampler,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-  writer.writeCombinedImageSampler(2, *resources.metal_rough_texture,
+  writer.writeCombinedImageSampler(2,
+                                   *resources.metal_rough_texture,
                                    *resources.metal_rough_sampler,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   writer.updateSet(device, mat_data.descriptor_set);

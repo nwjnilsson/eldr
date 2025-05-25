@@ -39,7 +39,7 @@ Fence::Fence(const Device& device)
   f_data_        = std::make_shared<FenceImpl>(device, fence_ci);
 }
 
-VkFence Fence::get() const { return f_data_->fence_; }
+VkFence Fence::vk() const { return f_data_->fence_; }
 
 VkResult Fence::reset() const
 {

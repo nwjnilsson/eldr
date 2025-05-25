@@ -88,6 +88,6 @@ Pipeline::Pipeline(const Device&                     device,
 {
 }
 
-VkPipeline       Pipeline::get() const { return p_data_->pipeline_; }
+VkPipeline       Pipeline::vk() const { return p_data_->pipeline_; }
 VkPipelineLayout Pipeline::layout() const { return p_data_->pipeline_layout_; }
 } // namespace eldr::vk::wr

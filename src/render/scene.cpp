@@ -6,6 +6,7 @@
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/material.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
+#include <eldr/vulkan/wrappers/sampler.hpp>
 
 // TODO: use rapidobj
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -64,9 +65,9 @@ VkSamplerMipmapMode extractMipmapMode(fastgltf::Filter filter)
 namespace eldr::vk {
 // TODO: move
 struct SceneData {
-  std::vector<vk::wr::Sampler>                                samplers;
-  vk::DescriptorAllocator                                     descriptors;
-  vk::wr::GpuBuffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
+  std::vector<vk::wr::Sampler>                             samplers;
+  vk::DescriptorAllocator                                  descriptors;
+  vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
 } // namespace eldr::vk
 
@@ -219,7 +220,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 
   std::vector<std::shared_ptr<Mesh>>      meshes;
   std::vector<std::shared_ptr<SceneNode>> nodes;
-  std::vector<vk::wr::Texture>            images;
+  std::vector<vk::wr::Image>              images;
   std::vector<std::shared_ptr<Material>>  materials;
 
   images.resize(gltf.images.size(), engine.errorImage());

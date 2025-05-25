@@ -11,7 +11,7 @@ public:
   DescriptorSetLayout(const Device&, std::span<VkDescriptorSetLayoutBinding>,
                       VkDescriptorSetLayoutCreateFlags flags);
 
-  [[nodiscard]] VkDescriptorSetLayout get() const;
+  [[nodiscard]] VkDescriptorSetLayout vk() const;
 
 private:
   class DescriptorSetLayoutImpl;

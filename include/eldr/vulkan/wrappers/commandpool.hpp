@@ -12,7 +12,7 @@ public:
               const VkCommandPoolCreateFlags flags =
                 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-  [[nodiscard]] VkCommandPool get() const;
+  [[nodiscard]] VkCommandPool vk() const;
 
   [[nodiscard]] const CommandBuffer& requestCommandBuffer();
 

@@ -201,11 +201,11 @@ Device::Device(const Instance&                 instance,
 {
   // Select physical device
   VkPhysicalDevice physical_device{ selectPhysicalDevice(
-    instance.get(), surface.get(), device_extensions) };
+    instance.vk(), surface.vk(), device_extensions) };
 
   vkGetPhysicalDeviceProperties(physical_device, &physical_device_props_);
 
-  queue_family_indices_ = findQueueFamilies(physical_device, surface.get());
+  queue_family_indices_ = findQueueFamilies(physical_device, surface.vk());
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::set<uint32_t>                   unique_queue_families = {
     queue_family_indices_.graphics_family.value(),
@@ -276,7 +276,7 @@ Device::Device(const Instance&                 instance,
     .pDeviceMemoryCallbacks         = nullptr,
     .pHeapSizeLimit                 = nullptr,
     .pVulkanFunctions               = &vma_vulkan_functions,
-    .instance                       = instance.get(),
+    .instance                       = instance.vk(),
     .vulkanApiVersion               = required_vk_api_version,
     .pTypeExternalMemoryHandleTypes = nullptr,
   };

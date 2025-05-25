@@ -11,8 +11,8 @@ public:
   Swapchain(const Device&, const Surface&, VkExtent2D);
 
   [[nodiscard]] const VkExtent2D& extent() const { return extent_; }
-  [[nodiscard]] VkSwapchainKHR    get() const;
-  [[nodiscard]] VkSwapchainKHR*   ptr() const;
+  [[nodiscard]] VkSwapchainKHR    vk() const;
+  [[nodiscard]] VkSwapchainKHR*   vkp() const;
   //[[nodiscard]] uint32_t minImageCount() const { return min_image_count_; }
   [[nodiscard]] const std::vector<ImageView>& imageViews() const
   {

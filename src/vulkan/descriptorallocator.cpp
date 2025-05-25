@@ -76,11 +76,11 @@ VkDescriptorSet DescriptorAllocator::allocate(
   // get or create a pool to allocate from
   wr::DescriptorPool pool_to_use{ getPool(device) };
 
-  VkDescriptorSetLayout       layouts[]{ layout.get() };
+  VkDescriptorSetLayout       layouts[]{ layout.vk() };
   VkDescriptorSetAllocateInfo alloc_info{
     .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .pNext              = pNext,
-    .descriptorPool     = pool_to_use.get(),
+    .descriptorPool     = pool_to_use.vk(),
     .descriptorSetCount = 1,
     .pSetLayouts        = layouts,
   };
@@ -93,7 +93,7 @@ VkDescriptorSet DescriptorAllocator::allocate(
       result == VK_ERROR_FRAGMENTED_POOL) {
     full_pools_.push_back(std::move(pool_to_use));
     pool_to_use               = getPool(device);
-    alloc_info.descriptorPool = pool_to_use.get();
+    alloc_info.descriptorPool = pool_to_use.vk();
     if (result = vkAllocateDescriptorSets(device.logical(), &alloc_info, &ds);
         result != VK_SUCCESS)
       Throw("Failed to allocate descriptor sets! ({})", result);

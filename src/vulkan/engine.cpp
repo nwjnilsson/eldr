@@ -29,7 +29,6 @@
 #include <eldr/vulkan/wrappers/shader.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
-#include <eldr/vulkan/wrappers/texture.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -47,10 +46,10 @@ namespace eldr::vk {
 // Engine types
 // -----------------------------------------------------------------------------
 struct FrameData {
-  DescriptorAllocator         descriptors;
-  wr::GpuBuffer<GpuSceneData> scene_data_buffer;
-  wr::GpuBuffer<GpuModelData> model_data_buffer;
-  const wr::CommandBuffer*    cmd_buf;
+  DescriptorAllocator      descriptors;
+  wr::Buffer<GpuSceneData> scene_data_buffer;
+  wr::Buffer<GpuModelData> model_data_buffer;
+  const wr::CommandBuffer* cmd_buf;
 };
 
 // TODO: is this even used
@@ -68,12 +67,12 @@ struct VulkanEngine::EngineData {
   wr::Swapchain           swapchain;
   DescriptorAllocator     global_descriptor_allocator;
 
-  wr::GpuBuffer<GpuVertex> vertex_buffer;
-  wr::GpuBuffer<uint32_t>  index_buffer;
+  wr::Buffer<GpuVertex> vertex_buffer;
+  wr::Buffer<uint32_t>  index_buffer;
 
   std::unique_ptr<RenderGraph>  render_graph;
   std::unique_ptr<ImGuiOverlay> imgui_overlay;
-  std::vector<wr::Texture>      textures;
+  std::vector<wr::Image>        textures;
   std::vector<wr::Shader>       shaders; // shader module is not needed after
                                    // building pipeline so check if this can be
                                    // rearranged
@@ -85,10 +84,10 @@ struct VulkanEngine::EngineData {
   GltfMetallicRoughness   metal_rough_material;
   MaterialInstance        default_material_data;
 
-  wr::Texture white_texture;
-  wr::Texture error_texture;
+  wr::Image white_texture;
+  wr::Image error_texture;
 
-  wr::Texture viking_texture;
+  wr::Image   viking_texture;
   wr::Sampler default_sampler_linear;
 };
 
@@ -176,14 +175,8 @@ GltfMetallicRoughness& VulkanEngine::metalRoughMaterial() const
 {
   return d_->metal_rough_material;
 }
-const wr::Texture& VulkanEngine::whiteImage() const
-{
-  return d_->white_texture;
-}
-const wr::Texture& VulkanEngine::errorImage() const
-{
-  return d_->error_texture;
-}
+const wr::Image& VulkanEngine::whiteImage() const { return d_->white_texture; }
+const wr::Image& VulkanEngine::errorImage() const { return d_->error_texture; }
 const wr::Sampler& VulkanEngine::defaultSamplerLinear() const
 {
   return d_->default_sampler_linear;
@@ -237,17 +230,17 @@ void VulkanEngine::setupFrameData()
     d_->frames_in_flight.push_back({
       .descriptors = DescriptorAllocator{ 1000, frame_sizes },
       .scene_data_buffer =
-        wr::GpuBuffer<GpuSceneData>{ d_->device,
-                                     "Scene data uniform buffer",
-                                     elem_count,
-                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                     VMA_MEMORY_USAGE_CPU_TO_GPU },
+        wr::Buffer<GpuSceneData>{ d_->device,
+                                  "Scene data uniform buffer",
+                                  elem_count,
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_MEMORY_USAGE_CPU_TO_GPU },
       .model_data_buffer =
-        wr::GpuBuffer<GpuModelData>{ d_->device,
-                                     "Model data uniform buffer",
-                                     elem_count,
-                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                     VMA_MEMORY_USAGE_CPU_TO_GPU },
+        wr::Buffer<GpuModelData>{ d_->device,
+                                  "Model data uniform buffer",
+                                  elem_count,
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_MEMORY_USAGE_CPU_TO_GPU },
       .cmd_buf = nullptr, // Set later when drawing frames
     });
   }
@@ -272,10 +265,10 @@ void VulkanEngine::initDefaultData()
 {
   const wr::Device& device{ d_->device };
   // Create default white texture
-  d_->white_texture = wr::Texture{ device, Bitmap::createDefaultWhite() };
+  d_->white_texture = wr::Image{ device, Bitmap::createDefaultWhite() };
 
   // Create default checkerboard error texture
-  d_->error_texture = wr::Texture{ device, Bitmap::createCheckerboard() };
+  d_->error_texture = wr::Image{ device, Bitmap::createCheckerboard() };
 
   // Create default linear sampler
   d_->default_sampler_linear = wr::Sampler{ device,
@@ -658,7 +651,7 @@ void VulkanEngine::drawFrame(const Scene& scene)
     .pWaitSemaphores      = swapchain.imageAvailableSemaphore(frame_index_),
     .pWaitDstStageMask    = wait_stages,
     .commandBufferCount   = 1,
-    .pCommandBuffers      = cb.ptr(),
+    .pCommandBuffers      = cb.vkp(),
     .signalSemaphoreCount = 1,
     .pSignalSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
   };
@@ -672,7 +665,7 @@ void VulkanEngine::drawFrame(const Scene& scene)
     .waitSemaphoreCount = 1,
     .pWaitSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
     .swapchainCount     = 1,
-    .pSwapchains        = swapchain.ptr(),
+    .pSwapchains        = swapchain.vkp(),
     .pImageIndices      = &image_index,
     .pResults           = {},
   };

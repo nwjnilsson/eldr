@@ -8,8 +8,8 @@ public:
   Semaphore() = default;
   Semaphore(const Device& device, VkSemaphoreCreateFlags flags = 0);
 
-  [[nodiscard]] VkSemaphore        get() const;
-  [[nodiscard]] const VkSemaphore* ptr() const;
+  [[nodiscard]] VkSemaphore        vk() const;
+  [[nodiscard]] const VkSemaphore* vkp() const;
 
 private:
   class SemaphoreImpl;

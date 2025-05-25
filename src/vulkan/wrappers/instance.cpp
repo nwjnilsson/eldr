@@ -181,5 +181,5 @@ Instance::Instance(const VkApplicationInfo&   app_info,
   i_data_ = std::make_shared<InstanceImpl>(instance_ci);
 }
 
-VkInstance Instance::get() const { return i_data_->instance_; }
+VkInstance Instance::vk() const { return i_data_->instance_; }
 } // namespace eldr::vk::wr

@@ -17,7 +17,6 @@ src = [
   'wrappers/shader.cpp',
   'wrappers/surface.cpp',
   'wrappers/swapchain.cpp',
-  'wrappers/texture.cpp',
   'descriptorallocator.cpp',
   'descriptorsetlayoutbuilder.cpp',
   'descriptorwriter.cpp',

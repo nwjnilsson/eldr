@@ -8,7 +8,7 @@ public:
   Fence() = default;
   Fence(const Device& device);
 
-  [[nodiscard]] VkFence get() const;
+  [[nodiscard]] VkFence vk() const;
 
   VkResult reset() const;
   VkResult wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;

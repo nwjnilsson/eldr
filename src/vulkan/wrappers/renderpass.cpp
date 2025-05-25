@@ -53,6 +53,6 @@ RenderPass::RenderPass(const Device&                      device,
   sampler_data_ = std::make_shared<RenderPassImpl>(device, render_pass_ci);
 }
 
-VkRenderPass RenderPass::get() const { return sampler_data_->render_pass_; }
+VkRenderPass RenderPass::vk() const { return sampler_data_->render_pass_; }
 
 } // namespace eldr::vk::wr

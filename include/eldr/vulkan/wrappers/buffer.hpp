@@ -13,13 +13,13 @@ namespace eldr::vk::wr {
 // have a templatized constructor maybe, and a templatized upload function.
 // Should probably support uploading to a specific section of the buffer, and
 // not just overwriting from the beginning of the mapped data
-template <typename T> class GpuBuffer {
+template <typename T> class Buffer {
 private:
-  class GpuBufferImpl : public GpuResourceAllocation {
+  class BufferImpl : public GpuResourceAllocation {
   public:
-    GpuBufferImpl(const Device&                  device,
-                  const VkBufferCreateInfo&      buffer_ci,
-                  const VmaAllocationCreateInfo& alloc_ci)
+    BufferImpl(const Device&                  device,
+               const VkBufferCreateInfo&      buffer_ci,
+               const VmaAllocationCreateInfo& alloc_ci)
       : GpuResourceAllocation(device)
     {
       if (const VkResult result{ vmaCreateBuffer(device_.allocator(),
@@ -31,7 +31,7 @@ private:
           result != VK_SUCCESS)
         Throw("vmaCreateBuffer(): {}", result);
     }
-    ~GpuBufferImpl()
+    ~BufferImpl()
     {
       vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
     }
@@ -40,8 +40,8 @@ private:
   };
 
 public:
-  GpuBuffer() = default;
-  GpuBuffer(
+  Buffer() = default;
+  Buffer(
     const Device&            device,
     std::string_view         name,
     size_t                   element_count,
@@ -72,28 +72,27 @@ public:
       .pUserData      = {},
       .priority       = {},
     };
-    b_data_ = std::make_shared<GpuBufferImpl>(device, buffer_ci, alloc_ci);
+    d_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci);
     vmaSetAllocationName(device.allocator(),
-                         b_data_->allocation_,
+                         d_->allocation_,
                          fmt::format("{} allocation", name).c_str());
   }
 
-  GpuBuffer(
+  Buffer(
     const Device&            device,
     std::string_view         name,
     std::span<const T>       data,
     VkBufferUsageFlags       buffer_usage,
     VmaMemoryUsage           memory_usage,
     VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
-    : GpuBuffer(
-        device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
+    : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
   {
     uploadData(data);
   }
 
   // VkDeviceSize    size() const { return size_; }
   [[nodiscard]] const std::string& name() const { return name_; }
-  [[nodiscard]] VkBuffer           get() const { return b_data_->buffer_; }
+  [[nodiscard]] VkBuffer           vk() const { return d_->buffer_; }
   /// @return size_t The number of elements in the buffer.
   [[nodiscard]] size_t size() const { return size_; }
 
@@ -113,9 +112,9 @@ public:
     VkBufferDeviceAddressInfo address_info{
       .sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
       .pNext  = {},
-      .buffer = b_data_->buffer_
+      .buffer = d_->buffer_
     };
-    return vkGetBufferDeviceAddress(b_data_->device_.logical(), &address_info);
+    return vkGetBufferDeviceAddress(d_->device_.logical(), &address_info);
   }
 
   /// @brief Copies `data` to the mapped GPU memory.
@@ -123,18 +122,17 @@ public:
   /// @param data The span of data to upload to the GPU buffer.
   void uploadData(std::span<const T> data) const
   {
-    assert(b_data_->alloc_info_.pMappedData != nullptr);
+    assert(d_->alloc_info_.pMappedData != nullptr);
     assert(data.size() > 0);
     assert(data.size_bytes() <= size_bytes_);
-    std::memcpy(
-      b_data_->alloc_info_.pMappedData, data.data(), data.size_bytes());
+    std::memcpy(d_->alloc_info_.pMappedData, data.data(), data.size_bytes());
   }
-  // void copyFromBuffer(const GpuBuffer&, const CommandPool&);
+  // void copyFromBuffer(const Buffer&, const CommandPool&);
 
 private:
-  std::string                    name_;
-  std::shared_ptr<GpuBufferImpl> b_data_;
-  size_t                         size_{ 0 };
+  std::string                 name_;
+  std::shared_ptr<BufferImpl> d_;
+  size_t                      size_{ 0 };
   // TODO: not sure if still needed
   VkDeviceSize size_bytes_{ 0 };
 };

@@ -11,7 +11,7 @@ public:
   Surface() = default;
   Surface(const Instance&, GLFWwindow*);
 
-  [[nodiscard]] VkSurfaceKHR get() const;
+  [[nodiscard]] VkSurfaceKHR vk() const;
 
 private:
   class SurfaceImpl;

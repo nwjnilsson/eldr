@@ -5,9 +5,53 @@
 
 namespace eldr::vk::wr {
 
+namespace {
+uint32_t calculateMipLevels(const Bitmap& bitmap)
+{
+  return static_cast<uint32_t>(
+           std::floor(std::log2(std::max(bitmap.width(), bitmap.height())))) +
+         1;
+}
+
+ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
+{
+  const VkExtent2D size{ bitmap.width(), bitmap.height() };
+  // Calculate mip level count to generate mip levels
+
+  VkFormat format;
+  // Pixel format should be RGBA at this point
+  assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
+  switch (bitmap.componentFormat()) {
+    case Struct::Type::UInt8:
+      if (bitmap.srgbGamma())
+        format = VK_FORMAT_R8G8B8A8_SRGB;
+      else
+        format = VK_FORMAT_R8G8B8A8_UNORM;
+      break;
+    default:
+      Throw("Component formats other than UInt8 are not yet implemented");
+  }
+
+  ImageCreateInfo texture_info{
+    .name        = bitmap.name(),
+    .extent      = size,
+    .format      = format,
+    .tiling      = VK_IMAGE_TILING_OPTIMAL,
+    .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
+    .sample_count = VK_SAMPLE_COUNT_1_BIT,
+    .mip_levels   = mip_levels,
+    .memory_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+    .final_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+  };
+  return texture_info;
+}
+} // namespace
 //------------------------------------------------------------------------------
 // GpuImageImpl
 //------------------------------------------------------------------------------
+
 class Image::ImageImpl : public GpuResourceAllocation {
 public:
   ImageImpl(const Device&                  device,
@@ -82,5 +126,45 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
   }
 }
 
-VkImage Image::get() const { return d_->image_; }
+Image::Image(const Device& device, const Bitmap& bitmap, uint32_t mip_levels)
+  : Image(device, createBitmapTextureCI(bitmap, mip_levels))
+{
+  //----------------------------------------------------------------------------
+  // Copy copy bitmap data and generate mipmap
+  //----------------------------------------------------------------------------
+  const VkBufferImageCopy copy_region{
+    .bufferOffset      = 0,
+    .bufferRowLength   = 0,
+    .bufferImageHeight = 0,
+    .imageSubresource = {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel       = 0,
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+    .imageOffset = { 0, 0, 0 },
+    .imageExtent = { .width  = size_.width,
+                     .height = size_.height,
+                     .depth  = 1 },
+  };
+
+  device.execute([&](const CommandBuffer& cb) {
+    cb.copyDataToImage(bitmap.bytes(), *this, copy_region)
+      // The transition below is not necessary when generating mipmaps using the
+      // blit command, since each level will be transitioned to
+      // VK_IMAGE_LAYOUT_SHADER_READ_ONLY after the blit command is finished.
+      //.transitionImageLayout(image_, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+      // TODO: real-time generation of mipmaps like this is not common practice
+      // . Add support for loading each mip level from disk (making the
+      // transition above necessary again (I think)).
+      .generateMipmaps(*this);
+  });
+}
+
+Image::Image(const Device& device, const Bitmap& bitmap)
+  : Image(device, bitmap, calculateMipLevels(bitmap))
+{
+}
+
+VkImage Image::vk() const { return d_->image_; }
 } // namespace eldr::vk::wr

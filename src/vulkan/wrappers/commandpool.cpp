@@ -74,5 +74,5 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   return command_buffers_.back();
 }
 
-VkCommandPool CommandPool::get() const { return d_->pool_; }
+VkCommandPool CommandPool::vk() const { return d_->pool_; }
 } // namespace eldr::vk::wr

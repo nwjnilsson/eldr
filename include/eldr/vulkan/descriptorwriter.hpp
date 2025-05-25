@@ -12,11 +12,11 @@ public:
 
   template <typename T>
   DescriptorWriter& writeUniformBuffer(uint32_t                binding,
-                                       const wr::GpuBuffer<T>& buffer,
+                                       const wr::Buffer<T>& buffer,
                                        size_t                  offset);
   template <typename T>
   DescriptorWriter& writeStorageBuffer(uint32_t                binding,
-                                       const wr::GpuBuffer<T>& buffer,
+                                       const wr::Buffer<T>& buffer,
                                        size_t                  offset);
 
   DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
@@ -40,7 +40,7 @@ public:
 private:
   template <typename T>
   DescriptorWriter& writeBuffer(uint32_t                binding,
-                                const wr::GpuBuffer<T>& buffer,
+                                const wr::Buffer<T>& buffer,
                                 size_t                  offset,
                                 VkDescriptorType        type);
   DescriptorWriter&
@@ -58,12 +58,12 @@ private:
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t                binding,
-                                                const wr::GpuBuffer<T>& buffer,
+                                                const wr::Buffer<T>& buffer,
                                                 size_t           index_offset,
                                                 VkDescriptorType type)
 {
   buffer_infos_.push_back({
-    .buffer = buffer.get(),
+    .buffer = buffer.vk(),
     .offset = index_offset * sizeof(T),
     .range  = sizeof(T),
   });
@@ -86,7 +86,7 @@ DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t                binding,
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeUniformBuffer(
-  uint32_t binding, const wr::GpuBuffer<T>& buffer, size_t index_offset)
+  uint32_t binding, const wr::Buffer<T>& buffer, size_t index_offset)
 {
   return writeBuffer<T>(
     binding, buffer, index_offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -94,7 +94,7 @@ DescriptorWriter& DescriptorWriter::writeUniformBuffer(
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeStorageBuffer(
-  uint32_t binding, const wr::GpuBuffer<T>& buffer, size_t offset)
+  uint32_t binding, const wr::Buffer<T>& buffer, size_t offset)
 {
   return writeBuffer<T>(
     binding, buffer, offset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);

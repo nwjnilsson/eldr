@@ -36,12 +36,12 @@ public:
   const CommandBuffer& reset() const;
 
   const CommandBuffer&
-  bindIndexBuffer(const GpuBuffer<byte>& buffer,
-                  VkIndexType            index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize           offset     = 0) const;
+  bindIndexBuffer(const Buffer<byte>& buffer,
+                  VkIndexType         index_type = VK_INDEX_TYPE_UINT32,
+                  VkDeviceSize        offset     = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
-  /// GpuBuffer, because the underlying call to vkCmdBindVertexBuffers expects
+  /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
   /// an array of VkBuffer.
   const CommandBuffer&
   bindVertexBuffers(std::span<const VkBuffer>,
@@ -90,8 +90,8 @@ public:
   const CommandBuffer& generateMipmaps(const Image& image) const;
 
   template <typename T>
-  const CommandBuffer& copyBufferToImage(const GpuBuffer<T>& buffer,
-                                         Image&              image,
+  const CommandBuffer& copyBufferToImage(const Buffer<T>& buffer,
+                                         Image&           image,
                                          const VkBufferImageCopy&) const;
 
   const CommandBuffer& copyDataToImage(std::span<const byte> data,
@@ -112,12 +112,12 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const GpuBuffer<byte>&
+  [[nodiscard]] const Buffer<byte>&
   createStagingBuffer(std::string_view name, std::span<const byte> data) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
-  [[nodiscard]] VkCommandBuffer    get() const;
-  [[nodiscard]] VkCommandBuffer*   ptr() const;
+  [[nodiscard]] VkCommandBuffer    vk() const;
+  [[nodiscard]] VkCommandBuffer*   vkp() const;
   [[nodiscard]] VkResult           fenceStatus() const;
   void                             resetFence() const;
   void                             waitFence() const;
@@ -128,7 +128,7 @@ private:
   class CommandBufferImpl;
   std::shared_ptr<CommandBufferImpl> d_;
 
-  Fence                                wait_fence_;
-  mutable std::vector<GpuBuffer<byte>> staging_buffers_;
+  Fence                             wait_fence_;
+  mutable std::vector<Buffer<byte>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

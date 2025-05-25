@@ -8,11 +8,12 @@ namespace eldr::vk::wr {
 class Framebuffer {
 public:
   Framebuffer() = default;
-  Framebuffer(const Device& device, const RenderPass& render_pass,
+  Framebuffer(const Device&                   device,
+              const RenderPass&               render_pass,
               const std::vector<VkImageView>& attachments,
               const Swapchain&                swapchain);
 
-  [[nodiscard]] VkFramebuffer get() const;
+  [[nodiscard]] VkFramebuffer vk() const;
 
 private:
   // std::string name_;

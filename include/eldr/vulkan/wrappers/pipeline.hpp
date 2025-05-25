@@ -10,14 +10,16 @@ namespace eldr::vk::wr {
 class Pipeline {
 public:
   Pipeline() = default;
-  Pipeline(const Device& device, std::string_view name,
+  Pipeline(const Device&                     device,
+           std::string_view                  name,
            const VkPipelineLayoutCreateInfo& layout_ci,
            VkGraphicsPipelineCreateInfo&     pipeline_ci);
-  Pipeline(const Device& device, std::string_view name,
+  Pipeline(const Device&                     device,
+           std::string_view                  name,
            const VkPipelineLayoutCreateInfo& layout_ci,
            VkComputePipelineCreateInfo&      pipeline_ci);
 
-  [[nodiscard]] VkPipeline       get() const;
+  [[nodiscard]] VkPipeline       vk() const;
   [[nodiscard]] VkPipelineLayout layout() const;
 
 protected:

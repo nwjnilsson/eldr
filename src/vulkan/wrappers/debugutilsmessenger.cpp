@@ -76,10 +76,10 @@ DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
   : instance_(instance)
 {
   auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance.get(), "vkCreateDebugUtilsMessengerEXT");
+    instance.vk(), "vkCreateDebugUtilsMessengerEXT");
   Assert(func != nullptr);
   const VkResult err{ func(
-    instance.get(), &debug_report_ci, nullptr, &debug_messenger_) };
+    instance.vk(), &debug_report_ci, nullptr, &debug_messenger_) };
   if (err != VK_SUCCESS)
     Throw("Failed to create debug utils messenger! ({})", err);
 }
@@ -87,9 +87,9 @@ DebugUtilsMessenger::DebugUtilsMessengerImpl::DebugUtilsMessengerImpl(
 DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()
 {
   auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance_.get(), "vkDestroyDebugUtilsMessengerEXT");
+    instance_.vk(), "vkDestroyDebugUtilsMessengerEXT");
   if (func != nullptr)
-    func(instance_.get(), debug_messenger_, nullptr);
+    func(instance_.vk(), debug_messenger_, nullptr);
 }
 
 //------------------------------------------------------------------------------

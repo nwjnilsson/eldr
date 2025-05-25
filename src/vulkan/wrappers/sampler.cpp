@@ -65,6 +65,6 @@ Sampler::Sampler(const Device&       device,
   sampler_data_ = std::make_shared<SamplerImpl>(device, sampler_info);
 }
 
-VkSampler Sampler::get() const { return sampler_data_->sampler_; }
+VkSampler Sampler::vk() const { return sampler_data_->sampler_; }
 
 } // namespace eldr::vk::wr

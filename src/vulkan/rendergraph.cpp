@@ -115,13 +115,13 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
       }
 
       if (buffer_resource->buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
-        assert(physical_buffer->buffer_.get());
+        assert(physical_buffer->buffer_.vk());
         cb.bindIndexBuffer(physical_buffer->buffer_);
       }
 
       else if (buffer_resource->buffer_usage_ &
                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
-        vertex_buffers.push_back(physical_buffer->buffer_.get());
+        vertex_buffers.push_back(physical_buffer->buffer_.vk());
       }
     }
   }
@@ -156,7 +156,7 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         VkRenderingAttachmentInfo attachment{
           .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
           .pNext              = {},
-          .imageView          = image->image_.view().get(),
+          .imageView          = image->image_.view().vk(),
           .imageLayout        = image->image_.layout(),
           .resolveMode        = texture->sample_count_ == VK_SAMPLE_COUNT_1_BIT
                                   ? VK_RESOLVE_MODE_NONE
@@ -175,7 +175,7 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
             attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
             // TODO: Other resolve targets than swapchain image should be
             // possible
-            attachment.resolveImageView = swapchain_.imageView(i).get();
+            attachment.resolveImageView = swapchain_.imageView(i).vk();
             attachments.push_back(attachment);
             break;
           case TextureUsage::DepthStencilBuffer:
@@ -473,21 +473,36 @@ void RenderGraph::compile()
     //   texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
     //   continue;
     // }
-    const bool color_usage{ texture->usage_ == TextureUsage::ColorBuffer };
-    const wr::Image::ImageCreateInfo texture_info{
-      .name        = fmt::format("{} image", texture->name_),
-      .extent      = swapchain_.extent(),
-      .format      = texture->format_,
-      .tiling      = VK_IMAGE_TILING_OPTIMAL,
-      .usage_flags = color_usage ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                                 : VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      .aspect_flags =
-        color_usage ? VK_IMAGE_ASPECT_COLOR_BIT : VK_IMAGE_ASPECT_DEPTH_BIT,
+    VkImageUsageFlags  usage_flags;
+    VkImageAspectFlags aspect_flags;
+    VkImageLayout      layout;
+    switch (texture->usage_) {
+      case TextureUsage::ColorBuffer:
+        usage_flags  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+        layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        break;
+      case TextureUsage::DepthStencilBuffer:
+        usage_flags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+        layout       = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        break;
+      default:
+        Throw("Image creation for this usage has not been implemented yet.");
+        break;
+    }
+
+    const wr::ImageCreateInfo texture_info{
+      .name         = fmt::format("{} image", texture->name_),
+      .extent       = swapchain_.extent(),
+      .format       = texture->format_,
+      .tiling       = VK_IMAGE_TILING_OPTIMAL,
+      .usage_flags  = usage_flags,
+      .aspect_flags = aspect_flags,
       .sample_count = texture->sample_count_,
       .mip_levels   = 1,
       .memory_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-      .final_layout = color_usage ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-                                  : VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+      .final_layout = layout,
     };
 
     auto physical      = std::make_shared<PhysicalImage>();
@@ -557,11 +572,11 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
           physical.buffer_ =
-            wr::GpuBuffer<byte_t>{ device_,
-                                   buffer_resource->name(),
-                                   data_size,
-                                   buffer_resource->buffer_usage_,
-                                   buffer_resource->memory_usage_ };
+            wr::Buffer<byte_t>{ device_,
+                                buffer_resource->name(),
+                                data_size,
+                                buffer_resource->buffer_usage_,
+                                buffer_resource->memory_usage_ };
         }
       }
       // Upload data

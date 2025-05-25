@@ -1,3 +1,4 @@
+#include <eldr/core/bitmap.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
@@ -7,7 +8,6 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
-#include <eldr/vulkan/wrappers/texture.hpp>
 #include <vulkan/vulkan_core.h>
 
 using namespace eldr::core;
@@ -89,12 +89,12 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
         "Unable to load font {}.  Falling back to error texture",
         font_file_path);
     imgui_texture_ =
-      wr::Texture{ device_, Bitmap::createCheckerboard(), font_mip_levels };
+      wr::Image{ device_, Bitmap::createCheckerboard(), font_mip_levels };
   }
   else {
     Log(Trace, "Creating ImGui font texture");
 
-    imgui_texture_ = wr::Texture{
+    imgui_texture_ = wr::Image{
       device_,
       Bitmap{ "ImGui font texture",
               Bitmap::PixelFormat::RGBA,

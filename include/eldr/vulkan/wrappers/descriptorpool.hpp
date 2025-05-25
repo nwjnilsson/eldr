@@ -12,7 +12,7 @@ public:
                  std::span<const VkDescriptorPoolSize> pool_sizes,
                  VkDescriptorPoolCreateFlags           flags = 0);
 
-  [[nodiscard]] VkDescriptorPool get() const;
+  [[nodiscard]] VkDescriptorPool vk() const;
   void                           reset(VkDescriptorPoolResetFlags flags = 0);
 
 private:

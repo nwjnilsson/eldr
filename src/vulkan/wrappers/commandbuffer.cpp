@@ -46,7 +46,7 @@ CommandBuffer::CommandBuffer(const Device&      device,
 {
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  alloc_info.commandPool = command_pool.get();
+  alloc_info.commandPool = command_pool.vk();
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = 1;
 
@@ -195,7 +195,7 @@ CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
   if (const VkResult result{ vkQueueSubmit(
-        d_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.get()) };
+        d_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.vk()) };
       result != VK_SUCCESS)
     Throw("Failed to submit to queue ({})!", result);
   return *this;
@@ -241,9 +241,9 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
                                               VkFilter           filter) const
 {
   vkCmdBlitImage(d_->command_buffer_,
-                 src_image.get(),
+                 src_image.vk(),
                  src_layout,
-                 dst_image.get(),
+                 dst_image.vk(),
                  dst_layout,
                  1,
                  &blit,
@@ -251,13 +251,12 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
   return *this;
 }
 
-const CommandBuffer&
-CommandBuffer::bindIndexBuffer(const GpuBuffer<byte>& buffer,
-                               VkIndexType            index_type,
-                               VkDeviceSize           offset) const
+const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
+                                                    VkIndexType  index_type,
+                                                    VkDeviceSize offset) const
 {
-  assert(buffer.get());
-  vkCmdBindIndexBuffer(d_->command_buffer_, buffer.get(), offset, index_type);
+  assert(buffer.vk());
+  vkCmdBindIndexBuffer(d_->command_buffer_, buffer.vk(), offset, index_type);
   return *this;
 }
 
@@ -305,8 +304,8 @@ const CommandBuffer&
 CommandBuffer::bindPipeline(const Pipeline&     pipeline,
                             VkPipelineBindPoint bind_point) const
 {
-  assert(pipeline.get());
-  vkCmdBindPipeline(d_->command_buffer_, bind_point, pipeline.get());
+  assert(pipeline.vk());
+  vkCmdBindPipeline(d_->command_buffer_, bind_point, pipeline.vk());
   return *this;
 }
 
@@ -332,7 +331,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
     .newLayout           = {},
     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image               = image.get(),
+    .image               = image.vk(),
     .subresourceRange    = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
                              .baseMipLevel   = 0,
                              .levelCount     = 1,
@@ -415,9 +414,9 @@ CommandBuffer::transitionImageLayout(Image&        image,
     .newLayout           = new_layout,
     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-    .image               = image.get(),
+    .image               = image.vk(),
     .subresourceRange = {
-      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .aspectMask     = image.view().aspectFlags(),
       .baseMipLevel   = 0,
       .levelCount     = image.mipLevels(),
       .baseArrayLayer = 0,
@@ -439,6 +438,14 @@ CommandBuffer::transitionImageLayout(Image&        image,
     barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     barrier.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
   }
+  else if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
+           new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                           VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+  }
   else if (image.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
            new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
@@ -457,13 +464,13 @@ CommandBuffer::transitionImageLayout(Image&        image,
 
 template <typename T>
 const CommandBuffer&
-CommandBuffer::copyBufferToImage(const GpuBuffer<T>&      buffer,
+CommandBuffer::copyBufferToImage(const Buffer<T>&         buffer,
                                  Image&                   image,
                                  const VkBufferImageCopy& copy_region) const
 {
   vkCmdCopyBufferToImage(d_->command_buffer_,
-                         buffer.get(),
-                         image.get(),
+                         buffer.vk(),
+                         image.vk(),
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                          1,
                          &copy_region);
@@ -500,7 +507,7 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const GpuBuffer<std::byte>&
+const Buffer<std::byte>&
 CommandBuffer::createStagingBuffer(std::string_view      name,
                                    std::span<const byte> data) const
 {
@@ -523,7 +530,7 @@ void     CommandBuffer::waitFence() const
 
 void CommandBuffer::resetFence() const { wait_fence_.reset(); }
 
-VkCommandBuffer CommandBuffer::get() const { return d_->command_buffer_; }
+VkCommandBuffer CommandBuffer::vk() const { return d_->command_buffer_; }
 
-VkCommandBuffer* CommandBuffer::ptr() const { return &d_->command_buffer_; }
+VkCommandBuffer* CommandBuffer::vkp() const { return &d_->command_buffer_; }
 } // namespace eldr::vk::wr

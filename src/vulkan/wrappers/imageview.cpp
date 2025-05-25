@@ -2,6 +2,33 @@
 #include <eldr/vulkan/wrappers/image.hpp>
 
 namespace eldr::vk::wr {
+namespace {
+VkImageViewCreateInfo vkImageViewCI(const ImageViewCreateInfo& ci)
+{
+  const VkImageViewCreateInfo image_view_ci{
+    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .pNext = nullptr,
+    .flags = {},
+    .image    = ci.image,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+    .format   = ci.format,
+    // Standard color properties
+    .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY,
+                    VK_COMPONENT_SWIZZLE_IDENTITY },
+    .subresourceRange = {
+      .aspectMask     = ci.aspect_flags,
+      .baseMipLevel   = 0,
+      .levelCount     = ci.mip_levels,
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+  };
+  return image_view_ci;
+}
+
+} // namespace
 //------------------------------------------------------------------------------
 // ImageViewImpl
 //------------------------------------------------------------------------------
@@ -32,62 +59,26 @@ ImageView::ImageViewImpl::~ImageViewImpl()
 //------------------------------------------------------------------------------
 // ImageViewImpl
 //------------------------------------------------------------------------------
-ImageView::ImageView(const Device&                device,
-                     const VkImageViewCreateInfo& image_view_ci)
+ImageView::ImageView(const Device&              device,
+                     const ImageViewCreateInfo& image_view_ci)
+  : aspect_flags_(image_view_ci.aspect_flags),
+    d_(std::make_shared<ImageViewImpl>(device, vkImageViewCI(image_view_ci)))
 {
-  d_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
 }
 
 ImageView::ImageView(const Device&      device,
                      const Image&       image,
                      VkImageAspectFlags aspect_flags)
+  : aspect_flags_(aspect_flags)
 {
-  const VkImageViewCreateInfo image_view_ci{
-    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = {},
-    .image    = image.get(),
-    .viewType = VK_IMAGE_VIEW_TYPE_2D,
-    .format   = image.format(),
-    // Standard color properties
-    .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY,
-                    VK_COMPONENT_SWIZZLE_IDENTITY },
-    .subresourceRange = { 
-      .aspectMask     = aspect_flags,
-      .baseMipLevel   = 0,
-      .levelCount     = image.mipLevels(),
-      .baseArrayLayer = 0,
-      .layerCount     = 1,
-    },
+  const ImageViewCreateInfo image_view_ci{
+    .image        = image.vk(),
+    .format       = image.format(),
+    .aspect_flags = aspect_flags,
+    .mip_levels   = image.mipLevels(),
   };
-  d_ = std::make_shared<ImageViewImpl>(device, image_view_ci);
+  d_ = std::make_shared<ImageViewImpl>(device, vkImageViewCI(image_view_ci));
 }
 
-VkImageView ImageView::get() const { return d_->image_view_; }
-
-ImageView ImageView::createSwapchainImageView(const Device& device,
-                                              VkImage       image,
-                                              VkFormat      format)
-{
-  VkImageViewCreateInfo image_view_ci{
-    .sType            = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-    .pNext            = {},
-    .flags            = {},
-    .image            = image,
-    .viewType         = VK_IMAGE_VIEW_TYPE_2D,
-    .format           = format,
-    .components       = { VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY,
-                          VK_COMPONENT_SWIZZLE_IDENTITY },
-    .subresourceRange = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-                          .baseMipLevel   = 0,
-                          .levelCount     = 1,
-                          .baseArrayLayer = 0,
-                          .layerCount     = 1 }
-  };
-  return ImageView(device, image_view_ci);
-}
+VkImageView ImageView::vk() const { return d_->image_view_; }
 } // namespace eldr::vk::wr

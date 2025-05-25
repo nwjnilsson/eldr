@@ -20,14 +20,14 @@ Surface::SurfaceImpl::SurfaceImpl(const Instance& instance, GLFWwindow* window)
   : instance_(instance)
 {
   if (const VkResult result{
-        glfwCreateWindowSurface(instance.get(), window, nullptr, &surface_) };
+        glfwCreateWindowSurface(instance.vk(), window, nullptr, &surface_) };
       result != VK_SUCCESS)
     Throw("Failed to create window surface! ({})", result);
 }
 
 Surface::SurfaceImpl::~SurfaceImpl()
 {
-  vkDestroySurfaceKHR(instance_.get(), surface_, nullptr);
+  vkDestroySurfaceKHR(instance_.vk(), surface_, nullptr);
 }
 
 //------------------------------------------------------------------------------
@@ -38,5 +38,5 @@ Surface::Surface(const Instance& instance, GLFWwindow* window)
 {
 }
 
-VkSurfaceKHR Surface::get() const { return s_data_->surface_; }
+VkSurfaceKHR Surface::vk() const { return s_data_->surface_; }
 } // namespace eldr::vk::wr

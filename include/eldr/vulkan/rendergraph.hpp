@@ -157,7 +157,7 @@ public:
   // TODO: Refactor descriptor management in the render graph
   // void addDescriptorLayout(wr::DescriptorSetLayout& layout)
   // {
-  //   descriptor_layouts_.push_back(layout.get());
+  //   descriptor_layouts_.push_back(layout.vk());
   // }
 
   /// @brief Add a push constant range to this render stage.
@@ -282,9 +282,9 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  // GpuBuffer of any kind of data. Can be used as index buffer or vertex
+  // Buffer of any kind of data. Can be used as index buffer or vertex
   // buffer.
-  wr::GpuBuffer<byte_t> buffer_;
+  wr::Buffer<byte_t> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
