@@ -18,7 +18,6 @@ public:
   {
     return image_views_;
   }
-  [[nodiscard]] const ImageView& imageView(uint32_t index) const;
   [[nodiscard]] VkFormat imageFormat() const { return surface_format_.format; }
   [[nodiscard]] const VkSemaphore*
   imageAvailableSemaphore(uint32_t index) const;

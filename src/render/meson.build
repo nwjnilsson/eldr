@@ -2,8 +2,8 @@ src = [
   'scene.cpp',
   'mesh.cpp'
   ]
-eldr_render = static_library(
-  'eldr-render',
+lib_render = static_library(
+  'lib-render',
   sources : src,
   include_directories : [eldr_headers, tinyobjloader_headers],
   dependencies : [
@@ -12,5 +12,5 @@ eldr_render = static_library(
     vma_dep,
     fastgltf_dep,
     ],
-  link_with : [eldr_core])
+  link_with : [lib_core])
   

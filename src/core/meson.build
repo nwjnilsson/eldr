@@ -14,8 +14,8 @@ src = [ 'bitmap.cpp',
 
 # All libs can probably be just static but if anything should be shared, it's
 # probably the core types
-eldr_core = library(
-  'eldr-core',
+lib_core = library(
+  'lib-core',
   sources : src,
   include_directories : [eldr_headers],
   dependencies : [

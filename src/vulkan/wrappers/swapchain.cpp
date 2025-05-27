@@ -242,8 +242,4 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
 
 VkSwapchainKHR   Swapchain::vk() const { return sc_data_->swapchain_; }
 VkSwapchainKHR*  Swapchain::vkp() const { return &sc_data_->swapchain_; }
-const ImageView& Swapchain::imageView(uint32_t index) const
-{
-  return image_views_[index];
-}
 } // namespace eldr::vk::wr

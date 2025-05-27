@@ -1,12 +1,9 @@
 #include <eldr/app/app.hpp>
-
 #include <eldr/core/logger.hpp>
-#include <eldr/core/thread.hpp>
 #include <eldr/core/util.hpp>
 
 #include <cxxopts.hpp>
 
-#include <cstdlib>
 #include <iostream>
 
 using namespace eldr::core;

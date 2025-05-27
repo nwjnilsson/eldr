@@ -175,7 +175,7 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
             attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
             // TODO: Other resolve targets than swapchain image should be
             // possible
-            attachment.resolveImageView = swapchain_.imageView(i).vk();
+            attachment.resolveImageView = swapchain_.imageViews()[i].vk();
             attachments.push_back(attachment);
             break;
           case TextureUsage::DepthStencilBuffer:

@@ -28,10 +28,10 @@ src = [
   ]
 
 
-vulkan_engine = static_library(
-  'vulkan-engine',
+lib_engine = static_library(
+  'lib-engine',
   sources : src,
   include_directories : [eldr_headers],
   dependencies : [fmt_dep, glfw_dep, vulkan_dep, vma_dep, imgui_dep],
-  link_with : [eldr_core])
+  link_with : [lib_core])
   
