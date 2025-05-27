@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
+using namespace eldr::core;
 namespace eldr {
 
 // -----------------------------------------------------------------------------
@@ -79,16 +80,15 @@ void EldrApp::mouseScrollCallback(GLFWwindow* /*window*/,
 
 void EldrApp::run()
 {
-  auto p_scene{ Scene::load(*vk_engine_, { model_path }) };
-  assert(p_scene);
-  Scene scene{ *p_scene.value() };
-  // vk_engine_->addScene(scene);
+  auto scene = Scene::load(*vk_engine_, { model_path }).value_or(nullptr);
+  Assert(scene);
+  vk_engine_->addScene("Suzanne", scene);
 
   while (!window_->shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
     updateImGui();
-    vk_engine_->drawFrame(scene);
+    vk_engine_->drawFrame();
     frame_time_ = stop_watch_.seconds<float>();
   }
 }

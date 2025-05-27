@@ -23,7 +23,7 @@ public:
 
 protected:
   // inline Shape() = default;
-  inline Shape(const std::string& name, ShapeType type)
+  inline Shape(std::string_view name, ShapeType type)
     : name_(name), shape_type_(type) {};
 
 protected:

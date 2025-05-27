@@ -52,9 +52,9 @@ public:
 
   [[nodiscard]] const std::string& name() const { return name_; }
 
-private:
+protected:
   const std::string                 name_;
-  std::shared_ptr<PhysicalResource> physical_;
+  std::unique_ptr<PhysicalResource> physical_;
 };
 
 // enum class BufferUsage {
@@ -78,6 +78,8 @@ public:
       memory_usage_(memory_usage)
   {
   }
+
+  [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
 
   /// @return The usage of this buffer resource
   // BufferUsage usage() const { return usage_; }
@@ -180,8 +182,7 @@ public:
   /// @details This function can be used to specify other vulkan commands during
   /// command buffer recording. The most common use for this is for draw
   /// commands.
-  void setOnRecord(std::function<void(const PhysicalStage&,
-                                      const wr::CommandBuffer&)> on_record)
+  void setOnRecord(std::function<void(const wr::CommandBuffer&)> on_record)
   {
     on_record_ = std::move(on_record);
   }
@@ -201,8 +202,7 @@ private:
 
   // std::vector<VkDescriptorSetLayout> descriptor_layouts_;
   // std::vector<VkPushConstantRange>   push_constant_ranges_;
-  std::function<void(const PhysicalStage&, const wr::CommandBuffer&)>
-    on_record_{ [](auto&, auto&) {} };
+  std::function<void(const wr::CommandBuffer&)> on_record_{ [](auto&) {} };
 };
 
 class GraphicsStage : public RenderStage {
@@ -287,9 +287,13 @@ public:
   PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
+  [[nodiscard]] VkDeviceAddress getDeviceAddress() const
+  {
+    return buffer_.getDeviceAddress();
+  }
+
 private:
-  // Buffer of any kind of data. Can be used as index buffer or vertex
-  // buffer.
+  // Buffer of any kind of data. Can be an index buffer, vertex buffer or other
   wr::Buffer<byte_t> buffer_;
 };
 
@@ -309,7 +313,7 @@ private:
   wr::Image image_;
 };
 
-class PhysicalBackBuffer : public PhysicalResource {
+class PhysicalBackBuffer : public PhysicalImage {
   friend RenderGraph;
 
 public:
@@ -373,7 +377,7 @@ public:
     : device_(device), swapchain_(swapchain)
   {
     back_buffer_ = add<TextureResource>(
-      "Back buffer", TextureUsage::Color, swapchain_.imageFormat());
+      "back buffer", TextureUsage::Color, swapchain_.imageFormat());
   }
 
   [[nodiscard]] TextureResource*       backBuffer() { return back_buffer_; }

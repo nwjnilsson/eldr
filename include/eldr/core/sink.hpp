@@ -140,15 +140,15 @@ void StreamSink<TPolicy>::sink(LogLevel           level,
       GetConsoleScreenBufferInfo(console, &console_info);
       switch (level) {
         case Trace:
-          SetConsoleTextAttribute(console, CYAN);
+          SetConsoleTextAttribute(console, FOREGROUND_INTENSITY);
           (*stream_) << "TRACE";
           break;
         case Debug:
-          SetConsoleTextAttribute(console, BLUE);
+          SetConsoleTextAttribute(console, GREEN);
           (*stream_) << "DEBUG";
           break;
         case Info:
-          SetConsoleTextAttribute(console, FOREGROUND_INTENSITY);
+          SetConsoleTextAttribute(console, BLUE);
           (*stream_) << "INFO";
           break;
         case Warn:
@@ -156,11 +156,11 @@ void StreamSink<TPolicy>::sink(LogLevel           level,
           (*stream_) << "WARNING";
           break;
         case Error:
-          SetConsoleTextAttribute(console, RED);
+          SetConsoleTextAttribute(console, DARKRED);
           (*stream_) << "ERROR";
           break;
         case Critical:
-          SetConsoleTextAttribute(console, DARKRED);
+          SetConsoleTextAttribute(console, RED);
           (*stream_) << "CRITICAL";
           break;
         default:
@@ -169,15 +169,15 @@ void StreamSink<TPolicy>::sink(LogLevel           level,
 #else
       switch (level) {
         case Trace:
-          (*stream_) << "\x1b[1;36m";
+          (*stream_) << "\x1b[38;5;245m";
           (*stream_) << "TRACE";
           break;
         case Debug:
-          (*stream_) << "\x1b[1;34m";
+          (*stream_) << "\x1b[1;32m";
           (*stream_) << "DEBUG";
           break;
         case Info:
-          (*stream_) << "\x1b[38;5;245m";
+          (*stream_) << "\x1b[1;34m";
           (*stream_) << "INFO";
           break;
         case Warn:
@@ -185,11 +185,11 @@ void StreamSink<TPolicy>::sink(LogLevel           level,
           (*stream_) << "WARNING";
           break;
         case Error:
-          (*stream_) << "\x1b[1;31m";
+          (*stream_) << "\x1b[0;31m";
           (*stream_) << "ERROR";
           break;
         case Critical:
-          (*stream_) << "\x1b[0;31m";
+          (*stream_) << "\x1b[1;31m";
           (*stream_) << "CRITICAL";
           break;
         default:

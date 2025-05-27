@@ -68,7 +68,7 @@ public:
                   std::span<const Point2f> texcoords,
                   std::span<const Color4f> colors,
                   std::span<const Vec3f>   normals);
-  void drawFrame(const Scene& scene);
+  void drawFrame();
 
   [[nodiscard]] std::string deviceName() const;
 
@@ -83,8 +83,8 @@ private:
   void createCommandBuffers();
   void setupRenderGraph();
   void recreateSwapchain();
-  void buildBuffers();
-  void updateScene(const Scene&, uint32_t current_image);
+  void updateBuffers();
+  void updateScenes(uint32_t current_image);
   void drawGeometry(const wr::CommandBuffer& cb);
 
 private:
@@ -94,9 +94,6 @@ private:
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
-
-  std::vector<GpuVertex> vertices_;
-  std::vector<uint32_t>  indices_;
 
   BufferResource* vertex_buffer_;
   BufferResource* index_buffer_;

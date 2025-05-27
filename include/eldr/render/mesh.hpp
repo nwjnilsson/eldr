@@ -26,9 +26,12 @@ class Mesh final : public Shape {
   ELDR_IMPORT_CORE_TYPES()
 
 public:
-  Mesh(const std::string& name, std::vector<Point3f>&& positions,
-       std::vector<Point2f>&& texcoords, std::vector<Color4f>&& colors,
-       std::vector<Vec3f>&& normals, std::vector<GeoSurface>&& surfaces);
+  Mesh(std::string_view          name,
+       std::vector<Point3f>&&    positions,
+       std::vector<Point2f>&&    texcoords,
+       std::vector<Color4f>&&    colors,
+       std::vector<Vec3f>&&      normals,
+       std::vector<GeoSurface>&& surfaces);
   ~Mesh() override = default;
 
   /// Accessors

@@ -252,8 +252,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
   //                      VMA_MEMORY_USAGE_CPU_TO_GPU };
   // }
 
-  stage_->setOnRecord([&](const PhysicalStage&     physical,
-                          const wr::CommandBuffer& cb) {
+  stage_->setOnRecord([&](const wr::CommandBuffer& cb) {
     ImDrawData* imgui_draw_data = ImGui::GetDrawData();
     if (imgui_draw_data == nullptr) {
       return;

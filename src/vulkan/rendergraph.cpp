@@ -57,6 +57,14 @@ void TextureResource::resolvesTo(TextureResource* target)
   resolve_ = target;
 }
 
+VkDeviceAddress BufferResource::getDeviceAddress() const
+{
+  if (const auto* buffer = physical_.get()->as<PhysicalBuffer>()) {
+    return buffer->getDeviceAddress();
+  }
+  Throw("Buffer resource has no physical buffer attached.");
+}
+
 bool RenderStage::hasReadDependency(
   const std::vector<std::unique_ptr<RenderStage>>& stages) const
 {
@@ -99,7 +107,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
   const auto* graphics_stage = stage->as<GraphicsStage>();
   if (graphics_stage != nullptr) {
     const auto* phys_graphics_stage = physical.as<PhysicalGraphicsStage>();
-    assert(phys_graphics_stage != nullptr);
+    Assert(phys_graphics_stage != nullptr);
 
     const VkRenderingInfo render_info{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
@@ -126,8 +134,8 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     if (buffer_resource == nullptr)
       continue;
 
-    if (const auto& physical_buffer{
-          dynamic_pointer_cast<PhysicalBuffer>(buffer_resource->physical_) }) {
+    if (const auto& physical_buffer =
+          buffer_resource->physical_->as<PhysicalBuffer>()) {
 
       if (unlikely(physical_buffer->buffer_.empty())) {
         Log(Debug,
@@ -158,7 +166,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     cb.bindVertexBuffers(vertex_buffers);
   }
   // cb.bindPipeline(physical.pipeline_);
-  stage->on_record_(physical, cb);
+  stage->on_record_(cb);
 
   if (graphics_stage != nullptr) {
     cb.endRendering();
@@ -187,7 +195,7 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         resolve_image = texture->resolve_->physical_->as<PhysicalImage>();
         Assert(resolve_image, "Invalid resolve image. Has it been created?");
         Assert(texture->sample_count_ != VK_SAMPLE_COUNT_1_BIT,
-               "A resolve image has been provided, but only a singel sample "
+               "A resolve image has been provided, but only a single sample "
                "is used.");
         resolve_view   = resolve_image->image_.view().vk();
         resolve_layout = resolve_image->image_.layout();
@@ -198,7 +206,7 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         .pNext              = {},
         .imageView          = image->image_.view().vk(),
         .imageLayout        = image->image_.layout(),
-        .resolveMode        = resolve_view != VK_NULL_HANDLE
+        .resolveMode        = resolve_view == VK_NULL_HANDLE
                                 ? VK_RESOLVE_MODE_NONE
                                 : VK_RESOLVE_MODE_AVERAGE_BIT,
         .resolveImageView   = resolve_view,
@@ -452,18 +460,9 @@ void RenderGraph::compile()
   //        " "flag.");
 #endif
 
-  // Ensure that all resolve textures are also in writes
-  for (auto& stage : stages_) {
-    for (const auto* write : stage->writes_) {
-      if (const auto* texture = write->as<TextureResource>()) {
-        if (texture->resolve_) {
-          if (not stage->writes_.contains(texture->resolve_)) {
-            stage->writes_.insert(texture->resolve_);
-          }
-        }
-      }
-    }
-  }
+  // TODO: The topology sort needs to check the resolve targets too, as this is
+  // technically a write, even though these are not explicitly included as
+  // attachments
 
   // TODO: the topology sorting implemented here has not been extensively
   // tested, but it works for the two stages I'm currently using...
@@ -539,7 +538,7 @@ void RenderGraph::compile()
   Log(Trace, "Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
     Log(Trace, "   - {}", buffer_resource->name_);
-    buffer_resource->physical_ = std::make_shared<PhysicalBuffer>();
+    buffer_resource->physical_ = std::make_unique<PhysicalBuffer>();
   }
 
   Log(Trace, "Allocating physical resource for texture:");
@@ -582,9 +581,9 @@ void RenderGraph::compile()
       .final_layout = layout,
     };
 
-    auto physical      = std::make_shared<PhysicalImage>();
+    auto physical      = std::make_unique<PhysicalImage>();
     physical->image_   = wr::Image{ device_, texture_info };
-    texture->physical_ = physical;
+    texture->physical_ = std::move(physical);
   }
 
   for (auto substages : stage_stack_) {
@@ -624,24 +623,24 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
     if (buffer_resource->data_.data() != nullptr) {
       // There is data to be uploaded to the gpu
       const size_t data_size{ buffer_resource->data_.size_bytes() };
-      auto&        physical{ *dynamic_pointer_cast<PhysicalBuffer>(
-        buffer_resource->physical_) };
+      auto*        physical = buffer_resource->physical_->as<PhysicalBuffer>();
+      Assert(physical);
       if (data_size == 0) {
         // Free the buffer
         // TODO: Decide whether BufferResource::uploadData() should allow
         // upploading empty spans at all. Doing so is most likely a
         // mistake (as far as I can see right now).
         // physical.buffer_.reset();
-        physical.buffer_ = {};
+        physical->buffer_ = {};
       }
       else {
         bool new_buffer_needed = false;
-        if (unlikely(physical.buffer_.empty())) {
+        if (unlikely(physical->buffer_.empty())) {
           new_buffer_needed = true;
         }
         else {
           // A gpu buffer already exists
-          if (data_size != physical.buffer_.size_bytes()) {
+          if (data_size != physical->buffer_.size_bytes()) {
             // The gpu buffer needs to be resized
             new_buffer_needed = true;
           }
@@ -649,7 +648,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          physical.buffer_ =
+          physical->buffer_ =
             wr::Buffer<byte_t>{ device_,
                                 buffer_resource->name(),
                                 data_size,
@@ -658,7 +657,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
         }
       }
       // Upload data
-      physical.buffer_.uploadData(buffer_resource->data_);
+      physical->buffer_.uploadData(buffer_resource->data_);
       // Reset data pointer once it has been uploaded to gpu
       buffer_resource->data_ = {};
     }

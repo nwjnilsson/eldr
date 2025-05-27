@@ -23,26 +23,38 @@ add_global_arguments(
     )
 
 # Meson will use -O3 if buildtype=release
-if get_option('buildtype').startswith('debugoptimized')
+build_type = get_option('buildtype')
+if build_type.startswith('debugoptimized')
   add_project_arguments(
     '-DDEBUG',
     '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO',
     language : 'cpp'
     )
-elif get_option('buildtype').startswith('debug')
+elif build_type.startswith('debug')
   add_project_arguments(
     '-DDEBUG',
     '-DELDR_VULKAN_DEBUG_REPORT',
-    '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE',
     language : 'cpp'
     )
-elif get_option('buildtype').startswith('release')
+elif build_type.startswith('release')
   add_project_arguments(
     '-DNDEBUG',
-    '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_WARN',
     language : 'cpp'
     )
-endif  
+endif
+
+log_level = get_option('log_level')
+if log_level.startswith('trace')
+  add_project_arguments('-DLOG_ACTIVE_LEVEL_TRACE', language : 'cpp')
+elif log_level.startswith('debug')
+  add_project_arguments('-DLOG_ACTIVE_LEVEL_DEBUG', language : 'cpp')
+elif log_level.startswith('info')
+  add_project_arguments('-DLOG_ACTIVE_LEVEL_INFO', language : 'cpp')
+elif log_level.startswith('warn')
+  add_project_arguments('-DLOG_ACTIVE_LEVEL_WARN', language : 'cpp')
+elif log_level.startswith('error')
+  add_project_arguments('-DLOG_ACTIVE_LEVEL_ERROR', language : 'cpp')
+endif
 
 
 # ------------------------------------------------------------------------------

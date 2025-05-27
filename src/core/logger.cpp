@@ -92,8 +92,18 @@ void Logger::createContext()
 
   logger->setFormatter(std::move(formatter));
   logger->addSink(std::move(sink));
-#ifdef DEBUG
+#if defined(LOG_ACTIVE_LEVEL_TRACE)
+  logger->setLogLevel(Trace);
+#elif defined(LOG_ACTIVE_LEVEL_DEBUG)
   logger->setLogLevel(Debug);
+#elif defined(LOG_ACTIVE_LEVEL_INFO)
+  logger->setLogLevel(Info);
+#elif defined(LOG_ACTIVE_LEVEL_WARN)
+  logger->setLogLevel(Warn);
+#elif defined(LOG_ACTIVE_LEVEL_ERROR)
+  logger->setLogLevel(Error);
+#else
+#  error "Default log level is not defined."
 #endif
   Thread::thread()->setLogger(std::move(logger));
 }
@@ -108,7 +118,9 @@ std::string className(const char* function_sig)
   /// compilers that don't support __PRETTY_FUNCTION__-like variables
   std::string  func_sig{ function_sig };
   std::string  class_name;
-  const size_t r_colons{ func_sig.rfind("::") };
+  const size_t param_start{ func_sig.find("(") };
+  assert(param_start != std::string::npos);
+  const size_t r_colons{ func_sig.rfind("::", param_start) };
   if (r_colons == std::string::npos)
     return "Unknown";
   const size_t l_colons{ func_sig.rfind("::", r_colons - 1) };
