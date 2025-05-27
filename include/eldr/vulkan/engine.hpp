@@ -95,12 +95,11 @@ private:
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
 
-  //  std::vector<GpuVertex> vertices_;
-  //  std::vector<uint32_t>  indices_;
+  std::vector<GpuVertex> vertices_;
+  std::vector<uint32_t>  indices_;
 
-  TextureResource* msaa_buffer_;
-  // BufferResource*  vertex_buffer_;
-  // BufferResource*  index_buffer_;
+  BufferResource* vertex_buffer_;
+  BufferResource* index_buffer_;
 
   std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
@@ -108,6 +107,8 @@ private:
   // related type when including engine.hpp
   struct EngineData;
   std::unique_ptr<EngineData> d_;
+  struct Settings;
+  std::unique_ptr<Settings> s_;
 
   GpuSceneData scene_data_;
 
@@ -118,9 +119,7 @@ private:
 };
 
 } // namespace eldr::vk
-namespace std {
-template <> struct hash<eldr::vk::GpuVertex> {
+template <> struct std::hash<eldr::vk::GpuVertex> {
   ELDR_IMPORT_CORE_TYPES();
   size_t operator()(eldr::vk::GpuVertex const& vertex) const;
 };
-} // namespace std

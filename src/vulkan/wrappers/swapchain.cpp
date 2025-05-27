@@ -240,6 +240,6 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
   }
 }
 
-VkSwapchainKHR   Swapchain::vk() const { return sc_data_->swapchain_; }
-VkSwapchainKHR*  Swapchain::vkp() const { return &sc_data_->swapchain_; }
+VkSwapchainKHR  Swapchain::vk() const { return sc_data_->swapchain_; }
+VkSwapchainKHR* Swapchain::vkp() const { return &sc_data_->swapchain_; }
 } // namespace eldr::vk::wr

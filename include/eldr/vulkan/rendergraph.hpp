@@ -57,14 +57,15 @@ private:
   std::shared_ptr<PhysicalResource> physical_;
 };
 
-enum class BufferUsage {
-  /// @brief Specifies that the buffer will be used to input index data.
-  IndexBuffer,
-
-  /// @brief Specifies that the buffer will be used to input per vertex data to
-  /// a vertex shader.
-  VertexBuffer,
-};
+// enum class BufferUsage {
+//   /// @brief Specifies that the buffer will be used to input index data.
+//   IndexBuffer,
+//
+//   /// @brief Specifies that the buffer will be used to input per vertex data
+//   to
+//   /// a vertex shader.
+//   VertexBuffer,
+// };
 
 class BufferResource : public RenderResource {
   friend RenderGraph;
@@ -101,35 +102,40 @@ private:
 };
 
 enum class TextureUsage {
-  // BackBuffer,
+  /// @brief Specifies that this texture is an offscreen render target
+  Color,
   /// @brief Specifies that this texture is a combined depth/stencil buffer.
   /// @note This may mean that this texture is completely GPU-sided and cannot
   /// be accessed by the CPU in any way.
-  DepthStencilBuffer,
-
-  /// @brief Specifies that this texture is an offscreen buffer, for example an
-  /// MSAA target.
-  ColorBuffer,
+  DepthStencil,
 };
+
+// May want presentable flags in the future, multiple graph outputs/swapchains
+// enum class TextureFlags : uint32_t {
+//   Presentable = 0x01,
+// };
 
 class TextureResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  TextureResource(std::string&&         name,
-                  TextureUsage          usage,
-                  VkFormat              format,
-                  VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT)
-    : RenderResource(name), usage_(usage), format_(format),
-      sample_count_(sample_count)
+  TextureResource(std::string&& name, TextureUsage usage, VkFormat format)
+    : RenderResource(name), usage_(usage), format_(format)
   {
   }
 
+  // void setFlags(TextureFlags flags);
+
+  void setSampleCount(VkSampleCountFlagBits sample_count);
+
+  void resolvesTo(TextureResource* target);
+
 private:
-  const TextureUsage usage_;
-  const VkFormat     format_{ VK_FORMAT_UNDEFINED };
-  // not sure if this will be used, sample count is set in pipeline
-  const VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  const TextureUsage    usage_;
+  const VkFormat        format_{ VK_FORMAT_UNDEFINED };
+  VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  // TextureFlags          flags_;
+  TextureResource* resolve_{ nullptr };
 };
 
 /// @brief A single render stage in the render graph.
@@ -235,7 +241,7 @@ public:
 
   /// @brief Specifies that `buffer` should map to `binding` in the shaders of
   /// this stage.
-  void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
+  // void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
 
   /// @brief Specifies that `shader` should be used during the pipeline of this
   /// stage.
@@ -353,8 +359,7 @@ public:
   PhysicalGraphicsStage& operator=(PhysicalGraphicsStage&&)      = delete;
 
 private:
-  std::array<std::vector<VkRenderingAttachmentInfo>, max_frames_in_flight>
-                                             color_attachments_;
+  std::vector<VkRenderingAttachmentInfo>     color_attachments_;
   std::unique_ptr<VkRenderingAttachmentInfo> depth_attachment_;
   // wr::RenderPass               render_pass_;
   // std::vector<wr::Framebuffer> framebuffers_;
@@ -367,11 +372,17 @@ public:
   explicit RenderGraph(const wr::Device& device, const wr::Swapchain& swapchain)
     : device_(device), swapchain_(swapchain)
   {
-    // back_buffer_ = std::make_unique<TextureResource>(
-    //   "Back buffer", TextureUsage::BackBuffer, swapchain_.imageFormat());
+    back_buffer_ = add<TextureResource>(
+      "Back buffer", TextureUsage::Color, swapchain_.imageFormat());
   }
 
-  template <typename T, typename... Args> T* add(Args&&... args)
+  [[nodiscard]] TextureResource*       backBuffer() { return back_buffer_; }
+  [[nodiscard]] const TextureResource* backBuffer() const
+  {
+    return back_buffer_;
+  }
+
+  template <typename T, typename... Args> [[nodiscard]] T* add(Args&&... args)
   {
     auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
     if constexpr (std::is_same_v<T, BufferResource>) {
@@ -408,9 +419,9 @@ private:
   const wr::Device&    device_;
   const wr::Swapchain& swapchain_;
 
-  // std::unique_ptr<TextureResource>              back_buffer_;
-  std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
+  TextureResource*                              back_buffer_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;
+  std::vector<std::unique_ptr<BufferResource>>  buffer_resources_;
   std::vector<std::unique_ptr<RenderStage>>     stages_;
   // Stage execution order. Each sub-list contains nodes that can be recorded
   // onto the command buffer without a memory barrier in between.
@@ -426,5 +437,7 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
 {
   return dynamic_cast<const T*>(this);
 }
+
+// ELDR_DECLARE_ENUM_OPERATORS(TextureFlags)
 
 } // namespace eldr::vk

@@ -29,6 +29,34 @@ void RenderStage::readsFrom(const RenderResource* resource)
   reads_.insert(resource);
 }
 
+// void TextureResource::setFlags(TextureFlags flags)
+// {
+// #ifdef DEBUG
+//   if (flags & TextureFlags::Presentable) {
+//     Assert(sample_count_ == VK_SAMPLE_COUNT_1_BIT,
+//            "The sample count of presentable textures must be 1.");
+//   }
+// #endif
+//   flags_ = flags;
+// }
+
+void TextureResource::setSampleCount(VkSampleCountFlagBits sample_count)
+{
+  // #ifdef DEBUG
+  //   if (flags_ & TextureFlags::Presentable) {
+  //     Assert(sample_count == VK_SAMPLE_COUNT_1_BIT,
+  //            "The sample count of presentable textures must be 1.");
+  //   }
+  // #endif
+  sample_count_ = sample_count;
+}
+
+void TextureResource::resolvesTo(TextureResource* target)
+{
+  Assert(target->sample_count_ == VK_SAMPLE_COUNT_1_BIT);
+  resolve_ = target;
+}
+
 bool RenderStage::hasReadDependency(
   const std::vector<std::unique_ptr<RenderStage>>& stages) const
 {
@@ -81,12 +109,11 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
         .offset{},
         .extent{ swapchain_.extent() },
       },
-      .layerCount           = 1,
-      .viewMask             = 0,
-      .colorAttachmentCount = static_cast<uint32_t>(
-        phys_graphics_stage->color_attachments_[frame_index].size()),
-      .pColorAttachments =
-        phys_graphics_stage->color_attachments_[frame_index].data(),
+      .layerCount = 1,
+      .viewMask   = 0,
+      .colorAttachmentCount =
+        static_cast<uint32_t>(phys_graphics_stage->color_attachments_.size()),
+      .pColorAttachments  = phys_graphics_stage->color_attachments_.data(),
       .pDepthAttachment   = phys_graphics_stage->depth_attachment_.get(),
       .pStencilAttachment = VK_NULL_HANDLE,
     };
@@ -107,18 +134,19 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
             "The PhysicalBuffer of '{}' in stage '{}' is empty. "
             "This can happen when RenderGraph::render(...) gets called "
             "before data has been uploaded to the buffer via "
-            "BufferResource::uploadData(...), or it could be "
-            "caused by some other bug.",
+            "BufferResource::uploadData(...).",
             buffer_resource->name_,
             stage->name_);
         return;
       }
 
       if (buffer_resource->buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
-        assert(physical_buffer->buffer_.vk());
+        Assert(physical_buffer->buffer_.vk());
         cb.bindIndexBuffer(physical_buffer->buffer_);
       }
 
+      // Vertex pulling style buffers will not get added. Address is instead
+      // passed as constant to shader
       else if (buffer_resource->buffer_usage_ &
                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
         vertex_buffers.push_back(physical_buffer->buffer_.vk());
@@ -126,9 +154,9 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     }
   }
 
-  // if (!vertex_buffers.empty()) {
-  //   cb.bindVertexBuffers(vertex_buffers);
-  // }
+  if (not vertex_buffers.empty()) {
+    cb.bindVertexBuffers(vertex_buffers);
+  }
   // cb.bindPipeline(physical.pipeline_);
   stage->on_record_(physical, cb);
 
@@ -144,48 +172,56 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
 void RenderGraph::buildAttachments(const GraphicsStage*   stage,
                                    PhysicalGraphicsStage& physical) const
 {
-  for (uint32_t i{ 0 }; i < max_frames_in_flight; ++i) {
-    auto& attachments = physical.color_attachments_[i];
-    attachments.clear();
-    for (const auto* resource : stage->writes_) {
-      const auto* texture = resource->as<TextureResource>();
-      if (texture == nullptr) {
-        continue;
+  auto& attachments = physical.color_attachments_;
+  attachments.clear();
+  for (const auto* resource : stage->writes_) {
+    const auto* texture = resource->as<TextureResource>();
+    if (texture == nullptr) {
+      continue;
+    }
+    if (const auto* image = texture->physical_->as<PhysicalImage>()) {
+      const PhysicalImage* resolve_image;
+      VkImageView          resolve_view{ VK_NULL_HANDLE };
+      VkImageLayout        resolve_layout{ VK_IMAGE_LAYOUT_UNDEFINED };
+      if (texture->resolve_ != nullptr) {
+        resolve_image = texture->resolve_->physical_->as<PhysicalImage>();
+        Assert(resolve_image, "Invalid resolve image. Has it been created?");
+        Assert(texture->sample_count_ != VK_SAMPLE_COUNT_1_BIT,
+               "A resolve image has been provided, but only a singel sample "
+               "is used.");
+        resolve_view   = resolve_image->image_.view().vk();
+        resolve_layout = resolve_image->image_.layout();
       }
-      if (const auto* image = texture->physical_->as<PhysicalImage>()) {
-        VkRenderingAttachmentInfo attachment{
-          .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-          .pNext              = {},
-          .imageView          = image->image_.view().vk(),
-          .imageLayout        = image->image_.layout(),
-          .resolveMode        = texture->sample_count_ == VK_SAMPLE_COUNT_1_BIT
-                                  ? VK_RESOLVE_MODE_NONE
-                                  : VK_RESOLVE_MODE_AVERAGE_BIT,
-          .resolveImageView   = {},
-          .resolveImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-          .loadOp     = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                              : VK_ATTACHMENT_LOAD_OP_LOAD,
-          .storeOp    = VK_ATTACHMENT_STORE_OP_STORE,
-          .clearValue = {}
-        };
 
-        attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-        switch (texture->usage_) {
-          case TextureUsage::ColorBuffer:
-            attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-            // TODO: Other resolve targets than swapchain image should be
-            // possible
-            attachment.resolveImageView = swapchain_.imageViews()[i].vk();
-            attachments.push_back(attachment);
-            break;
-          case TextureUsage::DepthStencilBuffer:
-            attachment.clearValue.depthStencil = { 1.0f, 0 };
-            physical.depth_attachment_ =
-              std::make_unique<VkRenderingAttachmentInfo>(attachment);
-            break;
-          default:
-            Assert(false);
-        }
+      VkRenderingAttachmentInfo attachment{
+        .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .pNext              = {},
+        .imageView          = image->image_.view().vk(),
+        .imageLayout        = image->image_.layout(),
+        .resolveMode        = resolve_view != VK_NULL_HANDLE
+                                ? VK_RESOLVE_MODE_NONE
+                                : VK_RESOLVE_MODE_AVERAGE_BIT,
+        .resolveImageView   = resolve_view,
+        .resolveImageLayout = resolve_layout,
+        .loadOp     = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                            : VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp    = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = {}
+      };
+      attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+      switch (texture->usage_) {
+        case TextureUsage::Color:
+          attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+          attachments.push_back(attachment);
+          break;
+        case TextureUsage::DepthStencil:
+          attachment.clearValue.depthStencil = { 1.0f, 0 };
+          physical.depth_attachment_ =
+            std::make_unique<VkRenderingAttachmentInfo>(attachment);
+          break;
+        default:
+          Throw("Rendering attachment for this texture usage has not been "
+                "implemented.");
       }
     }
   }
@@ -387,10 +423,51 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
 
 void RenderGraph::compile()
 {
+#ifdef DEBUG
+  // Initial validity checks
+  // int presentable{ 0 };
+  for (const auto& texture : texture_resources_) {
+    if (texture->resolve_) {
+      if (texture->sample_count_ == VK_SAMPLE_COUNT_1_BIT)
+        Throw("Texture {} has an invalid sample count ({}). A resolve "
+              "attachment has been defined (\"{}\"), thus the sample count "
+              "should be greater than 1.",
+              texture->name_,
+              texture->sample_count_,
+              texture->resolve_->name_);
+      if (texture->resolve_->sample_count_ != VK_SAMPLE_COUNT_1_BIT) {
+        Throw("The resolve attachment \"{}\" of texture \"{}\" has an invalid "
+              "sample count: {}, (should be VK_SAMPLE_COUNT_1_BIT).",
+              texture->resolve_->name_,
+              texture->resolve_->name_,
+              texture->resolve_->sample_count_);
+      }
+    }
+    // if (texture->flags_ & TextureFlags::Presentable) {
+    //   presentable++;
+    // }
+  }
+  // Assert(presentable == 1,
+  //        "The render graph expects only a single texture with the Presentable
+  //        " "flag.");
+#endif
+
+  // Ensure that all resolve textures are also in writes
+  for (auto& stage : stages_) {
+    for (const auto* write : stage->writes_) {
+      if (const auto* texture = write->as<TextureResource>()) {
+        if (texture->resolve_) {
+          if (not stage->writes_.contains(texture->resolve_)) {
+            stage->writes_.insert(texture->resolve_);
+          }
+        }
+      }
+    }
+  }
+
   // TODO: the topology sorting implemented here has not been extensively
   // tested, but it works for the two stages I'm currently using...
-
-  // We make a copy of all reads to use when topology sorting to avoid
+  // Make a copy of all reads to use when topology sorting to avoid
   // modifying the real graph
   std::unordered_map<RenderStage*, std::unordered_set<const RenderResource*>>
     reads;
@@ -477,12 +554,12 @@ void RenderGraph::compile()
     VkImageAspectFlags aspect_flags;
     VkImageLayout      layout;
     switch (texture->usage_) {
-      case TextureUsage::ColorBuffer:
+      case TextureUsage::Color:
         usage_flags  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
         layout       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         break;
-      case TextureUsage::DepthStencilBuffer:
+      case TextureUsage::DepthStencil:
         usage_flags  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
         layout       = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
@@ -518,7 +595,7 @@ void RenderGraph::compile()
         auto& physical            = *g_stage_ptr;
         graphics_stage->physical_ = std::move(g_stage_ptr); // upcasts
 
-        // Deduce sample count to be used in stage
+        //// Deduce sample count to be used in stage
         // VkSampleCountFlagBits sample_count{ VK_SAMPLE_COUNT_1_BIT };
         // for (auto* resource : stage->writes_) {
         //   if (const auto* texture = resource->as<TextureResource>()) {
@@ -528,8 +605,9 @@ void RenderGraph::compile()
         //   }
         // }
         // graphics_stage->sample_count_ = sample_count;
-        //  log_->debug("Stage '{}' sample count: {}", graphics_stage->name_,
-        //              static_cast<uint32_t>(sample_count));
+        // log_->debug("Stage '{}' sample count: {}",
+        //             graphics_stage->name_,
+        //             static_cast<uint32_t>(sample_count));
 
         buildAttachments(graphics_stage, physical);
         // buildRenderPass(graphics_stage, physical);

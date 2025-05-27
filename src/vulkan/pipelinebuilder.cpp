@@ -106,12 +106,11 @@ PipelineBuilder&
 PipelineBuilder::setMultisampling(VkSampleCountFlagBits sample_count,
                                   float                 min_sample_shading)
 {
-  // multisampling defaulted to no multisampling (1 sample per pixel)
   multisampling_.rasterizationSamples = sample_count;
   multisampling_.sampleShadingEnable  = VK_TRUE;
   multisampling_.minSampleShading     = min_sample_shading;
   multisampling_.pSampleMask          = nullptr;
-  // no alpha to coverage either
+  // no alpha to coverage
   multisampling_.alphaToCoverageEnable = VK_FALSE;
   multisampling_.alphaToOneEnable      = VK_FALSE;
   return *this;

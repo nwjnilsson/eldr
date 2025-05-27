@@ -59,6 +59,10 @@ struct GpuMeshBuffers {
   VkDeviceAddress vertex_buffer_address;
 };
 
+struct VulkanEngine::Settings {
+  VkSampleCountFlagBits msaa_sample_count;
+};
+
 struct VulkanEngine::EngineData {
   wr::Instance            instance;
   wr::DebugUtilsMessenger debug_messenger;
@@ -115,7 +119,6 @@ VulkanEngine::VulkanEngine(const Window& window)
   };
 
   d_->instance = wr::Instance{ app_info, window_.instanceExtensions() };
-
   // ---------------------------------------------------------------------------
   // Create debug messenger
   // ---------------------------------------------------------------------------
@@ -162,10 +165,17 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   initDefaultData();
   buildMaterialPipelines(d_->metal_rough_material);
+
   //  ---------------------------------------------------------------------------
   //  Create render graph
   //  ---------------------------------------------------------------------------
   recreateSwapchain();
+
+  //  ---------------------------------------------------------------------------
+  //  Settings (Init defaults, some of these should be possible to change later
+  //  on using the GUI
+  //  ---------------------------------------------------------------------------
+  s_->msaa_sample_count = d_->device.findMaxMsaaSampleCount();
 }
 
 VulkanEngine::~VulkanEngine() { d_->device.waitIdle(); }
@@ -315,51 +325,53 @@ void VulkanEngine::buildBuffers()
       total_vtx_count,
       vertices.size());
 
-  d_->index_buffer  = { d_->device,
-                        "index buffer",
-                        indices,
-                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                        VMA_MEMORY_USAGE_GPU_ONLY };
-  d_->vertex_buffer = { d_->device,
-                        "vertex buffer",
-                        vertices,
-                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                          VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                        VMA_MEMORY_USAGE_GPU_ONLY,
-                        VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT };
+  vertex_buffer_->bindData(vertices);
+  index_buffer_->bindData(indices);
+
+  // d_->index_buffer  = { d_->device,
+  //                       "index buffer",
+  //                       indices,
+  //                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+  //                         VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+  //                       VMA_MEMORY_USAGE_GPU_ONLY };
+  // d_->vertex_buffer = { d_->device,
+  //                       "vertex buffer",
+  //                       vertices,
+  //                       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+  //                         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+  //                         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+  //                       VMA_MEMORY_USAGE_GPU_ONLY,
+  //                       VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT };
 }
 
 void VulkanEngine::setupRenderGraph()
 {
-  // 1 sample for back buffer, max possible sample count for color images and
-  // depth buffer.
-  // TODO: may want to be more flexible when setting sample count.
-  // Note that the sample count used for the depth and color buffer must match
-  // `.rasterizationSamples` in VkPipelineMultisampleStateCreateInfo.
-  const VkSampleCountFlagBits sample_count{
-    d_->device.findMaxMsaaSampleCount()
-  };
-
   auto*    graph{ d_->render_graph.get() };
   VkFormat color_format{ d_->swapchain.imageFormat() };
 
-  msaa_buffer_ = graph->add<TextureResource>(
-    "MSAA color buffer", TextureUsage::ColorBuffer, color_format, sample_count);
+  auto* color_buffer = graph->add<TextureResource>(
+    "Color buffer", TextureUsage::Color, color_format, s_->msaa_sample_count);
 
-  auto* depth_buffer{ graph->add<TextureResource>(
-    "depth buffer",
-    TextureUsage::DepthStencilBuffer,
-    d_->device.findDepthFormat(),
-    sample_count) };
+  auto* depth_buffer{ graph->add<TextureResource>("Depth buffer",
+                                                  TextureUsage::DepthStencil,
+                                                  d_->device.findDepthFormat(),
+                                                  s_->msaa_sample_count) };
+  color_buffer->resolvesTo(graph->backBuffer());
 
-  // index_buffer_ =
-  //   graph->add<BufferResource>("index buffer", BufferUsage::IndexBuffer);
-  // index_buffer_->bindData(indices_);
+  index_buffer_ = graph->add<BufferResource>("Index buffer",
+                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                               VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                             VMA_MEMORY_USAGE_GPU_ONLY);
+  index_buffer_->bindData(indices_);
 
-  //  vertex_buffer_ =
-  //    graph->add<BufferResource>("vertex buffer", BufferUsage::VertexBuffer);
+  // TODO: I haven't dealt with the GPU_ONLY situation here. Staging buffer and
+  // copy is needed from render graph
+  vertex_buffer_ = graph->add<BufferResource>(
+    "Vertex buffer",
+    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+      VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+    VMA_MEMORY_USAGE_GPU_ONLY);
+
   //  vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32_SFLOAT,
   //                                     offsetof(GpuVertex, pos));
   // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32_SFLOAT,
@@ -374,20 +386,21 @@ void VulkanEngine::setupRenderGraph()
   // vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32B32A32_SFLOAT,
   //                                    offsetof(GpuVertex,
   //                                    color));
-  // vertex_buffer_->bindData(vertices_);
+  vertex_buffer_->bindData(vertices_);
 
-  auto* main_stage{ graph->add<GraphicsStage>("main stage") };
+  auto* main_stage{ graph->add<GraphicsStage>("Main stage") };
   // Write order matters here (for now)
-  main_stage->writesTo(msaa_buffer_); // clear value index 0 is
+  main_stage->writesTo(color_buffer); // clear value index 0 is
                                       // clear color
   main_stage->writesTo(depth_buffer); // clear value index 1 is
                                       // depth stencil
-
+  // main_stage->writesTo(resolve_buffer);
   // main_stage->writesTo(graph->backBuffer());
   // main_stage->readsFrom(index_buffer_);
   // main_stage->readsFrom(vertex_buffer_);
   // main_stage->bindBuffer(vertex_buffer_, 0);
   main_stage->setClearsScreen(true);
+
   // main_stage->setDepthOptions(true, true);
   main_stage->setOnRecord(
     [&](const PhysicalStage& physical, const wr::CommandBuffer& cb) {
@@ -636,8 +649,8 @@ void VulkanEngine::drawFrame(const Scene& scene)
     return;
   }
 
-  const auto& cb{ device.requestCommandBuffer() };
-  frame.cmd_buf = &cb;
+  const auto& cb = device.requestCommandBuffer();
+  frame.cmd_buf  = &cb;
   d_->render_graph->render(cb, frame_index_);
 
   VkPipelineStageFlags wait_stages[]{
@@ -681,8 +694,7 @@ const wr::Device& VulkanEngine::device() const { return d_->device; }
 
 void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
 {
-  const auto& device{ d_->device };
-
+  const auto&               device{ d_->device };
   const VkPushConstantRange matrix_range{
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
     .offset     = 0,
@@ -714,7 +726,7 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
     .setPolygonMode(VK_POLYGON_MODE_FILL)
     .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
-    .setMultisamplingNone()
+    .setMultisampling(s_->msaa_sample_count)
     .disableBlending()
     .enableDepthtest(
       true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op
@@ -743,9 +755,9 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
 }
 
 } // namespace eldr::vk
-namespace std {
-size_t
-hash<eldr::vk::GpuVertex>::operator()(eldr::vk::GpuVertex const& vertex) const
+
+size_t std::hash<eldr::vk::GpuVertex>::operator()(
+  eldr::vk::GpuVertex const& vertex) const
 {
   size_t value{ hash<Point3f>()(vertex.pos) };
   value = eldr::hashCombine(value, hash<float>()(vertex.uv_x));
@@ -754,4 +766,3 @@ hash<eldr::vk::GpuVertex>::operator()(eldr::vk::GpuVertex const& vertex) const
   value = eldr::hashCombine(value, hash<Color4f>()(vertex.color));
   return value;
 };
-} // namespace std

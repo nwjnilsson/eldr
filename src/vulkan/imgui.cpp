@@ -121,19 +121,16 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                                       VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-  auto* texture = render_graph->add<TextureResource>(
-    "ImGui color buffer", TextureUsage::ColorBuffer, swapchain_.imageFormat());
-
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
   //                                      offsetof(ImDrawVert, pos));
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
   //                                      offsetof(ImDrawVert, uv));
   //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
   //                                      offsetof(ImDrawVert, col));
-  stage_ = render_graph->add<GraphicsStage>("imgui stage");
+  stage_ = render_graph->add<GraphicsStage>("ImGui stage");
   stage_->readsFrom(ibuffer_);
   stage_->readsFrom(vbuffer_);
-  stage_->writesTo(texture);
+  stage_->writesTo(render_graph->backBuffer());
 
   //  TODO: what to do with imgui pipeline?
   // stage_->bindBuffer(vertex_buffer_, 0);
