@@ -32,11 +32,11 @@ private:
   const wr::Swapchain swapchain_;
   float               scale_{ 1.0f };
 
-  BufferResource* ibuffer_{ nullptr };
-  BufferResource* vbuffer_{ nullptr };
-  GraphicsStage*  stage_{ nullptr };
-  // wr::Buffer<uint32_t>   index_buffer_;
-  // wr::Buffer<ImDrawVert> vertex_buffer_;
+  // BufferResource* ibuffer_{ nullptr };
+  // BufferResource* vbuffer_{ nullptr };
+  GraphicsStage*         stage_{ nullptr };
+  wr::Buffer<uint32_t>   index_buffer_;
+  wr::Buffer<ImDrawVert> vertex_buffer_;
 
   wr::Image               imgui_texture_;
   wr::Sampler             font_sampler_;

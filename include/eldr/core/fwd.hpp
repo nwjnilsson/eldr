@@ -4,6 +4,38 @@
 #include <glm/fwd.hpp>
 using Float = typename glm::float32_t;
 
+using FlagRep = uint32_t;
+template <typename FlagType> struct Flags {
+  constexpr explicit Flags() = default;
+  constexpr explicit Flags(FlagRep flags) : flags_(flags) {};
+  FlagRep flags_;
+};
+
+template <typename FlagType>
+constexpr Flags<FlagType> operator|(Flags<FlagType> f1, Flags<FlagType> f2)
+{
+  return Flags<FlagType>{ f1.flags_ | f2.flags_ };
+}
+template <typename FlagType>
+constexpr Flags<FlagType> operator|=(Flags<FlagType> f1, Flags<FlagType> f2)
+{
+  return f1 = f1 | f2;
+}
+template <typename FlagType>
+constexpr Flags<FlagType> operator&(Flags<FlagType> f1, Flags<FlagType> f2)
+{
+  return Flags<FlagType>{ f1.flags_ & f2.flags_ };
+}
+template <typename FlagType>
+constexpr Flags<FlagType> operator&=(Flags<FlagType> f1, Flags<FlagType> f2)
+{
+  return f1 = f1 & f2;
+}
+template <typename FlagType> constexpr bool operator!(Flags<FlagType> f)
+{
+  return not f.flags_;
+}
+
 using byte_t = std::byte;
 
 namespace eldr {
@@ -136,35 +168,36 @@ template <typename Float_> struct CoreAliases {
 #define ELDR_IMPORT_CORE_TYPES() ELDR_IMPORT_CORE_TYPES_PREFIX(Float, )
 
 #define ELDR_DECLARE_ENUM_OPERATORS_IMPL(name, neq_expr)                       \
-  constexpr uint32_t operator|(name f1, name f2)                               \
+  using name##Flags = Flags<name>;                                             \
+  constexpr name##Flags operator|(name f1, name f2)                            \
   {                                                                            \
-    return static_cast<uint32_t>(f1) | static_cast<uint32_t>(f2);              \
+    return Flags<name>{ static_cast<FlagRep>(f1) } |                           \
+           Flags<name>{ (static_cast<FlagRep>(f2)) };                          \
   }                                                                            \
-  constexpr uint32_t operator|(uint32_t f1, name f2)                           \
+  constexpr name##Flags operator|(Flags<name> f1, name f2)                     \
   {                                                                            \
-    return f1 | static_cast<uint32_t>(f2);                                     \
+    return f1 | Flags<name>{ static_cast<FlagRep>(f2) };                       \
   }                                                                            \
-  constexpr uint32_t operator|=(uint32_t f1, name f2)                          \
+  constexpr name##Flags operator&(name f1, name f2)                            \
   {                                                                            \
-    return f1 | static_cast<uint32_t>(f2);                                     \
+    return Flags<name>{ static_cast<FlagRep>(f1) } &                           \
+           Flags<name>{ static_cast<FlagRep>(f2) };                            \
   }                                                                            \
-  constexpr uint32_t operator&(name f1, name f2)                               \
+  constexpr name##Flags operator&(name##Flags f1, name f2)                     \
   {                                                                            \
-    return static_cast<uint32_t>(f1) & static_cast<uint32_t>(f2);              \
+    return f1 & Flags<name>{ static_cast<FlagRep>(f2) };                       \
   }                                                                            \
-  constexpr uint32_t operator&(uint32_t f1, name f2)                           \
+  constexpr name##Flags operator~(name f1)                                     \
   {                                                                            \
-    return f1 & static_cast<uint32_t>(f2);                                     \
+    return Flags<name>{ ~static_cast<FlagRep>(f1) };                           \
   }                                                                            \
-  constexpr uint32_t operator&=(uint32_t f1, name f2)                          \
+  constexpr name##Flags operator+(name e)                                      \
   {                                                                            \
-    return f1 & static_cast<uint32_t>(f2);                                     \
+    return Flags<name>{ static_cast<FlagRep>(e) };                             \
   }                                                                            \
-  constexpr uint32_t operator~(name f1) { return ~static_cast<uint32_t>(f1); } \
-  constexpr uint32_t operator+(name e) { return static_cast<uint32_t>(e); }    \
   template <typename UInt32> constexpr auto hasFlag(UInt32 flags, name f)      \
   {                                                                            \
-    return neq_expr(flags & static_cast<uint32_t>(f), 0u);                     \
+    return neq_expr(flags & static_cast<FlagRep>(f), 0u);                      \
   }
 
 #define ELDR_DECLARE_ENUM_OPERATORS(name)                                      \

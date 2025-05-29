@@ -19,14 +19,32 @@ namespace eldr::vk {
 //   });
 // }
 
-void RenderStage::writesTo(const RenderResource* resource)
+RenderStage& RenderStage::writesTo(const RenderResource* resource)
 {
+  if (unlikely(writes_.contains(resource))) {
+    Log(Warn,
+        "{} has already been added to the writes of \"{}\"",
+        resource->name(),
+        this->name());
+  }
   writes_.insert(resource);
+  return *this;
 }
 
-void RenderStage::readsFrom(const RenderResource* resource)
+RenderStage& RenderStage::readsFrom(const RenderResource* resource)
 {
   reads_.insert(resource);
+  return *this;
+}
+
+GraphicsStage& GraphicsStage::writesTo(const TextureResource* resource,
+                                       LoadOp                 load_op,
+                                       StoreOp                store_op)
+{
+  RenderStage::writesTo(resource);
+  load_store_ops_.insert(
+    std::make_pair(resource, std::make_pair(load_op, store_op)));
+  return *this;
 }
 
 // void TextureResource::setFlags(TextureFlags flags)
@@ -55,14 +73,6 @@ void TextureResource::resolvesTo(TextureResource* target)
 {
   Assert(target->sample_count_ == VK_SAMPLE_COUNT_1_BIT);
   resolve_ = target;
-}
-
-VkDeviceAddress BufferResource::getDeviceAddress() const
-{
-  if (const auto* buffer = physical_.get()->as<PhysicalBuffer>()) {
-    return buffer->getDeviceAddress();
-  }
-  Throw("Buffer resource has no physical buffer attached.");
 }
 
 bool RenderStage::hasReadDependency(
@@ -128,7 +138,7 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
     cb.beginRendering(render_info);
   }
 
-  std::vector<VkBuffer> vertex_buffers;
+  // std::vector<VkBuffer> vertex_buffers;
   for (const auto* resource : stage->reads_) {
     auto* buffer_resource{ resource->as<BufferResource>() };
     if (buffer_resource == nullptr)
@@ -148,23 +158,22 @@ void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
         return;
       }
 
-      if (buffer_resource->buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
-        Assert(physical_buffer->buffer_.vk());
-        cb.bindIndexBuffer(physical_buffer->buffer_);
-      }
+      // if (buffer_resource->buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+      // {
+      //   Assert(physical_buffer->buffer_.vk());
+      //   cb.bindIndexBuffer(physical_buffer->buffer_);
+      // }
 
-      // Vertex pulling style buffers will not get added. Address is instead
-      // passed as constant to shader
-      else if (buffer_resource->buffer_usage_ &
-               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
-        vertex_buffers.push_back(physical_buffer->buffer_.vk());
-      }
+      // else if (buffer_resource->buffer_usage_ &
+      //          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+      //   vertex_buffers.push_back(physical_buffer->buffer_.vk());
+      // }
     }
   }
 
-  if (not vertex_buffers.empty()) {
-    cb.bindVertexBuffers(vertex_buffers);
-  }
+  // if (not vertex_buffers.empty()) {
+  //   cb.bindVertexBuffers(vertex_buffers);
+  // }
   // cb.bindPipeline(physical.pipeline_);
   stage->on_record_(cb);
 
@@ -188,9 +197,10 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
       continue;
     }
     if (const auto* image = texture->physical_->as<PhysicalImage>()) {
-      const PhysicalImage* resolve_image;
-      VkImageView          resolve_view{ VK_NULL_HANDLE };
-      VkImageLayout        resolve_layout{ VK_IMAGE_LAYOUT_UNDEFINED };
+      const PhysicalImage*  resolve_image;
+      VkImageView           resolve_view{ VK_NULL_HANDLE };
+      VkImageLayout         resolve_layout{ VK_IMAGE_LAYOUT_UNDEFINED };
+      VkResolveModeFlagBits resolve_flags{ VK_RESOLVE_MODE_NONE };
       if (texture->resolve_ != nullptr) {
         resolve_image = texture->resolve_->physical_->as<PhysicalImage>();
         Assert(resolve_image, "Invalid resolve image. Has it been created?");
@@ -199,31 +209,32 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
                "is used.");
         resolve_view   = resolve_image->image_.view().vk();
         resolve_layout = resolve_image->image_.layout();
+        resolve_flags  = VK_RESOLVE_MODE_AVERAGE_BIT;
       }
+
+      const VkAttachmentLoadOp  load_op{ static_cast<VkAttachmentLoadOp>(
+        stage->load_store_ops_.at(texture).first) };
+      const VkAttachmentStoreOp store_op{ static_cast<VkAttachmentStoreOp>(
+        stage->load_store_ops_.at(texture).second) };
 
       VkRenderingAttachmentInfo attachment{
         .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext              = {},
         .imageView          = image->image_.view().vk(),
         .imageLayout        = image->image_.layout(),
-        .resolveMode        = resolve_view == VK_NULL_HANDLE
-                                ? VK_RESOLVE_MODE_NONE
-                                : VK_RESOLVE_MODE_AVERAGE_BIT,
+        .resolveMode        = resolve_flags,
         .resolveImageView   = resolve_view,
         .resolveImageLayout = resolve_layout,
-        .loadOp     = stage->clears_screen_ ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                            : VK_ATTACHMENT_LOAD_OP_LOAD,
-        .storeOp    = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = {}
+        .loadOp             = load_op,
+        .storeOp            = store_op,
+        .clearValue         = texture->clear_value_,
       };
-      attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+
       switch (texture->usage_) {
         case TextureUsage::Color:
-          attachment.clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
           attachments.push_back(attachment);
           break;
         case TextureUsage::DepthStencil:
-          attachment.clearValue.depthStencil = { 1.0f, 0 };
           physical.depth_attachment_ =
             std::make_unique<VkRenderingAttachmentInfo>(attachment);
           break;
@@ -527,9 +538,9 @@ void RenderGraph::compile()
   for (size_t i = 0; i < stage_stack_.size(); ++i) {
     ss << "  Stage group " << i + 1 << ": {";
     for (size_t j = 0; j < stage_stack_[i].size() - 1; ++j) {
-      ss << stage_stack_[i][j]->name() + ", ";
+      ss << stage_stack_[i][j]->name_ + ", ";
     }
-    ss << stage_stack_[i].back()->name() << "}\n";
+    ss << stage_stack_[i].back()->name_ << "}\n";
   }
   ss << "}";
   Log(Debug, "Proposed stage order:\n{}", ss.str());
@@ -543,7 +554,7 @@ void RenderGraph::compile()
 
   Log(Trace, "Allocating physical resource for texture:");
   for (auto& texture : texture_resources_) {
-    Log(Trace, "   - {}", texture->name());
+    Log(Trace, "   - {}", texture->name_);
 
     // if (texture_resource->usage_ == TextureUsage::BackBuffer) {
     //   texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
@@ -648,15 +659,15 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          physical->buffer_ =
-            wr::Buffer<byte_t>{ device_,
-                                buffer_resource->name(),
-                                data_size,
-                                buffer_resource->buffer_usage_,
-                                buffer_resource->memory_usage_ };
+          physical->buffer_ = wr::Buffer<byte_t>{
+            device_,           buffer_resource->name_,
+            data_size,         buffer_resource->buffer_usage_,
+            +HostAccess::None, MemoryUsage::PreferDevice
+          };
         }
       }
       // Upload data
+      // TODO: GPU only buffers (use staging buffer)
       physical->buffer_.uploadData(buffer_resource->data_);
       // Reset data pointer once it has been uploaded to gpu
       buffer_resource->data_ = {};

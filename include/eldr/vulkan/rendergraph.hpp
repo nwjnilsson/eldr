@@ -71,15 +71,10 @@ class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  BufferResource(std::string&&      name,
-                 VkBufferUsageFlags buffer_usage,
-                 VmaMemoryUsage     memory_usage)
-    : RenderResource(name), buffer_usage_(buffer_usage),
-      memory_usage_(memory_usage)
+  BufferResource(std::string&& name, BufferUsageFlags buffer_usage)
+    : RenderResource(name), buffer_usage_(buffer_usage)
   {
   }
-
-  [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
 
   /// @return The usage of this buffer resource
   // BufferUsage usage() const { return usage_; }
@@ -97,8 +92,7 @@ public:
   }
 
 private:
-  VkBufferUsageFlags buffer_usage_;
-  VmaMemoryUsage     memory_usage_;
+  BufferUsageFlags buffer_usage_;
   // Data to upload to the GPU on a call to render().
   std::span<const byte_t> data_;
 };
@@ -124,20 +118,33 @@ public:
   TextureResource(std::string&& name, TextureUsage usage, VkFormat format)
     : RenderResource(name), usage_(usage), format_(format)
   {
+    switch (usage_) {
+      case TextureUsage::Color:
+        clear_value_.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+        break;
+      case TextureUsage::DepthStencil:
+        clear_value_.depthStencil = { 1.0f, 0 };
+        break;
+      default:
+        Throw("Clear value for this texture usage has not been defined");
+    }
   }
-
-  // void setFlags(TextureFlags flags);
 
   void setSampleCount(VkSampleCountFlagBits sample_count);
 
+  void setClearValue(VkClearValue clear_value) { clear_value_ = clear_value; }
+
   void resolvesTo(TextureResource* target);
+
+  // void setFlags(TextureFlags flags);
 
 private:
   const TextureUsage    usage_;
   const VkFormat        format_{ VK_FORMAT_UNDEFINED };
   VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
+  VkClearValue          clear_value_;
+  TextureResource*      resolve_{ nullptr };
   // TextureFlags          flags_;
-  TextureResource* resolve_{ nullptr };
 };
 
 /// @brief A single render stage in the render graph.
@@ -153,11 +160,13 @@ public:
   RenderStage& operator=(const RenderStage&) = delete;
   RenderStage& operator=(RenderStage&&)      = delete;
 
+  [[nodiscard]] const std::string& name() const { return name_; }
+
   /// @brief Specifies that this stage writes to `resource`.
-  void writesTo(const RenderResource* resource);
+  RenderStage& writesTo(const RenderResource* resource);
 
   /// @brief Specifies that this stage reads from `resource`.
-  void readsFrom(const RenderResource* resource);
+  RenderStage& readsFrom(const RenderResource* resource);
 
   /// @brief Binds a descriptor set layout to this render stage.
   /// @note This function will be removed in the near future, as we are aiming
@@ -175,16 +184,16 @@ public:
   //   push_constant_ranges_.push_back(range);
   // }
 
-  [[nodiscard]] const std::string& name() const { return name_; }
-
   /// @brief Specifies a function that will be called during command buffer
   /// recording for this stage
   /// @details This function can be used to specify other vulkan commands during
   /// command buffer recording. The most common use for this is for draw
   /// commands.
-  void setOnRecord(std::function<void(const wr::CommandBuffer&)> on_record)
+  RenderStage&
+  setOnRecord(std::function<void(const wr::CommandBuffer&)> on_record)
   {
     on_record_ = std::move(on_record);
+    return *this;
   }
 
 private:
@@ -217,47 +226,14 @@ public:
   GraphicsStage& operator=(const GraphicsStage&) = delete;
   GraphicsStage& operator=(GraphicsStage&&)      = delete;
 
-  /// @brief Specifies that this stage should clear the screen before rendering.
-  void setClearsScreen(bool clears_screen) { clears_screen_ = clears_screen; }
-
-  /// @brief Specifies the depth options for this stage.
-  /// @param depth_test Whether depth testing should be performed
-  /// @param depth_write Whether depth writing should be performed
-  // void setDepthOptions(bool depth_test, bool depth_write)
-  // {
-  //   depth_test_  = depth_test;
-  //   depth_write_ = depth_write;
-  // }
-
-  /// @brief Set the blend attachment for this stage.
-  /// @param blend_attachment The blend attachment
-  // void setBlendAttachment(VkPipelineColorBlendAttachmentState
-  // blend_attachment)
-  // {
-  //   blend_attachment_ = blend_attachment;
-  // }
-
-  // void setCullMode(VkCullModeFlagBits cull_mode) { cull_mode_ = cull_mode; }
-
-  /// @brief Specifies that `buffer` should map to `binding` in the shaders of
-  /// this stage.
-  // void bindBuffer(const BufferResource* buffer, std::uint32_t binding);
-
-  /// @brief Specifies that `shader` should be used during the pipeline of this
-  /// stage.
-  /// @note Binding two shaders of same type (e.g. two vertex shaders) is
-  /// undefined behaviour.
-  // void usesShader(const wr::Shader& shader);
+  /// @brief Specifies that this stage writes to `resource`.
+  GraphicsStage& writesTo(const TextureResource* resource,
+                          LoadOp                 load_op,
+                          StoreOp                store_op = StoreOp::Store);
 
 private:
-  bool clears_screen_{ false };
-  // bool                                depth_test_{ false };
-  // bool                                depth_write_{ false };
-  // VkSampleCountFlagBits sample_count_{ VK_SAMPLE_COUNT_1_BIT };
-  // VkPipelineColorBlendAttachmentState blend_attachment_{};
-  // VkCullModeFlagBits                  cull_mode_{ VK_CULL_MODE_BACK_BIT };
-  // std::unordered_map<const BufferResource*, std::uint32_t> buffer_bindings_;
-  // std::vector<VkPipelineShaderStageCreateInfo>             shaders_;
+  using LoadStoreOps = std::pair<LoadOp, StoreOp>;
+  std::unordered_map<const TextureResource*, LoadStoreOps> load_store_ops_;
 };
 
 class PhysicalResource : public RenderGraphObject {
@@ -287,13 +263,8 @@ public:
   PhysicalBuffer& operator=(const PhysicalBuffer&) = delete;
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
-  [[nodiscard]] VkDeviceAddress getDeviceAddress() const
-  {
-    return buffer_.getDeviceAddress();
-  }
-
 private:
-  // Buffer of any kind of data. Can be an index buffer, vertex buffer or other
+  // Buffer of any kind of data
   wr::Buffer<byte_t> buffer_;
 };
 
@@ -337,17 +308,6 @@ public:
 
   PhysicalStage& operator=(const PhysicalStage&) = delete;
   PhysicalStage& operator=(PhysicalStage&&)      = delete;
-
-  /// @brief Retrieve the pipeline layout of this physical stage.
-  // TODO: This can be removed once descriptors are properly implemented in the
-  // render graph.
-  //   [[nodiscard]] VkPipelineLayout pipelineLayout() const
-  //   {
-  //     return pipeline_.layout();
-  //   }
-
-  // private:
-  //   wr::Pipeline pipeline_;
 };
 
 class PhysicalGraphicsStage : public PhysicalStage {

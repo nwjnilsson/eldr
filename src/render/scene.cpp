@@ -134,7 +134,14 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   namespace fg = fastgltf;
   Log(Trace, "Loading glTF: {}", file_path.c_str());
 
-  auto scene = std::make_shared<Scene>();
+  auto data{ fg::GltfDataBuffer::FromPath(file_path) };
+  if (auto error = data.error(); error != fg::Error::None) {
+    Log(Error,
+        "Failed to create GLTF data buffer: {} - {}",
+        fg::getErrorName(error),
+        fg::getErrorMessage(error));
+    return std::nullopt;
+  }
 
   fg::Parser     parser{};
   constexpr auto gltf_options{ fg::Options::DontRequireValidAssetMember |
@@ -142,21 +149,12 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
                                fg::Options::LoadExternalBuffers };
   // fg::Options::LoadExternalImages;
 
-  auto data{ fg::GltfDataBuffer::FromPath(file_path) };
-  if (auto error = data.error(); error != fg::Error::None) {
-    Log(Error,
-        "Failed to create GLTF data buffer: {} - {}",
-        fg::getErrorName(error),
-        fg::getErrorMessage(error));
-    return {};
-  }
-
   fg::Asset gltf;
   auto      type = fg::determineGltfFileType(data.get());
   if (type == fg::GltfType::glTF) {
-    auto load{ parser.loadGltf(
-      data.get(), file_path.parent_path(), gltf_options) };
-    auto error{ load.error() };
+    auto load =
+      parser.loadGltf(data.get(), file_path.parent_path(), gltf_options);
+    auto error = load.error();
     if (error == fg::Error::None) {
       gltf = std::move(load.get());
     }
@@ -165,13 +163,13 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
           "Failed to load glTF: {} - {}",
           fg::getErrorName(error),
           fg::getErrorMessage(error));
-      return {};
+      return std::nullopt;
     }
   }
   else if (type == fg::GltfType::GLB) {
-    auto load{ parser.loadGltfBinary(
-      data.get(), file_path.parent_path(), gltf_options) };
-    auto error{ load.error() };
+    auto load =
+      parser.loadGltfBinary(data.get(), file_path.parent_path(), gltf_options);
+    const fg::Error error{ load.error() };
     if (error != fg::Error::None) {
       gltf = std::move(load.get());
     }
@@ -180,14 +178,15 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
           "Failed to load glTF: {} - {}",
           fg::getErrorName(error),
           fg::getErrorMessage(error));
-      return {};
+      return std::nullopt;
     }
   }
   else {
     Log(Error, "Failed to determine glTF container");
-    return {};
+    return std::nullopt;
   }
 
+  auto scene           = std::make_shared<Scene>();
   scene->vk_scene_data = std::make_shared<vk::SceneData>();
   // Just an estimate of what will be needed
   const std::vector<vk::DescriptorAllocator::PoolSizeRatio> sizes{
@@ -203,8 +202,8 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
     engine.device(),
     "Material buffer",
     gltf.materials.size(),
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    VMA_MEMORY_USAGE_CPU_TO_GPU,
+    +vk::BufferUsage::Uniform,
+    +vk::HostAccess::Sequential,
   };
 
   // load samplers
@@ -274,7 +273,11 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
     // build material
     auto material = std::make_shared<Material>();
     materials.push_back(material);
-    scene->materials.insert(std::make_pair(mat.name, material));
+    const auto res =
+      scene->materials.insert(std::make_pair(mat.name, material));
+    if (unlikely(not res.second)) {
+      Log(Warn, "Scene contains duplicate material name ({}).", mat.name);
+    }
     material->data = engine.metalRoughMaterial().writeMaterial(
       engine.device(),
       pass_type,
@@ -283,14 +286,16 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 
     data_index++;
   }
+  if (unlikely(materials.empty())) {
+    Log(Error, "glTF file contains no materials, at least one is required");
+    return std::nullopt;
+  }
   scene->vk_scene_data->material_buffer.uploadData(scene_material_constants);
 
   //----------------------------------------------------------------------------
   // Load meshes
   //----------------------------------------------------------------------------
   std::vector<std::shared_ptr<Mesh>> meshes;
-  Log(Trace, "File contains {} meshes", gltf.meshes.size());
-
   for (fg::Mesh& mesh : gltf.meshes) {
     std::vector<uint32_t> indices; // currently not giving this to the mesh,
                                    // TODO: might be needed
@@ -372,7 +377,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
         surface.material = materials[p.materialIndex.value()];
       }
       else {
-        Log(Warn, "Primitive material missing!");
+        Log(Warn, "Missing primitive material index, using index 0 instead.");
         surface.material = materials[0];
       }
       surfaces.push_back(surface);
@@ -392,7 +397,11 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
                                           std::move(normals),
                                           std::move(surfaces));
     meshes.emplace_back(newmesh);
-    scene->meshes.insert(std::make_pair(mesh.name, std::move(newmesh)));
+    const auto res =
+      scene->meshes.insert(std::make_pair(mesh.name, std::move(newmesh)));
+    if (unlikely(not res.second)) {
+      Log(Warn, "Scene contains duplicate mesh name ({}).", mesh.name);
+    }
   }
 
   //----------------------------------------------------------------------------
@@ -410,7 +419,10 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       scene_node = std::make_shared<SceneNode>();
     }
     nodes.push_back(scene_node);
-    scene->nodes.insert(std::make_pair(node.name, scene_node));
+    const auto res = scene->nodes.insert(std::make_pair(node.name, scene_node));
+    if (unlikely(not res.second)) {
+      Log(Warn, "Scene contains duplicate node name ({}).", node.name);
+    }
 
     std::visit(fg::visitor{ [&](fg::math::fmat4x4 matrix) {
                              for (size_t i = 0; i < matrix.rows(); ++i) {
@@ -460,7 +472,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
     }
   }
   Log(Trace,
-      "Successfully loaded {} meshes, {} materials and {} nodes",
+      "Loaded {} meshes, {} materials and {} nodes",
       scene->meshes.size(),
       scene->materials.size(),
       scene->nodes.size());

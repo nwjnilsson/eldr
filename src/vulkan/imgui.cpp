@@ -98,7 +98,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       device_,
       Bitmap{ "ImGui font texture",
               Bitmap::PixelFormat::RGBA,
-              Struct::Type::UInt8,
+              StructType::UInt8,
               { font_texture_width, font_texture_height },
               font_texture_channels,
               {},
@@ -112,33 +112,8 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                VK_SAMPLER_MIPMAP_MODE_LINEAR,
                                font_mip_levels };
 
-  ibuffer_ = render_graph->add<BufferResource>("ImGui index buffer",
-                                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                               VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-  vbuffer_ =
-    render_graph->add<BufferResource>("ImGui vertex buffer",
-                                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                      VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
-  //                                      offsetof(ImDrawVert, pos));
-  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R32G32_SFLOAT,
-  //                                      offsetof(ImDrawVert, uv));
-  //   vertex_buffer_->addVertexAttribute(VK_FORMAT_R8G8B8A8_UNORM,
-  //                                      offsetof(ImDrawVert, col));
   stage_ = render_graph->add<GraphicsStage>("ImGui stage");
-  stage_->readsFrom(ibuffer_);
-  stage_->readsFrom(vbuffer_);
-  stage_->writesTo(render_graph->backBuffer());
-
-  //  TODO: what to do with imgui pipeline?
-  // stage_->bindBuffer(vertex_buffer_, 0);
-  //   stage_->usesShader(vertex_shader_);
-  //   stage_->usesShader(fragment_shader_);
-  //   stage_->setCullMode(VK_CULL_MODE_NONE);
-
-  // stage_->addDescriptorLayout(set_layout_);
+  stage_->writesTo(render_graph->backBuffer(), LoadOp::Load, StoreOp::Store);
 
   buildPipeline();
 
@@ -226,15 +201,16 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       index_data.push_back(cmd_list->IdxBuffer.Data[j]);
     }
   }
-  ibuffer_->bindData(index_data);
   // TODO: decide whether to keep this or use staging buffer and GPU_ONLY
   // memory
-  // if (index_buffer_.size() <= index_data.size())
-  //   index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
-  // else
-  //   index_buffer_ = { device_, "imgui index buffer", index_data,
-  //                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-  //                     VMA_MEMORY_USAGE_CPU_TO_GPU };
+  if (index_buffer_.size() <= index_data.size())
+    index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
+  else
+    index_buffer_ = { device_,
+                      "imgui index buffer",
+                      index_data,
+                      +BufferUsage::Index,
+                      +HostAccess::Sequential };
 
   std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
@@ -243,23 +219,24 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  vbuffer_->bindData(vertex_data);
-  // if (vertex_buffer_.size() <= vertex_data.size())
-  //   vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
-  // else {
-  //   vertex_buffer_ = { device_, "imgui vertex buffer", vertex_data,
-  //                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-  //                      VMA_MEMORY_USAGE_CPU_TO_GPU };
-  // }
+  if (vertex_buffer_.size() <= vertex_data.size())
+    vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
+  else {
+    vertex_buffer_ = { device_,
+                       "ImGui vertex buffer",
+                       vertex_data,
+                       +BufferUsage::Vertex,
+                       +HostAccess::Sequential };
+  }
 
   stage_->setOnRecord([&](const wr::CommandBuffer& cb) {
     ImDrawData* imgui_draw_data = ImGui::GetDrawData();
     if (imgui_draw_data == nullptr) {
       return;
     }
-    // cb.bindIndexBuffer(index_buffer_);
-    // VkBuffer vbuffers[]{ vertex_buffer_.get() };
-    // cb.bindVertexBuffers(vbuffers);
+    cb.bindIndexBuffer(index_buffer_);
+    VkBuffer vbuffers[]{ vertex_buffer_.vk() };
+    cb.bindVertexBuffers(vbuffers);
 
     const ImGuiIO& io = ImGui::GetIO();
     push_const_block_.scale =

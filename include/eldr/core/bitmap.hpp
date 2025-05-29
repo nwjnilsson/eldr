@@ -48,7 +48,7 @@ public:
 
   Bitmap(std::string_view                name,
          PixelFormat                     px_format,
-         Struct::Type                    component_format,
+         StructType                      component_format,
          Vec2u                           size,
          size_t                          channel_count,
          const std::vector<std::string>& channel_names = {},
@@ -71,7 +71,7 @@ public:
   PixelFormat pixelFormat() const { return pixel_format_; }
 
   /// Return the component format of this bitmap
-  Struct::Type componentFormat() const { return component_format_; }
+  StructType componentFormat() const { return component_format_; }
 
   /// Return a pointer to the underlying data
   byte* data() { return data_.get(); }
@@ -163,7 +163,7 @@ protected:
 private:
   std::string             name_{ "undefined" };
   PixelFormat             pixel_format_;
-  Struct::Type            component_format_;
+  StructType              component_format_;
   Vec2u                   size_{};
   std::unique_ptr<Struct> struct_{};
   bool                    srgb_gamma_{ false };

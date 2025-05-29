@@ -95,9 +95,6 @@ private:
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
 
-  BufferResource* vertex_buffer_;
-  BufferResource* index_buffer_;
-
   std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
   // Hide vulkan implementation details to avoid pulling in every single vulkan

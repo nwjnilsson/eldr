@@ -22,7 +22,7 @@ namespace eldr {
 
 Bitmap::Bitmap(std::string_view                name,
                PixelFormat                     px_format,
-               Struct::Type                    component_format,
+               StructType                      component_format,
                Vec2u                           size,
                size_t                          channel_count,
                const std::vector<std::string>& channel_names,
@@ -31,7 +31,7 @@ Bitmap::Bitmap(std::string_view                name,
     size_(size), data_(data), owns_data_(false)
 
 {
-  if (component_format_ == Struct::Type::UInt8)
+  if (component_format_ == StructType::UInt8)
     srgb_gamma_ = true;
   else
     srgb_gamma_ = false;
@@ -129,19 +129,19 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
 
   struct_ = std::make_unique<Struct>();
   for (auto ch : channels) {
-    bool     is_alpha = ch == "A" && pixel_format_ != PixelFormat::MultiChannel;
-    uint32_t flags    = static_cast<uint32_t>(Struct::Flags::Empty);
+    bool is_alpha = ch == "A" && pixel_format_ != PixelFormat::MultiChannel;
+    Flags<StructProperty> flags{ +StructProperty::Empty };
     if (!is_alpha && ch != "W" && srgb_gamma_)
-      flags |= Struct::Flags::Gamma;
+      flags |= +StructProperty::Gamma;
     if (!is_alpha && ch != "W" && premultiplied_alpha_)
-      flags |= Struct::Flags::PremultipliedAlpha;
+      flags |= +StructProperty::PremultipliedAlpha;
     if (is_alpha)
-      flags |= Struct::Flags::Alpha;
+      flags |= +StructProperty::Alpha;
     if (ch == "W")
-      flags |= Struct::Flags::Weight;
+      flags |= +StructProperty::Weight;
     if (Struct::isInteger(component_format_))
-      flags |= Struct::Flags::Normalized;
-    struct_->append(ch, component_format_, flags);
+      flags |= +StructProperty::Normalized;
+    struct_->append(ch, component_format_, flags.flags_);
   }
 }
 
@@ -151,29 +151,29 @@ size_t Bitmap::bytesPerPixel() const
 {
   size_t result;
   switch (component_format_) {
-    case Struct::Type::Int8:
-    case Struct::Type::UInt8:
+    case StructType::Int8:
+    case StructType::UInt8:
       result = 1;
       break;
-    case Struct::Type::Int16:
-    case Struct::Type::UInt16:
+    case StructType::Int16:
+    case StructType::UInt16:
       result = 2;
       break;
-    case Struct::Type::Int32:
-    case Struct::Type::UInt32:
+    case StructType::Int32:
+    case StructType::UInt32:
       result = 4;
       break;
-    case Struct::Type::Int64:
-    case Struct::Type::UInt64:
+    case StructType::Int64:
+    case StructType::UInt64:
       result = 8;
       break;
-    case Struct::Type::Float16:
+    case StructType::Float16:
       result = 2;
       break;
-    case Struct::Type::Float32:
+    case StructType::Float32:
       result = 4;
       break;
-    case Struct::Type::Float64:
+    case StructType::Float64:
       result = 8;
       break;
     default:
@@ -384,7 +384,7 @@ void Bitmap::readJpeg(Stream* stream)
   jpeg_start_decompress(&cinfo);
 
   size_                = Vec2u(cinfo.output_width, cinfo.output_height);
-  component_format_    = Struct::Type::UInt8;
+  component_format_    = StructType::UInt8;
   srgb_gamma_          = true;
   premultiplied_alpha_ = false;
 
@@ -454,9 +454,9 @@ void Bitmap::write_jpeg(Stream* stream, int quality) const
   else
     Throw("write_jpeg(): Unsupported pixel format!");
 
-  if (m_component_format != Struct::Type::UInt8)
+  if (m_component_format != StructType::UInt8)
     Throw("write_jpeg(): Unsupported component format %s, expected %s",
-          m_component_format, Struct::Type::UInt8);
+          m_component_format, StructType::UInt8);
 
   memset(&jbuf, 0, sizeof(jbuf_out_t));
   cinfo.err       = jpeg_std_error(&jerr);
@@ -622,10 +622,10 @@ void Bitmap::readPng(Stream* stream)
 
   switch (bit_depth) {
     case 8:
-      component_format_ = Struct::Type::UInt8;
+      component_format_ = StructType::UInt8;
       break;
     case 16:
-      component_format_ = Struct::Type::UInt16;
+      component_format_ = StructType::UInt16;
       break;
     default:
       Throw("Unsupported bit depth: %i", bit_depth);
@@ -712,7 +712,7 @@ void Bitmap::rgbToRgba()
 Bitmap Bitmap::createCheckerboard()
 {
   constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
-  constexpr auto   component_format{ Struct::Type::UInt8 };
+  constexpr auto   component_format{ StructType::UInt8 };
   constexpr Vec2f  size{ 512, 512 };
   constexpr size_t channel_count{ 4 };
   // 8x8 checkerboard pattern of squares.
@@ -750,7 +750,7 @@ Bitmap Bitmap::createCheckerboard()
 Bitmap Bitmap::createDefaultWhite()
 {
   constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
-  constexpr auto   component_format{ Struct::Type::UInt8 };
+  constexpr auto   component_format{ StructType::UInt8 };
   constexpr Vec2f  size{ 512, 512 };
   constexpr size_t channel_count{ 4 };
 

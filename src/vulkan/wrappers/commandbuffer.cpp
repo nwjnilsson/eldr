@@ -59,7 +59,7 @@ const CommandBuffer& CommandBuffer::pipelineBarrier(
   const std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const
 {
   // One barrier must be set at least
-  assert(!(img_mem_barriers.empty() && mem_barriers.empty()) &&
+  Assert(!(img_mem_barriers.empty() && mem_barriers.empty()) &&
          buf_mem_barriers.empty());
 
   VkDependencyInfo dep_info{
@@ -251,11 +251,12 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
   return *this;
 }
 
-const CommandBuffer& CommandBuffer::bindIndexBuffer(const Buffer<byte>& buffer,
-                                                    VkIndexType  index_type,
-                                                    VkDeviceSize offset) const
+const CommandBuffer&
+CommandBuffer::bindIndexBuffer(const Buffer<uint32_t>& buffer,
+                               VkIndexType             index_type,
+                               VkDeviceSize            offset) const
 {
-  assert(buffer.vk());
+  Assert(buffer.vk());
   vkCmdBindIndexBuffer(d_->command_buffer_, buffer.vk(), offset, index_type);
   return *this;
 }
@@ -267,9 +268,9 @@ CommandBuffer::bindVertexBuffers(std::span<const VkBuffer>     buffers,
 {
   std::vector<VkDeviceSize> zero_offsets(buffers.size(), 0);
   const VkDeviceSize*       p_offsets{ zero_offsets.data() };
-  assert(!buffers.empty());
+  Assert(!buffers.empty());
   if (!offsets.empty()) {
-    assert(buffers.size() == offsets.size());
+    Assert(buffers.size() == offsets.size());
     p_offsets = offsets.data();
   }
   vkCmdBindVertexBuffers(d_->command_buffer_,
@@ -287,8 +288,8 @@ CommandBuffer::bindDescriptorSets(std::span<const VkDescriptorSet> desc_sets,
                                   uint32_t                         first_set,
                                   std::span<const uint32_t> dyn_offsets) const
 {
-  assert(layout);
-  assert(!desc_sets.empty());
+  Assert(layout);
+  Assert(!desc_sets.empty());
   vkCmdBindDescriptorSets(d_->command_buffer_,
                           bind_point,
                           layout,
@@ -304,7 +305,7 @@ const CommandBuffer&
 CommandBuffer::bindPipeline(const Pipeline&     pipeline,
                             VkPipelineBindPoint bind_point) const
 {
-  assert(pipeline.vk());
+  Assert(pipeline.vk());
   vkCmdBindPipeline(d_->command_buffer_, bind_point, pipeline.vk());
   return *this;
 }
@@ -478,7 +479,7 @@ CommandBuffer::copyBufferToImage(const Buffer<T>&         buffer,
 }
 
 const CommandBuffer&
-CommandBuffer::copyDataToImage(std::span<const byte>    data,
+CommandBuffer::copyDataToImage(std::span<const byte_t>  data,
                                Image&                   image,
                                const VkBufferImageCopy& copy_region) const
 {
@@ -495,9 +496,9 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
                                                   const void*        data,
                                                   VkDeviceSize offset) const
 {
-  assert(layout);
-  assert(size > 0);
-  assert(data);
+  Assert(layout);
+  Assert(size > 0);
+  Assert(data);
   vkCmdPushConstants(d_->command_buffer_,
                      layout,
                      stage,
@@ -507,15 +508,15 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const Buffer<std::byte>&
-CommandBuffer::createStagingBuffer(std::string_view      name,
-                                   std::span<const byte> data) const
+const Buffer<byte_t>&
+CommandBuffer::createStagingBuffer(const std::string&      name,
+                                   std::span<const byte_t> data) const
 {
   staging_buffers_.emplace_back(d_->device_,
                                 name,
                                 data,
-                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                VMA_MEMORY_USAGE_CPU_ONLY);
+                                +BufferUsage::TransferSrc,
+                                +HostAccess::Sequential);
   return staging_buffers_.back();
 }
 

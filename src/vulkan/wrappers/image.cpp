@@ -20,9 +20,9 @@ ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
 
   VkFormat format;
   // Pixel format should be RGBA at this point
-  assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
+  Assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
   switch (bitmap.componentFormat()) {
-    case Struct::Type::UInt8:
+    case StructType::UInt8:
       if (bitmap.srgbGamma())
         format = VK_FORMAT_R8G8B8A8_SRGB;
       else
@@ -64,7 +64,7 @@ public:
 Image::ImageImpl::ImageImpl(const Device&                  device,
                             const VkImageCreateInfo&       image_ci,
                             const VmaAllocationCreateInfo& alloc_ci)
-  : GpuResourceAllocation(device)
+  : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{})
 {
   if (const VkResult result{ vmaCreateImage(device_.allocator(),
                                             &image_ci,

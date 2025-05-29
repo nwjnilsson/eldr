@@ -20,17 +20,22 @@ private:
     BufferImpl(const Device&                  device,
                const VkBufferCreateInfo&      buffer_ci,
                const VmaAllocationCreateInfo& alloc_ci)
-      : GpuResourceAllocation(device)
+      : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{})
     {
-      if (const VkResult result{ vmaCreateBuffer(device_.allocator(),
-                                                 &buffer_ci,
-                                                 &alloc_ci,
-                                                 &buffer_,
-                                                 &allocation_,
-                                                 &alloc_info_) };
-          result != VK_SUCCESS)
-        Throw("vmaCreateBuffer(): {}", result);
+      const VkResult result{ vmaCreateBuffer(device_.allocator(),
+                                             &buffer_ci,
+                                             &alloc_ci,
+                                             &buffer_,
+                                             &allocation_,
+                                             &alloc_info_) };
+      if (result != VK_SUCCESS) {
+        Throw("Failed to create buffer ({})", result);
+      }
+      VkMemoryPropertyFlags flags;
+      vmaGetAllocationMemoryProperties(device.allocator(), allocation_, &flags);
+      mem_flags_ = static_cast<MemoryPropertyFlags>(flags);
     }
+
     ~BufferImpl()
     {
       vmaDestroyBuffer(device_.allocator(), buffer_, allocation_);
@@ -41,30 +46,29 @@ private:
 
 public:
   Buffer() = default;
-  Buffer(
-    const Device&            device,
-    std::string_view         name,
-    size_t                   element_count,
-    VkBufferUsageFlags       buffer_usage,
-    VmaMemoryUsage           memory_usage,
-    VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
+  Buffer(const Device&      device,
+         const std::string& name,
+         size_t             element_count,
+         BufferUsageFlags   buffer_usage,
+         HostAccessFlags    host_access,
+         MemoryUsage        mem_usage = MemoryUsage::Auto)
     : size_(element_count), size_bytes_(size_ * sizeof(T))
   {
-    assert(size_ > 0);
+    Assert(size_ > 0);
     const VkBufferCreateInfo buffer_ci{
       .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .pNext                 = {},
       .flags                 = {},
       .size                  = size_bytes_,
-      .usage                 = buffer_usage,
+      .usage                 = buffer_usage.flags_,
       .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = {},
       .pQueueFamilyIndices   = {},
     };
 
     const VmaAllocationCreateInfo alloc_ci{
-      .flags          = alloc_flags,
-      .usage          = memory_usage,
+      .flags          = host_access.flags_,
+      .usage          = static_cast<VmaMemoryUsage>(mem_usage),
       .requiredFlags  = {},
       .preferredFlags = {},
       .memoryTypeBits = {},
@@ -73,26 +77,23 @@ public:
       .priority       = {},
     };
     d_ = std::make_shared<BufferImpl>(device, buffer_ci, alloc_ci);
-    vmaSetAllocationName(device.allocator(),
-                         d_->allocation_,
-                         fmt::format("{} allocation", name).c_str());
+    vmaSetAllocationName(device.allocator(), d_->allocation_, name.c_str());
   }
 
-  Buffer(
-    const Device&            device,
-    std::string_view         name,
-    std::span<const T>       data,
-    VkBufferUsageFlags       buffer_usage,
-    VmaMemoryUsage           memory_usage,
-    VmaAllocationCreateFlags alloc_flags = VMA_ALLOCATION_CREATE_MAPPED_BIT)
-    : Buffer(device, name, data.size(), buffer_usage, memory_usage, alloc_flags)
+  Buffer(const Device&      device,
+         const std::string& name,
+         std::span<const T> data,
+         BufferUsageFlags   buffer_usage,
+         HostAccessFlags    host_access,
+         MemoryUsage        mem_usage = MemoryUsage::Auto)
+    : Buffer(device, name, data.size(), buffer_usage, host_access, mem_usage)
   {
     uploadData(data);
   }
 
   // VkDeviceSize    size() const { return size_; }
-  [[nodiscard]] const std::string& name() const { return name_; }
-  [[nodiscard]] VkBuffer           vk() const { return d_->buffer_; }
+  [[nodiscard]] const char* name() const { return d_->alloc_info_.pName; }
+  [[nodiscard]] VkBuffer    vk() const { return d_->buffer_; }
   /// @return size_t The number of elements in the buffer.
   [[nodiscard]] size_t size() const { return size_; }
 
@@ -122,18 +123,30 @@ public:
   /// @param data The span of data to upload to the GPU buffer.
   void uploadData(std::span<const T> data) const
   {
-    assert(d_->alloc_info_.pMappedData != nullptr);
-    assert(data.size() > 0);
-    assert(data.size_bytes() <= size_bytes_);
-    std::memcpy(d_->alloc_info_.pMappedData, data.data(), data.size_bytes());
+    Assert(data.size() > 0);
+    Assert(data.size_bytes() <= size_bytes_);
+
+    if (not(d_->mem_flags_ & MemoryProperty::HostVisible)) {
+      Throw("GPU only buffer uploads not implemented yet");
+    }
+
+    constexpr MemoryProperty valid_buffer_flags{ MemoryProperty::HostCoherent };
+
+    Assert(d_->mem_flags_ & valid_buffer_flags);
+    void* dst{ nullptr };
+    vmaMapMemory(d_->device_.allocator(), d_->allocation_, &dst);
+    Assert(dst);
+    std::memcpy(dst, data.data(), data.size_bytes());
+    vmaUnmapMemory(d_->device_.allocator(), d_->allocation_);
+
+    // if not HOST_COHERENT, a flush is needed using vmaInvalidateAllocation() /
+    // vmaFlushAllocation()
   }
   // void copyFromBuffer(const Buffer&, const CommandPool&);
 
 private:
-  std::string                 name_;
   std::shared_ptr<BufferImpl> d_;
   size_t                      size_{ 0 };
-  // TODO: not sure if still needed
-  VkDeviceSize size_bytes_{ 0 };
+  size_t                      size_bytes_{ 0 };
 };
 } // namespace eldr::vk::wr
