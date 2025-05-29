@@ -1,5 +1,4 @@
 #pragma once
-#include "eldr/core/fwd.hpp"
 #include <eldr/vulkan/fwd.hpp>
 //------------------------------------------------------------------------------
 // vk_mem_alloc.h gives rise to a lot of warnings about unused
@@ -39,21 +38,10 @@ enum class MemoryUsage {
   PreferHost   = VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
 };
 
-enum class LoadOp {
-  Load     = VK_ATTACHMENT_LOAD_OP_LOAD,
-  Clear    = VK_ATTACHMENT_LOAD_OP_CLEAR,
-  DontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-};
-
-enum class StoreOp {
-  Store    = VK_ATTACHMENT_STORE_OP_STORE,
-  DontCare = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-};
-
 //------------------------------------------------------------------------------
 // Flags
 //------------------------------------------------------------------------------
-enum class HostAccess : FlagRep {
+enum class HostAccess : Flags {
   None          = 0x00,
   Sequential    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
   Random        = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
@@ -62,7 +50,7 @@ enum class HostAccess : FlagRep {
 };
 ELDR_DECLARE_ENUM_OPERATORS(HostAccess)
 
-enum class BufferUsage : FlagRep {
+enum class BufferUsage : Flags {
   TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
   TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
   // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
@@ -76,7 +64,7 @@ enum class BufferUsage : FlagRep {
 };
 ELDR_DECLARE_ENUM_OPERATORS(BufferUsage)
 
-enum class MemoryProperty : FlagRep {
+enum class MemoryProperty : Flags {
   DeviceLocal  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
   HostVisible  = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
   HostCoherent = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

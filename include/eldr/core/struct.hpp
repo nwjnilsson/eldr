@@ -33,7 +33,7 @@ enum class StructType : uint32_t {
 
 enum class ByteOrder { LittleEndian, BigEndian, HostByteOrder };
 /// Field-specific flags
-enum class StructProperty : uint32_t {
+enum class StructProperty : Flags {
   /// No flags set (default value)
   Empty = 0x00,
 
@@ -80,6 +80,7 @@ enum class StructProperty : uint32_t {
    */
   Alpha = 0x40
 };
+ELDR_DECLARE_ENUM_OPERATORS(StructProperty)
 
 class Struct {
 public:
@@ -98,7 +99,7 @@ public:
     size_t offset;
 
     /// Additional flags
-    uint32_t flags;
+    StructPropertyFlags flags;
 
     /// Default value
     double default_;
@@ -150,10 +151,10 @@ public:
 
   /// Append a new field to the \c Struct; determines size and offset
   /// automatically
-  Struct& append(const std::string& name,
-                 StructType         type,
-                 uint32_t flags = static_cast<uint32_t>(StructProperty::Empty),
-                 double   default_ = 0.0);
+  Struct& append(const std::string&  name,
+                 StructType          type,
+                 StructPropertyFlags flags    = +StructProperty::Empty,
+                 double              default_ = 0.0);
 
   /// Append a new field to the \c Struct (manual version)
   Struct& append(Field field)
@@ -263,8 +264,6 @@ protected:
   bool               pack_;
   ByteOrder          byte_order_;
 };
-
-ELDR_DECLARE_ENUM_OPERATORS(StructProperty)
 
 extern std::ostream& operator<<(std::ostream& os, const StructType& type);
 

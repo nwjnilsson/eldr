@@ -18,7 +18,7 @@ size_t hash(const T& t)
   return std::hash<T>()(t);
 }
 
-template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
 size_t hash(const T& t)
 {
   return hash(typename std::underlying_type<T>::type(t));

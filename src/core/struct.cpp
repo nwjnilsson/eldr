@@ -54,10 +54,10 @@ bool Struct::hasField(const std::string& name) const
   return false;
 }
 
-Struct& Struct::append(const std::string& name,
-                       StructType         type,
-                       uint32_t           flags,
-                       double             default_)
+Struct& Struct::append(const std::string&  name,
+                       StructType          type,
+                       StructPropertyFlags flags,
+                       double              default_)
 {
   Field f;
   f.name     = name;

@@ -130,18 +130,18 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
   struct_ = std::make_unique<Struct>();
   for (auto ch : channels) {
     bool is_alpha = ch == "A" && pixel_format_ != PixelFormat::MultiChannel;
-    Flags<StructProperty> flags{ +StructProperty::Empty };
+    StructPropertyFlags flags{ StructProperty::Empty };
     if (!is_alpha && ch != "W" && srgb_gamma_)
-      flags |= +StructProperty::Gamma;
+      flags |= StructProperty::Gamma;
     if (!is_alpha && ch != "W" && premultiplied_alpha_)
-      flags |= +StructProperty::PremultipliedAlpha;
+      flags |= StructProperty::PremultipliedAlpha;
     if (is_alpha)
-      flags |= +StructProperty::Alpha;
+      flags |= StructProperty::Alpha;
     if (ch == "W")
-      flags |= +StructProperty::Weight;
+      flags |= StructProperty::Weight;
     if (Struct::isInteger(component_format_))
-      flags |= +StructProperty::Normalized;
-    struct_->append(ch, component_format_, flags.flags_);
+      flags |= StructProperty::Normalized;
+    struct_->append(ch, component_format_, flags);
   }
 }
 
