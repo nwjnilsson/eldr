@@ -62,9 +62,9 @@ Sampler::Sampler(const Device&       device,
     .unnormalizedCoordinates = VK_FALSE,
   };
 
-  sampler_data_ = std::make_shared<SamplerImpl>(device, sampler_info);
+  d_ = std::make_shared<SamplerImpl>(device, sampler_info);
 }
 
-VkSampler Sampler::vk() const { return sampler_data_->sampler_; }
+VkSampler Sampler::vk() const { return d_->sampler_; }
 
 } // namespace eldr::vk::wr

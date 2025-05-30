@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 

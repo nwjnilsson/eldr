@@ -4,10 +4,7 @@
 #include <string>
 #include <vector>
 
-// fwd
-struct GLFWwindow;
-
-namespace eldr {
+namespace eldr::app {
 class Window {
 
 public:
@@ -53,7 +50,9 @@ public:
   [[nodiscard]] uint32_t                 height() const { return height_; }
   [[nodiscard]] bool                     shouldClose() const;
   [[nodiscard]] std::vector<const char*> instanceExtensions() const;
-  [[nodiscard]] GLFWwindow* glfwWindow() const { return glfw_window_; }
+
+  /// @brief Returns a pointer to the underlying GLFW window
+  [[nodiscard]] GLFWwindow* glfw() const { return glfw_window_; }
 
 private:
   GLFWwindow* glfw_window_;
@@ -61,4 +60,4 @@ private:
   uint32_t    height_{};
 };
 
-} // namespace eldr
+} // namespace eldr::app

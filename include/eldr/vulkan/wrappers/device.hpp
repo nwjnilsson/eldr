@@ -1,8 +1,7 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <functional>
-#include <memory>
 #include <optional>
 #include <vector>
 
@@ -68,7 +67,7 @@ private:
 
 private:
   class DeviceImpl;
-  std::shared_ptr<DeviceImpl> d_data_;
+  std::shared_ptr<DeviceImpl> d_;
   VkPhysicalDeviceProperties  physical_device_props_;
   QueueFamilyIndices          queue_family_indices_;
   VkQueue                     p_queue_{ VK_NULL_HANDLE }; // present

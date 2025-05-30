@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <string>
 
@@ -7,7 +7,9 @@ namespace eldr::vk::wr {
 class Shader {
 public:
   Shader() = default;
-  Shader(const Device&, std::string_view name, std::string_view file_name,
+  Shader(const Device&,
+         std::string_view      name,
+         std::string_view      file_name,
          VkShaderStageFlagBits stage);
 
   [[nodiscard]] VkShaderStageFlagBits stage() const { return stage_; }
@@ -24,6 +26,6 @@ private:
   std::string           entry_point_{ "main" };
   VkShaderStageFlagBits stage_;
   class ShaderImpl;
-  std::shared_ptr<ShaderImpl> s_data_;
+  std::shared_ptr<ShaderImpl> d_;
 };
 } // namespace eldr::vk::wr

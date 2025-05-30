@@ -39,9 +39,9 @@ Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
     .pNext = {},
     .flags = flags,
   };
-  s_data_ = std::make_shared<SemaphoreImpl>(device, semaphore_ci);
+  d_ = std::make_shared<SemaphoreImpl>(device, semaphore_ci);
 }
 
-VkSemaphore        Semaphore::vk() const { return s_data_->semaphore_; }
-const VkSemaphore* Semaphore::vkp() const { return &s_data_->semaphore_; }
+VkSemaphore        Semaphore::vk() const { return d_->semaphore_; }
+const VkSemaphore* Semaphore::vkp() const { return &d_->semaphore_; }
 } // namespace eldr::vk::wr

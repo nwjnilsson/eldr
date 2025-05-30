@@ -1,6 +1,6 @@
 #pragma once
+#include <eldr/vulkan/vulkan.hpp>
 
-#include <eldr/vulkan/common.hpp>
 #include <span>
 
 namespace eldr::vk::wr {
@@ -18,6 +18,6 @@ public:
 
 private:
   class RenderPassImpl;
-  std::shared_ptr<RenderPassImpl> sampler_data_;
+  std::shared_ptr<RenderPassImpl> d_;
 };
 } // namespace eldr::vk::wr

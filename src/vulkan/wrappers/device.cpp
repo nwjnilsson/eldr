@@ -282,21 +282,16 @@ Device::Device(const Instance&                 instance,
   };
 
   // Create device
-  d_data_ =
-    std::make_shared<DeviceImpl>(physical_device, device_ci, allocator_ci);
+  d_ = std::make_shared<DeviceImpl>(physical_device, device_ci, allocator_ci);
 
   // Get queues
-  vkGetDeviceQueue(d_data_->device_,
-                   queue_family_indices_.present_family.value(),
-                   0,
-                   &p_queue_);
-  vkGetDeviceQueue(d_data_->device_,
-                   queue_family_indices_.graphics_family.value(),
-                   0,
-                   &g_queue_);
+  vkGetDeviceQueue(
+    d_->device_, queue_family_indices_.present_family.value(), 0, &p_queue_);
+  vkGetDeviceQueue(
+    d_->device_, queue_family_indices_.graphics_family.value(), 0, &g_queue_);
 }
 
-void Device::waitIdle() const { vkDeviceWaitIdle(d_data_->device_); }
+void Device::waitIdle() const { vkDeviceWaitIdle(d_->device_); }
 
 VkSampleCountFlagBits Device::findMaxMsaaSampleCount() const
 {
@@ -327,7 +322,7 @@ VkSampleCountFlagBits Device::findMaxMsaaSampleCount() const
 SwapchainSupportDetails
 Device::swapchainSupportDetails(VkSurfaceKHR surface) const
 {
-  return getSwapchainSupportDetails(d_data_->physical_device_, surface);
+  return getSwapchainSupportDetails(d_->physical_device_, surface);
 }
 
 VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
@@ -336,8 +331,7 @@ VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
 {
   for (VkFormat format : candidates) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(
-      d_data_->physical_device_, format, &props);
+    vkGetPhysicalDeviceFormatProperties(d_->physical_device_, format, &props);
     if (tiling == VK_IMAGE_TILING_LINEAR &&
         (props.linearTilingFeatures & features) == features)
       return format;
@@ -361,8 +355,8 @@ CommandPool& Device::threadGraphicsPool() const
 {
   thread_local CommandPool* thread_graphics_pool{ nullptr };
   if (thread_graphics_pool == nullptr) {
-    std::scoped_lock locker(d_data_->mutex_);
-    thread_graphics_pool = &d_data_->command_pools_.emplace_back(*this);
+    std::scoped_lock locker(d_->mutex_);
+    thread_graphics_pool = &d_->command_pools_.emplace_back(*this);
   }
   return *thread_graphics_pool;
 }
@@ -384,7 +378,7 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
                                 VkMemoryPropertyFlags properties) const
 {
   VkPhysicalDeviceMemoryProperties mem_props;
-  vkGetPhysicalDeviceMemoryProperties(d_data_->physical_device_, &mem_props);
+  vkGetPhysicalDeviceMemoryProperties(d_->physical_device_, &mem_props);
   for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
     if (type_filter & (1 << i) &&
         (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -394,8 +388,8 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
   Throw("Failed to find suitable device memory type!");
 }
 
-VkPhysicalDevice Device::physical() const { return d_data_->physical_device_; }
-VkDevice         Device::logical() const { return d_data_->device_; }
-VmaAllocator     Device::allocator() const { return d_data_->allocator_; }
+VkPhysicalDevice Device::physical() const { return d_->physical_device_; }
+VkDevice         Device::logical() const { return d_->device_; }
+VmaAllocator     Device::allocator() const { return d_->allocator_; }
 
 } // namespace eldr::vk::wr

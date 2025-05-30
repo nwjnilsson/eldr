@@ -1,5 +1,5 @@
 #include <eldr/core/platform.hpp>
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>

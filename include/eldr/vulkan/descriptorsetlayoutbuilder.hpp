@@ -1,6 +1,4 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 
 #include <vector>
@@ -28,8 +26,8 @@ public:
         VkDescriptorSetLayoutCreateFlags create_flags = 0);
 
 private:
-  DescriptorSetLayoutBuilder& add(uint32_t binding, VkDescriptorType type,
-                                  VkShaderStageFlags stage_flags);
+  DescriptorSetLayoutBuilder&
+  add(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stage_flags);
 
 private:
   std::vector<VkDescriptorSetLayoutBinding> bindings_;

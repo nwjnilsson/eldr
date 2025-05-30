@@ -178,8 +178,8 @@ Instance::Instance(const VkApplicationInfo&   app_info,
   instance_ci.ppEnabledExtensionNames = extensions.data();
 
   // Create instance
-  i_data_ = std::make_shared<InstanceImpl>(instance_ci);
+  d_ = std::make_shared<InstanceImpl>(instance_ci);
 }
 
-VkInstance Instance::vk() const { return i_data_->instance_; }
+VkInstance Instance::vk() const { return d_->instance_; }
 } // namespace eldr::vk::wr

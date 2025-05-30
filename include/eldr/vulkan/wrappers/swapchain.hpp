@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
 #include <vector>
@@ -38,7 +37,7 @@ public:
 
 private:
   class SwapchainImpl;
-  std::shared_ptr<SwapchainImpl> sc_data_;
+  std::shared_ptr<SwapchainImpl> d_;
 
   VkExtent2D         extent_;
   VkSurfaceFormatKHR surface_format_;

@@ -3,7 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
-namespace eldr {
+namespace eldr::app {
 namespace {
 static void glfwErrorCallback(int error, const char* description)
 {
@@ -111,4 +111,4 @@ void Window::waitForFocus() const
   }
 }
 
-} // namespace eldr
+} // namespace eldr::app

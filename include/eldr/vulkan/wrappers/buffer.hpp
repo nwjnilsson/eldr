@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
@@ -60,14 +59,14 @@ public:
       .pNext                 = {},
       .flags                 = {},
       .size                  = size_bytes_,
-      .usage                 = buffer_usage.flags_,
+      .usage                 = buffer_usage.flags,
       .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = {},
       .pQueueFamilyIndices   = {},
     };
 
     const VmaAllocationCreateInfo alloc_ci{
-      .flags          = host_access.flags_,
+      .flags          = host_access.flags,
       .usage          = static_cast<VmaMemoryUsage>(mem_usage),
       .requiredFlags  = {},
       .preferredFlags = {},
@@ -130,7 +129,9 @@ public:
       Throw("GPU only buffer uploads not implemented yet");
     }
 
-    constexpr MemoryProperty valid_buffer_flags{ MemoryProperty::HostCoherent };
+    constexpr MemoryPropertyFlags valid_buffer_flags{
+      MemoryProperty::HostCoherent
+    };
 
     Assert(d_->mem_flags_ & valid_buffer_flags);
     void* dst{ nullptr };

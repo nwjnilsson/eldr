@@ -11,7 +11,7 @@
 
 namespace eldr {
 
-enum class StructType : uint32_t {
+enum class StructType {
   // Invalid/unspecified
   Invalid = 0,
 
@@ -32,8 +32,9 @@ enum class StructType : uint32_t {
 };
 
 enum class ByteOrder { LittleEndian, BigEndian, HostByteOrder };
+
 /// Field-specific flags
-enum class StructProperty : Flags {
+enum class StructProperty : FlagRep {
   /// No flags set (default value)
   Empty = 0x00,
 
@@ -80,8 +81,10 @@ enum class StructProperty : Flags {
    */
   Alpha = 0x40
 };
-ELDR_DECLARE_ENUM_OPERATORS(StructProperty)
+} // namespace eldr
+ELDR_DECLARE_FLAG_SPEC(eldr, StructProperty)
 
+namespace eldr {
 class Struct {
 public:
   /// Field specifier with size and offset

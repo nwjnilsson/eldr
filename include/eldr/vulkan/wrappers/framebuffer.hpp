@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <vector>
 
@@ -18,7 +18,7 @@ public:
 private:
   // std::string name_;
   class FramebufferImpl;
-  std::shared_ptr<FramebufferImpl> fb_data_;
+  std::shared_ptr<FramebufferImpl> d_;
 };
 
 } // namespace eldr::vk::wr

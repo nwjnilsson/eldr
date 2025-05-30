@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
@@ -16,6 +16,6 @@ public:
 
 private:
   class FenceImpl;
-  std::shared_ptr<FenceImpl> f_data_;
+  std::shared_ptr<FenceImpl> d_;
 };
 } // namespace eldr::vk::wr

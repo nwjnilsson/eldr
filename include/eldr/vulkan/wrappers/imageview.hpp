@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 

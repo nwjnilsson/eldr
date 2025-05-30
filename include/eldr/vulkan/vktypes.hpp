@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/math.hpp>
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 // Misc Vulkan types
 namespace eldr::vk {

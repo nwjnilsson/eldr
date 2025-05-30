@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <vector>
 
@@ -14,7 +14,7 @@ public:
 
 private:
   class InstanceImpl;
-  std::shared_ptr<InstanceImpl> i_data_;
+  std::shared_ptr<InstanceImpl> d_;
 };
 
 //[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);

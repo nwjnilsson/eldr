@@ -45,11 +45,11 @@ DescriptorSetLayout::DescriptorSetLayout(
     .bindingCount = static_cast<uint32_t>(bindings.size()),
     .pBindings    = bindings.data(),
   };
-  dsl_data_ = std::make_shared<DescriptorSetLayoutImpl>(device, layout_ci);
+  d_ = std::make_shared<DescriptorSetLayoutImpl>(device, layout_ci);
 }
 
 VkDescriptorSetLayout DescriptorSetLayout::vk() const
 {
-  return dsl_data_->layout_;
+  return d_->layout_;
 }
 } // namespace eldr::vk::wr

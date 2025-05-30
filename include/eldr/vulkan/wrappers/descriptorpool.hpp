@@ -1,6 +1,5 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <span>
 
@@ -8,7 +7,8 @@ namespace eldr::vk::wr {
 class DescriptorPool {
 public:
   DescriptorPool() = default;
-  DescriptorPool(const Device& device, uint32_t max_sets,
+  DescriptorPool(const Device&                         device,
+                 uint32_t                              max_sets,
                  std::span<const VkDescriptorPoolSize> pool_sizes,
                  VkDescriptorPoolCreateFlags           flags = 0);
 
@@ -17,6 +17,6 @@ public:
 
 private:
   class DescriptorPoolImpl;
-  std::shared_ptr<DescriptorPoolImpl> dp_data_;
+  std::shared_ptr<DescriptorPoolImpl> d_;
 };
 } // namespace eldr::vk::wr

@@ -1,6 +1,5 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>

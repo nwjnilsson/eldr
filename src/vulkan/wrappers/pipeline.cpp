@@ -75,7 +75,7 @@ Pipeline::Pipeline(const Device&                     device,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkGraphicsPipelineCreateInfo&     pipeline_ci)
   : name_(name),
-    p_data_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
+    d_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 
@@ -84,10 +84,10 @@ Pipeline::Pipeline(const Device&                     device,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkComputePipelineCreateInfo&      pipeline_ci)
   : name_(name),
-    p_data_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
+    d_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 
-VkPipeline       Pipeline::vk() const { return p_data_->pipeline_; }
-VkPipelineLayout Pipeline::layout() const { return p_data_->pipeline_layout_; }
+VkPipeline       Pipeline::vk() const { return d_->pipeline_; }
+VkPipelineLayout Pipeline::layout() const { return d_->pipeline_layout_; }
 } // namespace eldr::vk::wr

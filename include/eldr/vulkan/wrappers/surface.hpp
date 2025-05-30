@@ -1,20 +1,18 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
-
-// fwd
-struct GLFWwindow;
+#include <eldr/app/fwd.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
 class Surface {
 public:
   Surface() = default;
-  Surface(const Instance&, GLFWwindow*);
+  Surface(const Instance&, const app::Window&);
 
   [[nodiscard]] VkSurfaceKHR vk() const;
 
 private:
   class SurfaceImpl;
-  std::shared_ptr<SurfaceImpl> s_data_;
+  std::shared_ptr<SurfaceImpl> d_;
 };
 } // namespace eldr::vk::wr

@@ -10,6 +10,6 @@ public:
 
 private:
   class DebugUtilsMessengerImpl;
-  std::shared_ptr<DebugUtilsMessengerImpl> messenger_data_;
+  std::shared_ptr<DebugUtilsMessengerImpl> d_;
 };
 } // namespace eldr::vk::wr

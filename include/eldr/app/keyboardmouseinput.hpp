@@ -1,16 +1,13 @@
 #pragma once
-#include <GLFW/glfw3.h>
+#include <memory>
 
-#include <array>
-#include <shared_mutex>
-
-namespace eldr::app::input {
+namespace eldr::app {
 class KeyboardMouseInput {
 public:
-  KeyboardMouseInput()                          = default;
+  KeyboardMouseInput();
   KeyboardMouseInput(const KeyboardMouseInput&) = delete;
   KeyboardMouseInput(KeyboardMouseInput&&)      = delete;
-  ~KeyboardMouseInput()                         = default;
+  ~KeyboardMouseInput();
 
   KeyboardMouseInput& operator=(const KeyboardMouseInput&) = delete;
   KeyboardMouseInput& operator=(KeyboardMouseInput&&)      = delete;
@@ -75,12 +72,7 @@ public:
   [[nodiscard]] std::array<double, 2> calculateCursorPositionDelta();
 
 private:
-  std::array<int64_t, 2>                   previous_cursor_pos_{ 0, 0 };
-  std::array<int64_t, 2>                   current_cursor_pos_{ 0, 0 };
-  std::array<bool, GLFW_KEY_LAST>          pressed_keys_{ false };
-  std::array<bool, GLFW_MOUSE_BUTTON_LAST> pressed_mouse_buttons_{ false };
-  bool                                     keyboard_updated_{ false };
-  bool                                     mouse_buttons_updated_{ false };
-  mutable std::shared_mutex                input_mutex_;
+  struct KeyboardMouseInputData;
+  std::unique_ptr<KeyboardMouseInputData> d_;
 };
-} // namespace eldr::app::input
+} // namespace eldr::app

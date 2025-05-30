@@ -10,7 +10,6 @@
 #include <eldr/core/stopwatch.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
-#include <eldr/vulkan/common.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
@@ -20,6 +19,7 @@
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/vktypes.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
@@ -33,7 +33,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include <GLFW/glfw3.h>
 #include <imgui.h>
 
 #include <memory>
@@ -101,7 +100,7 @@ struct VulkanEngine::EngineData {
 // -----------------------------------------------------------------------------
 // Engine
 // -----------------------------------------------------------------------------
-VulkanEngine::VulkanEngine(const Window& window)
+VulkanEngine::VulkanEngine(const app::Window& window)
   : window_(window), d_(std::make_unique<EngineData>()),
     s_(std::make_unique<Settings>())
 {
@@ -132,7 +131,7 @@ VulkanEngine::VulkanEngine(const Window& window)
   // ---------------------------------------------------------------------------
   // Create surface
   // ---------------------------------------------------------------------------
-  d_->surface = Surface{ d_->instance, window_.glfwWindow() };
+  d_->surface = Surface{ d_->instance, window_ };
   // ---------------------------------------------------------------------------
   // Create device
   // ---------------------------------------------------------------------------

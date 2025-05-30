@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
@@ -17,6 +17,6 @@ public:
 
 private:
   class SamplerImpl;
-  std::shared_ptr<SamplerImpl> sampler_data_;
+  std::shared_ptr<SamplerImpl> d_;
 };
 } // namespace eldr::vk::wr

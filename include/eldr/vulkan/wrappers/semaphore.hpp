@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
@@ -13,6 +13,6 @@ public:
 
 private:
   class SemaphoreImpl;
-  std::shared_ptr<SemaphoreImpl> s_data_;
+  std::shared_ptr<SemaphoreImpl> d_;
 };
 } // namespace eldr::vk::wr

@@ -145,14 +145,14 @@ static void Log(LogLevel                    level,
 #  define EL_ASSERT1(cond)                                                     \
     do {                                                                       \
       if (!(cond))                                                             \
-        Throw("Assertion \"%s\" failed!", #cond);                              \
+        Throw("Assertion \"{}\" failed!", #cond);                              \
     } while (0)
 
 /// Assertion with a specific error explanation
 #  define EL_ASSERT2(cond, explanation)                                        \
     do {                                                                       \
       if (!(cond))                                                             \
-        Throw("Assertion \"%s\" failed (" explanation ")", #cond);             \
+        Throw("Assertion \"{}\" failed (" explanation ")", #cond);             \
     } while (0)
 
 /// Expose both of the above macros using overloading, i.e.

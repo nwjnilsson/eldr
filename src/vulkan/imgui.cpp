@@ -201,9 +201,9 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       index_data.push_back(cmd_list->IdxBuffer.Data[j]);
     }
   }
-  // TODO: decide whether to keep this or use staging buffer and GPU_ONLY
-  // memory
-  if (index_buffer_.size() <= index_data.size())
+  // TODO: use gpu buffers, and also implement resizing index/vertex data is far
+  // below buffer size
+  if (index_buffer_.size() >= index_data.size())
     index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
   else
     index_buffer_ = { device_,
@@ -219,7 +219,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  if (vertex_buffer_.size() <= vertex_data.size())
+  if (vertex_buffer_.size() >= vertex_data.size())
     vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
   else {
     vertex_buffer_ = { device_,

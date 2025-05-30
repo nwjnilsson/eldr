@@ -48,7 +48,7 @@ Running Eldr with the following settings:
 )";
 
   // Run Eldr main app
-  eldr::EldrApp main_app;
+  eldr::app::App main_app;
   try {
     main_app.run();
   }

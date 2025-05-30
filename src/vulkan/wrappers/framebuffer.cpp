@@ -50,8 +50,8 @@ Framebuffer::Framebuffer(const Device&                   device,
     .height          = swapchain.extent().height,
     .layers          = 1,
   };
-  fb_data_ = std::make_shared<FramebufferImpl>(device, framebuffer_ci);
+  d_ = std::make_shared<FramebufferImpl>(device, framebuffer_ci);
 }
 
-VkFramebuffer Framebuffer::vk() const { return fb_data_->framebuffer_; }
+VkFramebuffer Framebuffer::vk() const { return d_->framebuffer_; }
 } // namespace eldr::vk::wr

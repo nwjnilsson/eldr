@@ -37,20 +37,28 @@ enum class MemoryUsage {
   PreferDevice = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
   PreferHost   = VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
 };
+enum class LoadOp {
+  Load     = VK_ATTACHMENT_LOAD_OP_LOAD,
+  Clear    = VK_ATTACHMENT_LOAD_OP_CLEAR,
+  DontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+};
+enum class StoreOp {
+  Store    = VK_ATTACHMENT_STORE_OP_STORE,
+  DontCare = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+};
 
 //------------------------------------------------------------------------------
 // Flags
 //------------------------------------------------------------------------------
-enum class HostAccess : Flags {
+enum class HostAccess : FlagRep {
   None          = 0x00,
   Sequential    = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
   Random        = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
   AllowTransfer = VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
   DeviceAddress = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
 };
-ELDR_DECLARE_ENUM_OPERATORS(HostAccess)
 
-enum class BufferUsage : Flags {
+enum class BufferUsage : FlagRep {
   TransferSrc = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
   TransferDst = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
   // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
@@ -62,15 +70,15 @@ enum class BufferUsage : Flags {
   // VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
   ShaderDeviceAddress = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 };
-ELDR_DECLARE_ENUM_OPERATORS(BufferUsage)
 
-enum class MemoryProperty : Flags {
+enum class MemoryProperty : FlagRep {
   DeviceLocal  = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
   HostVisible  = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
   HostCoherent = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
   HostCached   = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
   Protected    = VK_MEMORY_PROPERTY_PROTECTED_BIT,
 };
-ELDR_DECLARE_ENUM_OPERATORS(MemoryProperty)
-
 } // namespace eldr::vk
+ELDR_DECLARE_FLAG_SPEC(eldr::vk, HostAccess)
+ELDR_DECLARE_FLAG_SPEC(eldr::vk, BufferUsage)
+ELDR_DECLARE_FLAG_SPEC(eldr::vk, MemoryProperty)

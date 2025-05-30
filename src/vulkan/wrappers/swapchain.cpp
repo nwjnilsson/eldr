@@ -122,8 +122,8 @@ void Swapchain::setupSwapchain(const Device&  device,
   }
 
   VkSwapchainKHR old_swapchain{ VK_NULL_HANDLE };
-  if (likely(sc_data_ != nullptr))
-    old_swapchain = sc_data_->swapchain_;
+  if (likely(d_ != nullptr))
+    old_swapchain = d_->swapchain_;
   VkSwapchainCreateInfoKHR swapchain_ci{
     .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .pNext                 = {},
@@ -161,7 +161,7 @@ void Swapchain::setupSwapchain(const Device&  device,
   }
 
   Log(core::Trace, "Creating swapchain...");
-  sc_data_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
+  d_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
 
   // Clear data from old swapchain
   image_views_.clear();
@@ -170,14 +170,14 @@ void Swapchain::setupSwapchain(const Device&  device,
   // Get new swapchain images
   uint32_t image_count;
   if (const VkResult result{ vkGetSwapchainImagesKHR(
-        device.logical(), sc_data_->swapchain_, &image_count, nullptr) };
+        device.logical(), d_->swapchain_, &image_count, nullptr) };
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
   images_.resize(image_count);
 
   if (const VkResult result{ vkGetSwapchainImagesKHR(
-        device.logical(), sc_data_->swapchain_, &image_count, images_.data()) };
+        device.logical(), d_->swapchain_, &image_count, images_.data()) };
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
@@ -211,8 +211,8 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 {
   uint32_t       image_index{ 0 };
   const VkResult result{ vkAcquireNextImageKHR(
-    sc_data_->device_.logical(),
-    sc_data_->swapchain_,
+    d_->device_.logical(),
+    d_->swapchain_,
     UINT64_MAX,
     image_available_sem_[frame_index].vk(),
     VK_NULL_HANDLE,
@@ -230,7 +230,7 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 void Swapchain::present(const VkPresentInfoKHR& present_info,
                         bool&                   invalidate_swapchain) const
 {
-  const VkResult result{ vkQueuePresentKHR(sc_data_->device_.presentQueue(),
+  const VkResult result{ vkQueuePresentKHR(d_->device_.presentQueue(),
                                            &present_info) };
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     invalidate_swapchain = true;
@@ -240,6 +240,6 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
   }
 }
 
-VkSwapchainKHR  Swapchain::vk() const { return sc_data_->swapchain_; }
-VkSwapchainKHR* Swapchain::vkp() const { return &sc_data_->swapchain_; }
+VkSwapchainKHR  Swapchain::vk() const { return d_->swapchain_; }
+VkSwapchainKHR* Swapchain::vkp() const { return &d_->swapchain_; }
 } // namespace eldr::vk::wr

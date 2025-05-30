@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 
-#include <GLFW/glfw3.h>
+#include <eldr/app/window.hpp> // Include order matters, vulkan first
 
 namespace eldr::vk::wr {
 
@@ -10,17 +10,18 @@ namespace eldr::vk::wr {
 //------------------------------------------------------------------------------
 class Surface::SurfaceImpl {
 public:
-  SurfaceImpl(const Instance& instance, GLFWwindow* window);
+  SurfaceImpl(const Instance& instance, const app::Window& window);
   ~SurfaceImpl();
   const Instance instance_;
   VkSurfaceKHR   surface_{ VK_NULL_HANDLE };
 };
 
-Surface::SurfaceImpl::SurfaceImpl(const Instance& instance, GLFWwindow* window)
+Surface::SurfaceImpl::SurfaceImpl(const Instance&    instance,
+                                  const app::Window& window)
   : instance_(instance)
 {
-  if (const VkResult result{
-        glfwCreateWindowSurface(instance.vk(), window, nullptr, &surface_) };
+  if (const VkResult result{ glfwCreateWindowSurface(
+        instance.vk(), window.glfw(), nullptr, &surface_) };
       result != VK_SUCCESS)
     Throw("Failed to create window surface! ({})", result);
 }
@@ -33,10 +34,10 @@ Surface::SurfaceImpl::~SurfaceImpl()
 //------------------------------------------------------------------------------
 // Surface
 //------------------------------------------------------------------------------
-Surface::Surface(const Instance& instance, GLFWwindow* window)
-  : s_data_(std::make_shared<SurfaceImpl>(instance, window))
+Surface::Surface(const Instance& instance, const app::Window& window)
+  : d_(std::make_shared<SurfaceImpl>(instance, window))
 {
 }
 
-VkSurfaceKHR Surface::vk() const { return s_data_->surface_; }
+VkSurfaceKHR Surface::vk() const { return d_->surface_; }
 } // namespace eldr::vk::wr

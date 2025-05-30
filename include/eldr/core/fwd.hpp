@@ -1,10 +1,10 @@
 #pragma once
+#include <eldr/core/flags.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <glm/fwd.hpp>
 using Float = typename glm::float32_t;
 
-using Flags  = uint32_t;
 using byte_t = std::byte;
 
 namespace eldr {
@@ -135,57 +135,3 @@ template <typename Float_> struct CoreAliases {
   using prefix##Color4d     = typename prefix##CoreAliases::Color4d;
 
 #define ELDR_IMPORT_CORE_TYPES() ELDR_IMPORT_CORE_TYPES_PREFIX(Float, )
-
-#define ELDR_DECLARE_ENUM_OPERATORS_IMPL(name, neq_expr)                       \
-  struct name##Flags {                                                         \
-    constexpr explicit name##Flags(Flags _flags) : flags(_flags) {}            \
-    constexpr explicit name##Flags(name _flag)                                 \
-      : flags(static_cast<Flags>(_flag))                                       \
-    {                                                                          \
-    }                                                                          \
-    Flags flags;                                                               \
-  };                                                                           \
-  constexpr bool operator==(name##Flags f1, name##Flags f2)                    \
-  {                                                                            \
-    return f1.flags == f2.flags;                                               \
-  }                                                                            \
-  constexpr name##Flags operator|(name f1, name f2)                            \
-  {                                                                            \
-    return name##Flags{ static_cast<Flags>(f1) | static_cast<Flags>(f2) };     \
-  }                                                                            \
-  constexpr name##Flags operator|(name##Flags f1, name f2)                     \
-  {                                                                            \
-    return name##Flags{ f1.flags | static_cast<Flags>(f2) };                   \
-  }                                                                            \
-  constexpr name##Flags& operator|=(name##Flags& f1, name f2)                  \
-  {                                                                            \
-    return f1 = f1 | f2;                                                       \
-  }                                                                            \
-  constexpr name##Flags operator&(name f1, name f2)                            \
-  {                                                                            \
-    return name##Flags{ static_cast<Flags>(f1) & static_cast<Flags>(f2) };     \
-  }                                                                            \
-  constexpr name##Flags operator&(name##Flags f1, name f2)                     \
-  {                                                                            \
-    return name##Flags{ f1.flags & static_cast<Flags>(f2) };                   \
-  }                                                                            \
-  constexpr name##Flags& operator&=(name##Flags& f1, name f2)                  \
-  {                                                                            \
-    return f1 = f1 & f2;                                                       \
-  }                                                                            \
-  constexpr name##Flags operator~(name f1)                                     \
-  {                                                                            \
-    return name##Flags{ ~static_cast<Flags>(f1) };                             \
-  }                                                                            \
-  constexpr name##Flags operator+(name e)                                      \
-  {                                                                            \
-    return name##Flags{ static_cast<Flags>(e) };                               \
-  }                                                                            \
-  template <typename UInt32> constexpr auto hasFlag(UInt32 flags, name f)      \
-  {                                                                            \
-    return neq_expr(flags & static_cast<Flags>(f), 0u);                        \
-  }
-
-#define ELDR_DECLARE_ENUM_OPERATORS(name)                                      \
-  ELDR_DECLARE_ENUM_OPERATORS_IMPL(name,                                       \
-                                   [&](UInt32 a, UInt32 b) { return a != b; })

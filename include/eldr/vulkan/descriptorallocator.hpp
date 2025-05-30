@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
 
 #include <vector>

@@ -47,13 +47,13 @@ DescriptorPool::DescriptorPool(const Device&                         device,
     .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
     .pPoolSizes    = pool_sizes.data(),
   };
-  dp_data_ = std::make_shared<DescriptorPoolImpl>(device, pool_ci);
+  d_ = std::make_shared<DescriptorPoolImpl>(device, pool_ci);
 }
 
-VkDescriptorPool DescriptorPool::vk() const { return dp_data_->pool_; }
+VkDescriptorPool DescriptorPool::vk() const { return d_->pool_; }
 
 void DescriptorPool::reset(VkDescriptorPoolResetFlags flags)
 {
-  vkResetDescriptorPool(dp_data_->device_.logical(), dp_data_->pool_, flags);
+  vkResetDescriptorPool(d_->device_.logical(), d_->pool_, flags);
 }
 } // namespace eldr::vk::wr

@@ -110,8 +110,7 @@ DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
     .pfnUserCallback = vkDebugReportCallback,
     .pUserData       = {},
   };
-  messenger_data_ =
-    std::make_shared<DebugUtilsMessengerImpl>(instance, debug_report_ci);
+  d_ = std::make_shared<DebugUtilsMessengerImpl>(instance, debug_report_ci);
 }
 
 } // namespace eldr::vk::wr

@@ -50,9 +50,9 @@ RenderPass::RenderPass(const Device&                      device,
     .dependencyCount = 1,
     .pDependencies   = &subpass_dependency,
   };
-  sampler_data_ = std::make_shared<RenderPassImpl>(device, render_pass_ci);
+  d_ = std::make_shared<RenderPassImpl>(device, render_pass_ci);
 }
 
-VkRenderPass RenderPass::vk() const { return sampler_data_->render_pass_; }
+VkRenderPass RenderPass::vk() const { return d_->render_pass_; }
 
 } // namespace eldr::vk::wr

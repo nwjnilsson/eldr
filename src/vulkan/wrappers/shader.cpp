@@ -79,9 +79,9 @@ Shader::Shader(const Device&         device,
     .codeSize = bytecode.size(),
     .pCode    = reinterpret_cast<const uint32_t*>(bytecode.data()),
   };
-  s_data_ = std::make_shared<ShaderImpl>(device, filename, shader_module_ci);
+  d_ = std::make_shared<ShaderImpl>(device, filename, shader_module_ci);
 }
 
-VkShaderModule Shader::module() const { return s_data_->shader_module_; }
+VkShaderModule Shader::module() const { return d_->shader_module_; }
 
 } // namespace eldr::vk::wr

@@ -1,5 +1,5 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 /// @brief VkPipeline wrapper class. Pipeline manages both VkPipeline and
@@ -26,7 +26,7 @@ protected:
 protected:
   std::string name_;
   class PipelineImpl;
-  std::shared_ptr<PipelineImpl> p_data_;
+  std::shared_ptr<PipelineImpl> d_;
 };
 
 // Support for compute pipelines can be added if needed

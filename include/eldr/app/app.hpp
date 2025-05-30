@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/app/fwd.hpp>
 #include <eldr/core/stopwatch.hpp>
 #include <eldr/render/scene.hpp>
 
@@ -8,24 +9,19 @@
 // fwd
 // -----------------------------------------------------------------------------
 struct GLFWwindow;
-namespace eldr {
-class Window;
-}
+
 namespace eldr::vk {
 class VulkanEngine;
 }
-namespace eldr::app::input {
-class KeyboardMouseInput;
-}
 // -----------------------------------------------------------------------------
-namespace eldr {
-class EldrApp {
+namespace eldr::app {
+class App {
   ELDR_IMPORT_CORE_TYPES();
   const std::filesystem::path model_path = "assets/models/Suzanne.gltf";
 
 public:
-  EldrApp();
-  ~EldrApp();
+  App();
+  ~App();
 
   /// @brief Call glfwSetKeyCallback.
   /// @param window The window that received the event.
@@ -70,13 +66,13 @@ public:
   static constexpr uint32_t height = 720;
 
 private:
-  std::unique_ptr<app::input::KeyboardMouseInput> input_data_;
-  std::unique_ptr<Window>                         window_;
-  std::unique_ptr<vk::VulkanEngine>               vk_engine_;
-  Scene                                           scene_;
+  std::unique_ptr<KeyboardMouseInput> input_data_;
+  std::unique_ptr<Window>             window_;
+  std::unique_ptr<vk::VulkanEngine>   vk_engine_;
+  Scene                               scene_;
 
   float     frame_time_{};
   StopWatch stop_watch_{};
 };
 
-} // namespace eldr
+} // namespace eldr::app

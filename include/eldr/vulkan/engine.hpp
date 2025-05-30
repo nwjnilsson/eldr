@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/app/fwd.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/fwd.hpp>
@@ -9,7 +10,6 @@
 // fwd declarations
 namespace eldr {
 class EldrApp;
-class Window;
 } // namespace eldr
 
 // TODO: move Vulkan Engine to eldr:: namespace?
@@ -48,7 +48,7 @@ class VulkanEngine {
 
 public:
   VulkanEngine() = delete;
-  VulkanEngine(const Window& window);
+  VulkanEngine(const app::Window& window);
   ~VulkanEngine();
 
   const wr::Device& device() const; // TODO: refactor and remove
@@ -74,6 +74,9 @@ public:
 
   void buildMaterialPipelines(GltfMetallicRoughness& material);
 
+  // TODO: decide how to handle this
+  void invalidateSwapchain() { swapchain_invalidated_ = true; }
+
 private:
   void loadTextures();
   void loadShaders();
@@ -88,8 +91,8 @@ private:
   void drawGeometry(const wr::CommandBuffer& cb);
 
 private:
-  const Window& window_;
-  const Scene*  scene_;
+  const app::Window& window_;
+  const Scene*       scene_;
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
