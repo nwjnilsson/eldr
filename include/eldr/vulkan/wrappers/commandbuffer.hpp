@@ -1,6 +1,6 @@
 #pragma once
-#include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/fence.hpp>
+#include <eldr/vulkan/vulkan.hpp>
+#include <eldr/vulkan/wrappers/allocatedbuffer.hpp>
 
 #include <span>
 
@@ -85,7 +85,7 @@ public:
 
   const CommandBuffer&
   copyBufferToImage(Image&                              dst,
-                    const Buffer<byte_t>&               src,
+                    const AllocatedBuffer&              src,
                     std::span<const VkBufferImageCopy2> copy_regions) const;
 
   const CommandBuffer&
@@ -98,10 +98,22 @@ public:
              const AllocatedBuffer&         src,
              std::span<const VkBufferCopy2> copy_regions) const;
 
+  template <typename T>
   const CommandBuffer&
   copyDataToBuffer(AllocatedBuffer&               dst,
-                   std::span<const byte_t>        src,
-                   std::span<const VkBufferCopy2> copy_regions) const;
+                   std::span<const T>             src,
+                   std::span<const VkBufferCopy2> copy_regions) const
+  {
+    Assert(dst.sizeElem() == sizeof(T),
+           "The element size of the buffer does not match the element size of "
+           "the source array.");
+    return copyBuffer(
+      dst,
+      createStagingBuffer(
+        fmt::format("Staging buffer #{}", staging_buffers_.size() + 1),
+        std::as_bytes(src)),
+      copy_regions);
+  }
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
                                      VkShaderStageFlags stage,
@@ -117,7 +129,7 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const Buffer<byte_t>&
+  [[nodiscard]] const AllocatedBuffer&
   createStagingBuffer(const std::string&      name,
                       std::span<const byte_t> data) const;
 
@@ -131,7 +143,7 @@ public:
 private:
   std::string name_;
   class CommandBufferImpl;
-  std::shared_ptr<CommandBufferImpl>  d_;
-  mutable std::vector<Buffer<byte_t>> staging_buffers_;
+  std::shared_ptr<CommandBufferImpl>   d_;
+  mutable std::vector<AllocatedBuffer> staging_buffers_;
 };
 } // namespace eldr::vk::wr

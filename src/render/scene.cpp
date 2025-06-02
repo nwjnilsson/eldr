@@ -104,7 +104,7 @@ void MeshNode::draw(const Mat4f& top_matrix, DrawContext& ctx) const
 {
   const Mat4f node_matrix{ top_matrix * world_transform };
 
-  for (auto& s : mesh->surfaces()) {
+  for (const auto& s : mesh->surfaces()) {
     const RenderObject obj{
       .index_count = s.count,
       .first_index = s.start_index,

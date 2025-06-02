@@ -1,41 +1,11 @@
 #pragma once
 #include <eldr/vulkan/vktypes.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/wrappers/allocatedbuffer.hpp>
+#include <eldr/vulkan/wrappers/commandbuffer.hpp>
 
 #include <span>
 
 namespace eldr::vk::wr {
-
-class AllocatedBuffer {
-public:
-  AllocatedBuffer() = default;
-
-  [[nodiscard]] const char* name() const;
-  [[nodiscard]] VkBuffer    vk() const;
-  /// @brief size_t The number of elements in the buffer.
-  [[nodiscard]] size_t size() const { return size_; }
-  /// @brief Returns whether the buffer is empty or not.
-  [[nodiscard]] bool empty() const { return size_ == 0; }
-  /// @brief Returns the size (capacity), in bytes, of the memory allocation.
-  [[nodiscard]] size_t sizeAlloc() const;
-  /// @brief Returns a VkDeviceAddress for this buffer
-  [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
-
-protected:
-  AllocatedBuffer(const Device&      device,
-                  const std::string& name,
-                  size_t             size,
-                  BufferUsageFlags   buffer_usage,
-                  HostAccessFlags    host_access,
-                  MemoryUsage        mem_usage);
-  void uploadData(std::span<const byte_t> data);
-
-protected:
-  std::string name_;
-  size_t      size_{ 0 };
-  class BufferImpl;
-  std::shared_ptr<BufferImpl> d_;
-};
 
 // Should probably support uploading to a specific section of the buffer, and
 // not just overwriting from the beginning of the mapped data
@@ -50,11 +20,13 @@ public:
          MemoryUsage        mem_usage = MemoryUsage::Auto)
     : AllocatedBuffer(device,
                       name,
-                      sizeof(T) * elem_count,
+                      sizeof(T),
+                      elem_count,
                       buffer_usage,
                       host_access,
                       mem_usage)
   {
+    Assert(size() > 0);
   }
 
   Buffer(const Device&      device,
@@ -68,14 +40,39 @@ public:
     uploadData(data);
   }
 
-  /// @brief Returns the size, in bytes, of the elements in the buffer.
-  [[nodiscard]] size_t sizeBytes() const { return size_ * sizeof(T); }
-
   /// @brief Copies all contents of `data` into this buffer.
   /// @param data The span of data to upload to the GPU buffer.
-  void uploadData(std::span<const T> data)
+  void uploadData(std::span<const T> src)
   {
-    AllocatedBuffer::uploadData(std::as_bytes(data));
+    if (src.empty()) {
+      return;
+    }
+    if (d_->mem_flags_.hasFlag(MemoryProperty::HostVisible)) {
+      if (src.size_bytes() > sizeAlloc()) {
+        Throw("Buffer size is too small.");
+      }
+      // Host visible buffer, map memory and memcpy
+      Assert(d_->mem_flags_.hasFlag(MemoryProperty::HostCoherent)); // fow now
+      // if not HOST_COHERENT, a flush is needed using vmaInvalidateAllocation()
+      // / vmaFlushAllocation()
+      void* dst{ nullptr };
+      vmaMapMemory(d_->device_.allocator(), d_->allocation_, &dst);
+      Assert(dst);
+      std::memcpy(dst, src.data(), src.size_bytes());
+      vmaUnmapMemory(d_->device_.allocator(), d_->allocation_);
+    }
+    else {
+      d_->device_.execute([&](const CommandBuffer& cb) {
+        const VkBufferCopy2 copy_regions[]{ {
+          .sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+          .pNext     = {},
+          .srcOffset = 0,
+          .dstOffset = 0,
+          .size      = src.size_bytes(),
+        } };
+        cb.copyDataToBuffer(*this, src, copy_regions);
+      });
+    }
   }
 };
 } // namespace eldr::vk::wr

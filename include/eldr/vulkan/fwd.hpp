@@ -40,6 +40,7 @@ class Sampler;
 class Pipeline;
 // class GraphicsPipeline;
 // class ComputePipeline;
+class AllocatedBuffer;
 template <typename T> class Buffer;
 class Image;
 class ImageView;

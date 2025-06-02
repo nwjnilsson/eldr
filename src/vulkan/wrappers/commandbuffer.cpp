@@ -464,7 +464,7 @@ CommandBuffer::transitionImageLayout(Image&        image,
 
 const CommandBuffer& CommandBuffer::copyBufferToImage(
   Image&                              dst,
-  const Buffer<byte_t>&               src,
+  const AllocatedBuffer&              src,
   std::span<const VkBufferImageCopy2> copy_regions) const
 {
   const VkCopyBufferToImageInfo2 copy_info{
@@ -497,6 +497,7 @@ CommandBuffer::copyBuffer(AllocatedBuffer&               dst,
                           const AllocatedBuffer&         src,
                           std::span<const VkBufferCopy2> copy_regions) const
 {
+  Assert(dst.sizeAlloc() >= src.sizeAlloc());
   const VkCopyBufferInfo2 copy_info{
     .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
     .pNext       = {},
@@ -507,18 +508,6 @@ CommandBuffer::copyBuffer(AllocatedBuffer&               dst,
   };
   vkCmdCopyBuffer2(d_->command_buffer_, &copy_info);
   return *this;
-}
-
-const CommandBuffer& CommandBuffer::copyDataToBuffer(
-  AllocatedBuffer&               dst,
-  std::span<const byte_t>        src,
-  std::span<const VkBufferCopy2> copy_regions) const
-{
-  return copyBuffer(
-    dst,
-    createStagingBuffer(
-      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src),
-    copy_regions);
 }
 
 const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
@@ -539,12 +528,15 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const Buffer<byte_t>&
+const AllocatedBuffer&
 CommandBuffer::createStagingBuffer(const std::string&      name,
                                    std::span<const byte_t> src) const
 {
-  staging_buffers_.emplace_back(
-    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential);
+  staging_buffers_.push_back(Buffer<byte_t>{ d_->device_,
+                                             name,
+                                             src,
+                                             +BufferUsage::TransferSrc,
+                                             +HostAccess::Sequential });
   return staging_buffers_.back();
 }
 
