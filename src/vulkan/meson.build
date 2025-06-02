@@ -1,5 +1,6 @@
 src = [
   'vktools/format.cpp',
+  'wrappers/buffer.cpp',
   'wrappers/commandbuffer.cpp',
   'wrappers/commandpool.cpp',
   'wrappers/debugutilsmessenger.cpp',

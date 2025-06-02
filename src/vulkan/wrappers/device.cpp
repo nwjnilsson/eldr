@@ -1,3 +1,4 @@
+#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
@@ -6,7 +7,6 @@
 
 #include <mutex>
 #include <set>
-#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk::wr {
 namespace {

@@ -7,7 +7,6 @@
 namespace eldr::vk::wr {
 
 class CommandBuffer {
-
 public:
   CommandBuffer() = default;
   CommandBuffer(const Device&      device_,
@@ -27,15 +26,13 @@ public:
   const CommandBuffer& endRendering() const;
   const CommandBuffer& end() const;
   const CommandBuffer& submit(const VkSubmitInfo& submit_info) const;
-  const CommandBuffer& submitAndWait(const VkSubmitInfo& submit_info) const;
+  /// @brief Submits and waits for commands to execute
   const CommandBuffer& submitAndWait() const;
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
 
-  const CommandBuffer&
-  bindIndexBuffer(const Buffer<uint32_t>& buffer,
-                  VkIndexType             index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize            offset     = 0) const;
+  const CommandBuffer& bindIndexBuffer(const Buffer<uint32_t>& buffer,
+                                       VkDeviceSize offset = 0) const;
 
   /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
   /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
@@ -86,14 +83,25 @@ public:
 
   const CommandBuffer& generateMipmaps(const Image& image) const;
 
-  template <typename T>
-  const CommandBuffer& copyBufferToImage(const Buffer<T>& buffer,
-                                         Image&           image,
-                                         const VkBufferImageCopy&) const;
+  const CommandBuffer&
+  copyBufferToImage(Image&                              dst,
+                    const Buffer<byte_t>&               src,
+                    std::span<const VkBufferImageCopy2> copy_regions) const;
 
-  const CommandBuffer& copyDataToImage(std::span<const byte_t> data,
-                                       Image&                  image,
-                                       const VkBufferImageCopy&) const;
+  const CommandBuffer&
+  copyDataToImage(Image&                  dst,
+                  std::span<const byte_t> src,
+                  std::span<const VkBufferImageCopy2>) const;
+
+  const CommandBuffer&
+  copyBuffer(AllocatedBuffer&               dst,
+             const AllocatedBuffer&         src,
+             std::span<const VkBufferCopy2> copy_regions) const;
+
+  const CommandBuffer&
+  copyDataToBuffer(AllocatedBuffer&               dst,
+                   std::span<const byte_t>        src,
+                   std::span<const VkBufferCopy2> copy_regions) const;
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
                                      VkShaderStageFlags stage,
@@ -122,11 +130,8 @@ public:
 
 private:
   std::string name_;
-
   class CommandBufferImpl;
-  std::shared_ptr<CommandBufferImpl> d_;
-
-  Fence                               wait_fence_;
+  std::shared_ptr<CommandBufferImpl>  d_;
   mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

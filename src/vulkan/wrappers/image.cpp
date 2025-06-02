@@ -1,4 +1,6 @@
 #include <eldr/core/bitmap.hpp>
+
+#include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
@@ -132,7 +134,9 @@ Image::Image(const Device& device, const Bitmap& bitmap, uint32_t mip_levels)
   //----------------------------------------------------------------------------
   // Copy copy bitmap data and generate mipmap
   //----------------------------------------------------------------------------
-  const VkBufferImageCopy copy_region{
+  const VkBufferImageCopy2 copy_regions[] { {
+    .sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+      .pNext = {},
     .bufferOffset      = 0,
     .bufferRowLength   = 0,
     .bufferImageHeight = 0,
@@ -146,10 +150,10 @@ Image::Image(const Device& device, const Bitmap& bitmap, uint32_t mip_levels)
     .imageExtent = { .width  = size_.width,
                      .height = size_.height,
                      .depth  = 1 },
-  };
+  }};
 
   device.execute([&](const CommandBuffer& cb) {
-    cb.copyDataToImage(bitmap.bytes(), *this, copy_region)
+    cb.copyDataToImage(*this, bitmap.bytes(), copy_regions)
       // The transition below is not necessary when generating mipmaps using the
       // blit command, since each level will be transitioned to
       // VK_IMAGE_LAYOUT_SHADER_READ_ONLY after the blit command is finished.

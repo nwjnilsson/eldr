@@ -206,9 +206,9 @@ void VulkanEngine::loadTextures()
   // TODO: build a vector of texture filenames from some configuration and load
   // each texture
   const std::string     texture_path = "/assets/textures/viking_room.png";
-  std::filesystem::path filepath(std::string(env_p) + texture_path);
+  std::filesystem::path filepath{ std::string(env_p) + texture_path };
 
-  Bitmap bitmap(filepath);
+  Bitmap bitmap{ filepath };
   if (bitmap.pixelFormat() != Bitmap::PixelFormat::RGBA)
     bitmap.rgbToRgba();
   d_->textures.emplace_back(d_->device, bitmap);
@@ -242,16 +242,16 @@ void VulkanEngine::setupFrameData()
     constexpr size_t elem_count{ 1 };
     d_->frames_in_flight.push_back({
       .descriptors       = DescriptorAllocator{ 1000, frame_sizes },
-      .scene_data_buffer = Buffer<GpuSceneData>{ d_->device,
-                                                 "Scene data uniform buffer",
-                                                 elem_count,
-                                                 +BufferUsage::Uniform,
-                                                 +HostAccess::Sequential },
-      .model_data_buffer = Buffer<GpuModelData>{ d_->device,
-                                                 "Model data uniform buffer",
-                                                 elem_count,
-                                                 +BufferUsage::Uniform,
-                                                 +HostAccess::Sequential },
+      .scene_data_buffer = { d_->device,
+                             "Scene data uniform buffer",
+                             elem_count,
+                             +BufferUsage::Uniform,
+                             +HostAccess::Sequential },
+      .model_data_buffer = { d_->device,
+                             "Model data uniform buffer",
+                             elem_count,
+                             +BufferUsage::Uniform,
+                             +HostAccess::Sequential },
       .cmd_buf           = nullptr, // Set later when drawing frames
     });
   }

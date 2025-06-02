@@ -264,7 +264,6 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  // Buffer of any kind of data
   wr::Buffer<byte_t> buffer_;
 };
 

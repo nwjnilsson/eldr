@@ -1,8 +1,8 @@
 #include <eldr/core/platform.hpp>
-#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/engine.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
@@ -651,7 +651,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
         }
         else {
           // A gpu buffer already exists
-          if (data_size != physical->buffer_.size_bytes()) {
+          if (data_size != physical->buffer_.sizeBytes()) {
             // The gpu buffer needs to be resized
             new_buffer_needed = true;
           }
@@ -659,7 +659,7 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          physical->buffer_ = wr::Buffer<byte_t>{
+          physical->buffer_ = {
             device_,           buffer_resource->name_,
             data_size,         buffer_resource->buffer_usage_,
             +HostAccess::None, MemoryUsage::PreferDevice

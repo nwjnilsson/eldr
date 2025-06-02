@@ -159,19 +159,19 @@ std::string Struct::toString() const
     }
     os << "  " << f.type;
     os << " " << f.name << "; // @" << f.offset;
-    if (hasFlag(f.flags, StructProperty::Normalized))
+    if (f.flags.hasFlag(StructProperty::Normalized))
       os << ", normalized";
-    if (hasFlag(f.flags, StructProperty::Gamma))
+    if (f.flags.hasFlag(StructProperty::Gamma))
       os << ", gamma";
-    if (hasFlag(f.flags, StructProperty::Weight))
+    if (f.flags.hasFlag(StructProperty::Weight))
       os << ", weight";
-    if (hasFlag(f.flags, StructProperty::Alpha))
+    if (f.flags.hasFlag(StructProperty::Alpha))
       os << ", alpha";
-    if (hasFlag(f.flags, StructProperty::PremultipliedAlpha))
+    if (f.flags.hasFlag(StructProperty::PremultipliedAlpha))
       os << ", premultiplied alpha";
-    if (hasFlag(f.flags, StructProperty::Default))
+    if (f.flags.hasFlag(StructProperty::Default))
       os << ", default=" << f.default_;
-    if (hasFlag(f.flags, StructProperty::Assert))
+    if (f.flags.hasFlag(StructProperty::Assert))
       os << ", assert=" << f.default_;
     if (!f.blend.empty()) {
       os << ", blend = <";

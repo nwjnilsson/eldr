@@ -19,16 +19,17 @@ public:
   const Device    device_;
   VkCommandPool   command_pool_;
   VkCommandBuffer command_buffer_{ VK_NULL_HANDLE };
+  Fence           wait_fence_;
 };
 
 CommandBuffer::CommandBufferImpl::CommandBufferImpl(
   const Device& device, const VkCommandBufferAllocateInfo alloc_info)
-  : device_(device), command_pool_(alloc_info.commandPool)
+  : device_(device), command_pool_(alloc_info.commandPool), wait_fence_(device)
 {
   if (const VkResult result{ vkAllocateCommandBuffers(
         device_.logical(), &alloc_info, &command_buffer_) };
       result != VK_SUCCESS)
-    Throw("Failed to allocate command buffers ({})", result);
+    Throw("Failed to allocate command buffers ({}).", result);
 }
 
 CommandBuffer::CommandBufferImpl::~CommandBufferImpl()
@@ -42,7 +43,7 @@ CommandBuffer::CommandBufferImpl::~CommandBufferImpl()
 CommandBuffer::CommandBuffer(const Device&      device,
                              const CommandPool& command_pool,
                              std::string_view   name)
-  : name_(name), wait_fence_(device)
+  : name_(name)
 {
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -54,9 +55,9 @@ CommandBuffer::CommandBuffer(const Device&      device,
 }
 
 const CommandBuffer& CommandBuffer::pipelineBarrier(
-  const std::span<const VkImageMemoryBarrier2>  img_mem_barriers,
-  const std::span<const VkMemoryBarrier2>       mem_barriers,
-  const std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const
+  std::span<const VkImageMemoryBarrier2>  img_mem_barriers,
+  std::span<const VkMemoryBarrier2>       mem_barriers,
+  std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const
 {
   // One barrier must be set at least
   Assert(!(img_mem_barriers.empty() && mem_barriers.empty()) &&
@@ -129,14 +130,18 @@ const CommandBuffer& CommandBuffer::fullBarrier() const
 
 const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
 {
-  VkCommandBufferBeginInfo begin_info{};
-  begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  begin_info.flags            = usage;
-  begin_info.pInheritanceInfo = nullptr;
+  const VkCommandBufferBeginInfo begin_info{
+    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .pNext            = {},
+    .flags            = usage,
+    .pInheritanceInfo = nullptr,
+  };
   if (const VkResult result{
         vkBeginCommandBuffer(d_->command_buffer_, &begin_info) };
-      result != VK_SUCCESS)
-    Throw("Failed to begin command buffer ({})!", result);
+      result != VK_SUCCESS) {
+    Throw("Failed to begin command buffer ({}).", result);
+  }
+  staging_buffers_.clear();
   return *this;
 }
 
@@ -186,7 +191,7 @@ const CommandBuffer& CommandBuffer::end() const
 {
   if (const VkResult result{ vkEndCommandBuffer(d_->command_buffer_) };
       result != VK_SUCCESS)
-    Throw("Failed to end command buffer ({})!", result);
+    Throw("Failed to end command buffer ({}).", result);
   return *this;
 }
 
@@ -195,17 +200,9 @@ CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
   if (const VkResult result{ vkQueueSubmit(
-        d_->device_.graphicsQueue(), 1, &submit_info, wait_fence_.vk()) };
+        d_->device_.graphicsQueue(), 1, &submit_info, d_->wait_fence_.vk()) };
       result != VK_SUCCESS)
-    Throw("Failed to submit to queue ({})!", result);
-  return *this;
-}
-
-const CommandBuffer&
-CommandBuffer::submitAndWait(const VkSubmitInfo& submit_info) const
-{
-  submit(submit_info);
-  waitFence();
+    Throw("Failed to submit to queue ({}).", result);
   return *this;
 }
 
@@ -222,14 +219,16 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
     .signalSemaphoreCount = 0,
     .pSignalSemaphores    = {},
   };
-  return submitAndWait(submit_info);
+  submit(submit_info);
+  waitFence();
+  return *this;
 }
 
 const CommandBuffer& CommandBuffer::reset() const
 {
   if (const VkResult result{ vkResetCommandBuffer(d_->command_buffer_, 0) };
       result != VK_SUCCESS)
-    Throw("Failed to reset command buffer ({})", result);
+    Throw("Failed to reset command buffer ({}).", result);
   return *this;
 }
 
@@ -253,11 +252,11 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
 
 const CommandBuffer&
 CommandBuffer::bindIndexBuffer(const Buffer<uint32_t>& buffer,
-                               VkIndexType             index_type,
                                VkDeviceSize            offset) const
 {
   Assert(buffer.vk());
-  vkCmdBindIndexBuffer(d_->command_buffer_, buffer.vk(), offset, index_type);
+  vkCmdBindIndexBuffer(
+    d_->command_buffer_, buffer.vk(), offset, VK_INDEX_TYPE_UINT32);
   return *this;
 }
 
@@ -463,31 +462,63 @@ CommandBuffer::transitionImageLayout(Image&        image,
   return pipelineImageMemoryBarrier(barrier);
 }
 
-template <typename T>
-const CommandBuffer&
-CommandBuffer::copyBufferToImage(const Buffer<T>&         buffer,
-                                 Image&                   image,
-                                 const VkBufferImageCopy& copy_region) const
+const CommandBuffer& CommandBuffer::copyBufferToImage(
+  Image&                              dst,
+  const Buffer<byte_t>&               src,
+  std::span<const VkBufferImageCopy2> copy_regions) const
 {
-  vkCmdCopyBufferToImage(d_->command_buffer_,
-                         buffer.vk(),
-                         image.vk(),
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                         1,
-                         &copy_region);
+  const VkCopyBufferToImageInfo2 copy_info{
+    .sType          = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+    .pNext          = {},
+    .srcBuffer      = src.vk(),
+    .dstImage       = dst.vk(),
+    .dstImageLayout = dst.layout(),
+    .regionCount    = static_cast<uint32_t>(copy_regions.size()),
+    .pRegions       = copy_regions.data(),
+  };
+  vkCmdCopyBufferToImage2(d_->command_buffer_, &copy_info);
   return *this;
 }
 
-const CommandBuffer&
-CommandBuffer::copyDataToImage(std::span<const byte_t>  data,
-                               Image&                   image,
-                               const VkBufferImageCopy& copy_region) const
+const CommandBuffer& CommandBuffer::copyDataToImage(
+  Image&                              dst,
+  std::span<const byte_t>             src,
+  std::span<const VkBufferImageCopy2> copy_regions) const
 {
   return copyBufferToImage(
+    dst,
     createStagingBuffer(
-      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), data),
-    image,
-    copy_region);
+      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src),
+    copy_regions);
+}
+
+const CommandBuffer&
+CommandBuffer::copyBuffer(AllocatedBuffer&               dst,
+                          const AllocatedBuffer&         src,
+                          std::span<const VkBufferCopy2> copy_regions) const
+{
+  const VkCopyBufferInfo2 copy_info{
+    .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+    .pNext       = {},
+    .srcBuffer   = src.vk(),
+    .dstBuffer   = dst.vk(),
+    .regionCount = static_cast<uint32_t>(copy_regions.size()),
+    .pRegions    = copy_regions.data(),
+  };
+  vkCmdCopyBuffer2(d_->command_buffer_, &copy_info);
+  return *this;
+}
+
+const CommandBuffer& CommandBuffer::copyDataToBuffer(
+  AllocatedBuffer&               dst,
+  std::span<const byte_t>        src,
+  std::span<const VkBufferCopy2> copy_regions) const
+{
+  return copyBuffer(
+    dst,
+    createStagingBuffer(
+      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src),
+    copy_regions);
 }
 
 const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
@@ -510,26 +541,23 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
 
 const Buffer<byte_t>&
 CommandBuffer::createStagingBuffer(const std::string&      name,
-                                   std::span<const byte_t> data) const
+                                   std::span<const byte_t> src) const
 {
-  staging_buffers_.emplace_back(d_->device_,
-                                name,
-                                data,
-                                +BufferUsage::TransferSrc,
-                                +HostAccess::Sequential);
+  staging_buffers_.emplace_back(
+    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential);
   return staging_buffers_.back();
 }
 
-VkResult CommandBuffer::fenceStatus() const { return wait_fence_.status(); }
+VkResult CommandBuffer::fenceStatus() const { return d_->wait_fence_.status(); }
 void     CommandBuffer::waitFence() const
 {
   // 5 seconds, vulkan timeout is in nanoseconds
   constexpr const uint64_t timeout = 5e9;
-  if (wait_fence_.wait(timeout) == VK_TIMEOUT)
+  if (d_->wait_fence_.wait(timeout) == VK_TIMEOUT)
     Log(core::Debug, "{} timed out waiting for its internal fence!", name_);
 }
 
-void CommandBuffer::resetFence() const { wait_fence_.reset(); }
+void CommandBuffer::resetFence() const { d_->wait_fence_.reset(); }
 
 VkCommandBuffer CommandBuffer::vk() const { return d_->command_buffer_; }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
@@ -10,13 +11,13 @@ public:
   void reset();
 
   template <typename T>
-  DescriptorWriter& writeUniformBuffer(uint32_t                binding,
+  DescriptorWriter& writeUniformBuffer(uint32_t             binding,
                                        const wr::Buffer<T>& buffer,
-                                       size_t                  offset);
+                                       size_t               offset);
   template <typename T>
-  DescriptorWriter& writeStorageBuffer(uint32_t                binding,
+  DescriptorWriter& writeStorageBuffer(uint32_t             binding,
                                        const wr::Buffer<T>& buffer,
-                                       size_t                  offset);
+                                       size_t               offset);
 
   DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
 
@@ -38,10 +39,10 @@ public:
 
 private:
   template <typename T>
-  DescriptorWriter& writeBuffer(uint32_t                binding,
+  DescriptorWriter& writeBuffer(uint32_t             binding,
                                 const wr::Buffer<T>& buffer,
-                                size_t                  offset,
-                                VkDescriptorType        type);
+                                size_t               offset,
+                                VkDescriptorType     type);
   DescriptorWriter&
   writeImage(uint32_t         binding,
              VkImageView      image,
@@ -56,7 +57,7 @@ private:
 };
 
 template <typename T>
-DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t                binding,
+DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t             binding,
                                                 const wr::Buffer<T>& buffer,
                                                 size_t           index_offset,
                                                 VkDescriptorType type)

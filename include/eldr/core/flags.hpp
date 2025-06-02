@@ -18,6 +18,12 @@ struct Flags {
     static_assert(std::is_integral_v<Rep>);
     static_assert(std::is_enum_v<T>);
   };
+  constexpr bool hasFlag(T flag) const
+  {
+    return (flags & static_cast<Flags<T>::Rep>(flag)) !=
+           typename Flags<T>::Rep{};
+  }
+
   Rep flags;
 };
 
@@ -83,13 +89,6 @@ template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
 constexpr bool operator!(Flags<T> f)
 {
   return not f.flags;
-}
-
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
-constexpr bool hasFlag(Flags<T> flags, T flag)
-{
-  return (flags.flags & static_cast<Flags<T>::Rep>(flag)) !=
-         typename Flags<T>::Rep{};
 }
 
 // This assumes we're in the global namespace

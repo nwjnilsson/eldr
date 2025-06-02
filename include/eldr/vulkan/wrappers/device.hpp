@@ -59,6 +59,8 @@ public:
   [[nodiscard]] VkQueue          presentQueue() const { return p_queue_; }
 
   void waitIdle() const;
+
+  /// @brief Executes a lambda function immediately and waits.
   void execute(
     const std::function<void(const CommandBuffer& cmd_buf)>& cmd_lambda) const;
 
