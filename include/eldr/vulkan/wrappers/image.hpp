@@ -27,6 +27,9 @@ public:
   Image(const Device&, const Bitmap&, uint32_t mip_levels);
   virtual ~Image() = default;
 
+  [[nodiscard]] static Image createSwapchainImage(
+    const Device&, VkImage, std::string_view name, VkExtent2D, VkFormat);
+
   [[nodiscard]] VkImage            vk() const;
   [[nodiscard]] const std::string& name() const;
   [[nodiscard]] VkExtent2D         size() const { return size_; }
@@ -34,7 +37,8 @@ public:
   [[nodiscard]] uint32_t           mipLevels() const { return mip_levels_; }
 
   /// @brief Returns the layout of this image
-  [[nodiscard]] VkImageLayout    layout() const { return layout_; }
+  [[nodiscard]] VkImageLayout layout() const { return layout_; }
+
   [[nodiscard]] const ImageView& view() const { return image_view_; }
 
   void setLayout(VkImageLayout new_layout) { layout_ = new_layout; }

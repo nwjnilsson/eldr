@@ -37,15 +37,40 @@ enum class MemoryUsage {
   PreferDevice = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
   PreferHost   = VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
 };
+
 enum class LoadOp {
   Load     = VK_ATTACHMENT_LOAD_OP_LOAD,
   Clear    = VK_ATTACHMENT_LOAD_OP_CLEAR,
   DontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 };
+
 enum class StoreOp {
   Store    = VK_ATTACHMENT_STORE_OP_STORE,
   DontCare = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 };
+
+// enum class ImageLayout {
+//   Undefined              = VK_IMAGE_LAYOUT_UNDEFINED,
+//   General                = VK_IMAGE_LAYOUT_GENERAL,
+//   ColorAttachment        = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+//   DepthStencilAttachment = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+//   DepthStencilReadOnly   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+//   ShaderReadOnly         = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+//   TransferSrc            = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+//   TransferDst            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+//   Preinitialized         = VK_IMAGE_LAYOUT_PREINITIALIZED,
+//   DepthReadOnlyStencilAttachment =
+//     VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+//   DepthAttachmentStencilReadOnly =
+//     VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
+//   DepthAttachment   = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+//   DepthReadOnly     = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+//   StencilAttachment = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL,
+//   StencilReadOnly   = VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL,
+//   ReadOnly          = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+//   Attachment        = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+//   PresentSrc        = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+// };
 
 //------------------------------------------------------------------------------
 // Flags
@@ -78,6 +103,7 @@ enum class MemoryProperty : FlagRep {
   HostCached   = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
   Protected    = VK_MEMORY_PROPERTY_PROTECTED_BIT,
 };
+
 } // namespace eldr::vk
 ELDR_DECLARE_FLAG_SPEC(eldr::vk, HostAccess)
 ELDR_DECLARE_FLAG_SPEC(eldr::vk, BufferUsage)

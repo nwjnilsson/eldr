@@ -336,7 +336,7 @@ public:
     : device_(device), swapchain_(swapchain)
   {
     back_buffer_ = add<TextureResource>(
-      "back buffer", TextureUsage::Color, swapchain_.imageFormat());
+      "Back buffer", TextureUsage::Color, swapchain_.imageFormat());
   }
 
   [[nodiscard]] TextureResource*       backBuffer() { return back_buffer_; }
@@ -372,11 +372,10 @@ public:
   //                            PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
-                           const wr::CommandBuffer& cb,
-                           uint32_t                 frame_index) const;
+                           const wr::CommandBuffer& cb) const;
   void compile();
 
-  void render(const wr::CommandBuffer& cb, uint32_t frame_index);
+  void render(const wr::CommandBuffer& cb, wr::Image& target);
 
 private:
   const wr::Device&    device_;

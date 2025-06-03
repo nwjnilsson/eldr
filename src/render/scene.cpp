@@ -310,7 +310,6 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       surface.start_index = static_cast<uint32_t>(indices.size());
       surface.count =
         static_cast<uint32_t>(gltf.accessors[p.indicesAccessor.value()].count);
-      surfaces.push_back(surface);
 
       const size_t initial_vtx = vertices.size();
       // load indices

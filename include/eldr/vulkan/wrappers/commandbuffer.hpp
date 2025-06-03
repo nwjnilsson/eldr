@@ -71,8 +71,10 @@ public:
                                   uint32_t first_scissor) const;
   const CommandBuffer& fullBarrier() const;
 
-  const CommandBuffer& transitionImageLayout(Image&,
-                                             VkImageLayout new_layout) const;
+  const CommandBuffer&
+  transitionImageLayout(Image&,
+                        VkImageLayout new_layout,
+                        bool          force_layout_undefined = false) const;
 
   const CommandBuffer& blitImage(const Image&       src_image,
                                  VkImageLayout      src_layout,
@@ -82,6 +84,11 @@ public:
                                  VkFilter           filter) const;
 
   const CommandBuffer& generateMipmaps(const Image& image) const;
+
+  const CommandBuffer&
+  copyImage(Image&                        dst,
+            const Image&                  src,
+            std::span<const VkImageCopy2> copy_regions) const;
 
   const CommandBuffer&
   copyBufferToImage(Image&                              dst,

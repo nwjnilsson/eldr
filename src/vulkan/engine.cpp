@@ -54,8 +54,6 @@ struct FrameData {
 
 // TODO: is this even used
 struct GpuMeshBuffers {
-  BufferResource* index_buffer;
-  BufferResource* vertex_buffer;
   VkDeviceAddress vertex_buffer_address;
 };
 
@@ -85,8 +83,8 @@ struct VulkanEngine::EngineData {
   std::vector<FrameData> frames_in_flight;
 
   // The data below is experimental, default data
-  DescriptorSetLayout   scene_data_descriptor_layout;
-  DescriptorSetLayout   viking_model_descriptor_layout;
+  DescriptorSetLayout scene_data_descriptor_layout;
+  // DescriptorSetLayout   viking_model_descriptor_layout;
   GltfMetallicRoughness metal_rough_material;
   MaterialInstance      default_material_data;
 
@@ -267,9 +265,9 @@ void VulkanEngine::initDescriptors()
 
   layout_builder.reset();
 
-  layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
-    .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
-  d_->viking_model_descriptor_layout = layout_builder.build(d_->device, 0);
+  // layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
+  //   .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
+  // d_->viking_model_descriptor_layout = layout_builder.build(d_->device, 0);
 }
 
 void VulkanEngine::initDefaultData()
@@ -450,8 +448,8 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
   const auto& swapchain{ d_->swapchain };
   const auto& device{ d_->device };
 
-  // cb.bindIndexBuffer(d_->index_buffer);
-  // VkBuffer vbuffers[]{ d_->vertex_buffer.get() };
+  cb.bindIndexBuffer(d_->index_buffer);
+  // VkBuffer vbuffers[]{ d_->vertex_buffer.vk() };
   // cb.bindVertexBuffers(vbuffers);
 
   const size_t    surface_count{ main_draw_context_.opaque_surfaces.size() };
@@ -486,15 +484,6 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
       .world_matrix  = Mat4f{ 1.0f },
       .vertex_buffer = d_->vertex_buffer.getDeviceAddress(),
     };
-    // thoughts:
-    // 1. All vertices are in the same buffer, buildBuffers() binds data
-    // 2. Vertex buffer device address thus stays the same, but needs to be
-    // fetched from rendergraph somehow still.
-    // d_->render_graph->getDeviceAddress(vertex_buffer_);
-    //
-    //
-    // New thoughts: move index/vertex buffer resources out of rendergraph?
-    // Device address can then be easily accessed here.
     cb.pushConstant(draw.material->data.pipeline->layout(),
                     push_constants,
                     VK_SHADER_STAGE_VERTEX_BIT);
@@ -579,7 +568,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 
 void VulkanEngine::drawFrame()
 {
-  const auto& swapchain{ d_->swapchain };
+  auto&       swapchain{ d_->swapchain };
   const auto& device{ d_->device };
   if (swapchain_invalidated_) {
     recreateSwapchain();
@@ -607,7 +596,12 @@ void VulkanEngine::drawFrame()
 
   const auto& cb = device.requestCommandBuffer();
   frame.cmd_buf  = &cb;
-  d_->render_graph->render(cb, frame_index_);
+
+  cb.transitionImageLayout(swapchain.image(image_index),
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  d_->render_graph->render(cb, swapchain.image(image_index));
+  cb.transitionImageLayout(swapchain.image(image_index),
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
   VkPipelineStageFlags wait_stages[]{
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT

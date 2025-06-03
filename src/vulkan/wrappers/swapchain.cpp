@@ -125,16 +125,17 @@ void Swapchain::setupSwapchain(const Device&  device,
   if (likely(d_ != nullptr))
     old_swapchain = d_->swapchain_;
   VkSwapchainCreateInfoKHR swapchain_ci{
-    .sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-    .pNext                 = {},
-    .flags                 = {},
-    .surface               = surface.vk(),
-    .minImageCount         = min_image_count,
-    .imageFormat           = surface_format_.format,
-    .imageColorSpace       = surface_format_.colorSpace,
-    .imageExtent           = extent_,
-    .imageArrayLayers      = 1,
-    .imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    .sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+    .pNext            = {},
+    .flags            = {},
+    .surface          = surface.vk(),
+    .minImageCount    = min_image_count,
+    .imageFormat      = surface_format_.format,
+    .imageColorSpace  = surface_format_.colorSpace,
+    .imageExtent      = extent_,
+    .imageArrayLayers = 1,
+    .imageUsage =
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     .imageSharingMode      = {},
     .queueFamilyIndexCount = {},
     .pQueueFamilyIndices   = {},
@@ -164,8 +165,8 @@ void Swapchain::setupSwapchain(const Device&  device,
   d_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
 
   // Clear data from old swapchain
-  image_views_.clear();
   images_.clear();
+  std::vector<VkImage> images;
 
   // Get new swapchain images
   uint32_t image_count;
@@ -174,25 +175,20 @@ void Swapchain::setupSwapchain(const Device&  device,
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
-  images_.resize(image_count);
+  images.resize(image_count);
 
   if (const VkResult result{ vkGetSwapchainImagesKHR(
-        device.logical(), d_->swapchain_, &image_count, images_.data()) };
+        device.logical(), d_->swapchain_, &image_count, images.data()) };
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
-  //----------------------------------------------------------------------------
-  // Create image views
-  //----------------------------------------------------------------------------
-  image_views_.reserve(image_count);
-  ImageViewCreateInfo image_view_ci{};
-  image_view_ci.format       = surface_format_.format;
-  image_view_ci.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-  image_view_ci.mip_levels   = 1;
-
-  for (const VkImage image : images_) {
-    image_view_ci.image = image;
-    image_views_.emplace_back(device, image_view_ci);
+  for (size_t i{ 0 }; i < images.size(); ++i) {
+    images_.push_back(
+      Image::createSwapchainImage(device,
+                                  images[i],
+                                  fmt::format("Swapchain image {}", i),
+                                  extent_,
+                                  surface_format_.format));
   }
 }
 
@@ -242,4 +238,8 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
 
 VkSwapchainKHR  Swapchain::vk() const { return d_->swapchain_; }
 VkSwapchainKHR* Swapchain::vkp() const { return &d_->swapchain_; }
+
+const Image& Swapchain::image(size_t index) const { return images_[index]; }
+Image&       Swapchain::image(size_t index) { return images_[index]; }
+
 } // namespace eldr::vk::wr

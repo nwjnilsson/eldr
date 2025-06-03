@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
 #include <vector>
@@ -13,10 +14,8 @@ public:
   [[nodiscard]] VkSwapchainKHR    vk() const;
   [[nodiscard]] VkSwapchainKHR*   vkp() const;
   //[[nodiscard]] uint32_t minImageCount() const { return min_image_count_; }
-  [[nodiscard]] const std::vector<ImageView>& imageViews() const
-  {
-    return image_views_;
-  }
+  [[nodiscard]] const Image& image(size_t index) const;
+  [[nodiscard]] Image&       image(size_t index);
   [[nodiscard]] VkFormat imageFormat() const { return surface_format_.format; }
   [[nodiscard]] const VkSemaphore*
   imageAvailableSemaphore(uint32_t index) const;
@@ -43,8 +42,7 @@ private:
   VkSurfaceFormatKHR surface_format_;
   VkPresentModeKHR   present_mode_;
 
-  std::vector<ImageView> image_views_;
-  std::vector<VkImage>   images_;
+  std::vector<Image>     images_;
   std::vector<Semaphore> image_available_sem_;
   std::vector<Semaphore> render_finished_sem_;
 };

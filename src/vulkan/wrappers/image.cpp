@@ -59,6 +59,7 @@ public:
   ImageImpl(const Device&                  device,
             const VkImageCreateInfo&       image_ci,
             const VmaAllocationCreateInfo& alloc_ci);
+  ImageImpl(const Device&, VkImage); // for swapchain images
   ~ImageImpl();
   VkImage image_{ VK_NULL_HANDLE };
 };
@@ -78,9 +79,16 @@ Image::ImageImpl::ImageImpl(const Device&                  device,
     Throw("Failed to create image! ({})", result);
 }
 
+Image::ImageImpl::ImageImpl(const Device& device, VkImage image)
+  : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{}), image_(image)
+{
+}
+
 Image::ImageImpl::~ImageImpl()
 {
-  vmaDestroyImage(device_.allocator(), image_, allocation_);
+  if (allocation_ != VK_NULL_HANDLE) {
+    vmaDestroyImage(device_.allocator(), image_, allocation_);
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -170,5 +178,27 @@ Image::Image(const Device& device, const Bitmap& bitmap)
 {
 }
 
+Image Image::createSwapchainImage(const Device&    device,
+                                  VkImage          vkimage,
+                                  std::string_view name,
+                                  VkExtent2D       extent,
+                                  VkFormat         format)
+{
+  Image image;
+  image.name_   = name;
+  image.size_   = extent;
+  image.format_ = format;
+  image.d_      = std::make_shared<ImageImpl>(device, vkimage);
+  const ImageViewCreateInfo image_view_ci{
+    .image        = image.d_->image_,
+    .format       = format,
+    .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
+    .mip_levels   = image.mip_levels_,
+  };
+  image.image_view_ = ImageView{ device, image_view_ci };
+  return image;
+}
+
 VkImage Image::vk() const { return d_->image_; }
+
 } // namespace eldr::vk::wr

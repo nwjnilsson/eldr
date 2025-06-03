@@ -399,10 +399,16 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
   return pipelineImageMemoryBarrier(barrier);
 }
 
-const CommandBuffer&
-CommandBuffer::transitionImageLayout(Image&        image,
-                                     VkImageLayout new_layout) const
+const CommandBuffer& CommandBuffer::transitionImageLayout(
+  Image& image, VkImageLayout new_layout, bool force_initial_undefined) const
 {
+  const VkImageLayout old_layout{ force_initial_undefined
+                                    ? VK_IMAGE_LAYOUT_UNDEFINED
+                                    : image.layout() };
+  if (old_layout == new_layout) {
+    return *this;
+  }
+
   VkImageMemoryBarrier2 barrier{
     .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
     .pNext               = {},
@@ -410,7 +416,7 @@ CommandBuffer::transitionImageLayout(Image&        image,
     .srcAccessMask       = 0,
     .dstStageMask = {},
     .dstAccessMask       = 0,
-    .oldLayout           = image.layout(),
+    .oldLayout           = old_layout,
     .newLayout           = new_layout,
     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -424,21 +430,21 @@ CommandBuffer::transitionImageLayout(Image&        image,
     },
   };
 
-  if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
       new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
     barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     barrier.dstStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
   }
-  else if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
+  else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
            new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
     barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     barrier.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
   }
-  else if (image.layout() == VK_IMAGE_LAYOUT_UNDEFINED &&
+  else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
            new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -446,20 +452,67 @@ CommandBuffer::transitionImageLayout(Image&        image,
     barrier.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
                            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
   }
-  else if (image.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+  else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
+           new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL &&
+           new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
            new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
     barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.dstStageMask  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
   }
-  else {
-    Throw(
-      "Unsupported layout transition! ({} -> {})", image.layout(), new_layout);
+  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+           new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = 0;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
   }
-
+  else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR &&
+           new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.srcStageMask  = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    barrier.dstStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+  }
+  else {
+    Throw("Unsupported layout transition! ({} -> {})", old_layout, new_layout);
+  }
   image.setLayout(new_layout);
   return pipelineImageMemoryBarrier(barrier);
+}
+
+const CommandBuffer&
+CommandBuffer::copyImage(Image&                        dst,
+                         const Image&                  src,
+                         std::span<const VkImageCopy2> copy_regions) const
+{
+  Assert(dst.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  Assert(src.layout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  const VkCopyImageInfo2 copy_info{
+    .sType          = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2,
+    .pNext          = {},
+    .srcImage       = src.vk(),
+    .srcImageLayout = src.layout(),
+    .dstImage       = dst.vk(),
+    .dstImageLayout = dst.layout(),
+    .regionCount    = static_cast<uint32_t>(copy_regions.size()),
+    .pRegions       = copy_regions.data(),
+  };
+  vkCmdCopyImage2(d_->command_buffer_, &copy_info);
+  return *this;
 }
 
 const CommandBuffer& CommandBuffer::copyBufferToImage(

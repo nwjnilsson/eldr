@@ -72,6 +72,7 @@ void TextureResource::setSampleCount(VkSampleCountFlagBits sample_count)
 void TextureResource::resolvesTo(TextureResource* target)
 {
   Assert(target->sample_count_ == VK_SAMPLE_COUNT_1_BIT);
+  // TODO: how to count resolve targets in read/write dependency?
   resolve_ = target;
 }
 
@@ -108,8 +109,7 @@ bool RenderStage::hasReadDependency(
 // }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
-                                      const wr::CommandBuffer& cb,
-                                      uint32_t frame_index) const
+                                      const wr::CommandBuffer& cb) const
 {
   const PhysicalStage& physical = *stage->physical_;
 
@@ -212,11 +212,8 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         resolve_flags  = VK_RESOLVE_MODE_AVERAGE_BIT;
       }
 
-      const VkAttachmentLoadOp  load_op{ static_cast<VkAttachmentLoadOp>(
-        stage->load_store_ops_.at(texture).first) };
-      const VkAttachmentStoreOp store_op{ static_cast<VkAttachmentStoreOp>(
-        stage->load_store_ops_.at(texture).second) };
-
+      const LoadOp  load_op{ stage->load_store_ops_.at(texture).first };
+      const StoreOp store_op{ stage->load_store_ops_.at(texture).second };
       VkRenderingAttachmentInfo attachment{
         .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext              = {},
@@ -225,8 +222,8 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         .resolveMode        = resolve_flags,
         .resolveImageView   = resolve_view,
         .resolveImageLayout = resolve_layout,
-        .loadOp             = load_op,
-        .storeOp            = store_op,
+        .loadOp             = static_cast<VkAttachmentLoadOp>(load_op),
+        .storeOp            = static_cast<VkAttachmentStoreOp>(store_op),
         .clearValue         = texture->clear_value_,
       };
 
@@ -578,6 +575,9 @@ void RenderGraph::compile()
         Throw("Image creation for this usage has not been implemented yet.");
         break;
     }
+    if (texture.get() == backBuffer()) {
+      usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
 
     const wr::ImageCreateInfo texture_info{
       .name         = fmt::format("{} image", texture->name_),
@@ -628,8 +628,18 @@ void RenderGraph::compile()
   }
 }
 
-void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
+void RenderGraph::render(const wr::CommandBuffer& cb, wr::Image& target)
 {
+  Assert(target.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+         "Render graph expects target to be in "
+         "VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+  auto* bb = back_buffer_->physical_->as<PhysicalImage>();
+  Assert(bb);
+  const VkExtent2D size{ bb->image_.size() };
+  Assert(size.width == target.size().width and
+           size.height == target.size().height,
+         "Target must be of same size as render graph output");
+
   for (auto& buffer_resource : buffer_resources_) {
     if (buffer_resource->data_.data() != nullptr) {
       // There is data to be uploaded to the gpu
@@ -676,9 +686,35 @@ void RenderGraph::render(const wr::CommandBuffer& cb, uint32_t frame_index)
 
   // TODO: full memory barrier is not needed between nodes in same subset
   for (const auto& subset : stage_stack_) {
-    for (const auto& stage : subset)
-      recordCommandBuffer(stage, cb, frame_index);
+    for (const auto& stage : subset) {
+      recordCommandBuffer(stage, cb);
+    }
   }
+
+  // Copy back buffer to target
+  const VkImageCopy2 regions[] {{
+    .sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
+    .pNext = {},
+    .srcSubresource = {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel       = 0,
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+    .srcOffset = {0,0,0},
+    .dstSubresource = {
+      .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel       = 0,
+      .baseArrayLayer = 0,
+      .layerCount     = 1,
+    },
+    .dstOffset = {0,0,0},
+    .extent = {size.width, size.height, 1}
+  }};
+  cb.transitionImageLayout(bb->image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+    .copyImage(target, bb->image_, regions)
+    .transitionImageLayout(bb->image_,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 } // namespace eldr::vk

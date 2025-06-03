@@ -44,4 +44,5 @@ Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
 
 VkSemaphore        Semaphore::vk() const { return d_->semaphore_; }
 const VkSemaphore* Semaphore::vkp() const { return &d_->semaphore_; }
+
 } // namespace eldr::vk::wr

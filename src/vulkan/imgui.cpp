@@ -245,7 +245,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     VkDescriptorSet  descriptor_set{ descriptors.allocate(device_,
                                                          imgui_layout_) };
     DescriptorWriter writer;
-    writer.writeCombinedImageSampler(1, imgui_texture_, font_sampler_)
+    writer.writeCombinedImageSampler(0, imgui_texture_, font_sampler_)
       .updateSet(device_, descriptor_set);
 
     VkDescriptorSet im_descriptors[]{ descriptor_set };
