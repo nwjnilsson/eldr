@@ -352,29 +352,10 @@ void VulkanEngine::setupRenderGraph()
     "Depth buffer", TextureUsage::DepthStencil, d_->device.findDepthFormat()) };
   depth_buffer->setSampleCount(s_->msaa_sample_count);
 
-  GraphicsStage& main_stage = *graph->add<GraphicsStage>("Main stage");
-  main_stage.writesTo(color_buffer, LoadOp::Clear, StoreOp::Store)
+  auto* main_stage = graph->add<GraphicsStage>("Main stage");
+  main_stage->writesTo(color_buffer, LoadOp::Clear, StoreOp::Store)
     .writesTo(depth_buffer, LoadOp::Clear, StoreOp::Store)
     .setOnRecord([&](const CommandBuffer& cb) { drawGeometry(cb); });
-
-  // main_stage->setDepthOptions(true, true);
-
-  // for (const auto& shader : d_->shaders)
-  // {
-  //   main_stage->usesShader(shader);
-  // }
-
-  // TODO: Only one descriptor set is
-  // currently allocated for any given
-  // ResourceDescriptor. Additionally, for
-  // each frame in flight, the descriptor set
-  // bound is identical to the previous
-  // frame.This means that it is (for now)
-  // okay to only add a single layout for
-  // each resource descriptor that applies to
-  // all frames. for (const auto& descriptor
-  // : descriptors_)
-  // main_stage->addDescriptorLayout(d_->scene_data_descriptor_layout);
 }
 
 void VulkanEngine::recreateSwapchain()
@@ -401,7 +382,6 @@ void VulkanEngine::recreateSwapchain()
 
 void VulkanEngine::updateScenes(uint32_t current_image)
 {
-  // TODO: if scene has changed, rebuild vertices/indices
   static size_t last_scene_node_count{ 0 };
   for (auto& kv : loaded_scenes_) {
     auto& scene = kv.second;
@@ -449,6 +429,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
   const auto& device{ d_->device };
 
   cb.bindIndexBuffer(d_->index_buffer);
+  // Using vertex pulling instead, so binding vertex buffer not necessary
   // VkBuffer vbuffers[]{ d_->vertex_buffer.vk() };
   // cb.bindVertexBuffers(vbuffers);
 

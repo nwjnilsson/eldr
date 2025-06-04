@@ -113,6 +113,7 @@ enum class TextureUsage {
 
 class TextureResource : public RenderResource {
   friend RenderGraph;
+  friend GraphicsStage;
 
 public:
   TextureResource(std::string&& name, TextureUsage usage, VkFormat format)
@@ -203,7 +204,7 @@ private:
 protected:
   explicit RenderStage(std::string_view name) : name_(name) {}
 
-private:
+protected:
   const std::string                         name_;
   std::unique_ptr<PhysicalStage>            physical_;
   std::unordered_set<const RenderResource*> writes_;
@@ -230,10 +231,12 @@ public:
   GraphicsStage& writesTo(const TextureResource* resource,
                           LoadOp                 load_op,
                           StoreOp                store_op = StoreOp::Store);
+  GraphicsStage& readsFrom(const RenderResource* resource);
 
 private:
   using LoadStoreOps = std::pair<LoadOp, StoreOp>;
   std::unordered_map<const TextureResource*, LoadStoreOps> load_store_ops_;
+  std::unordered_set<const TextureResource*>               resolves_;
 };
 
 class PhysicalResource : public RenderGraphObject {

@@ -34,9 +34,10 @@ private:
 
   // BufferResource* ibuffer_{ nullptr };
   // BufferResource* vbuffer_{ nullptr };
-  GraphicsStage*         stage_{ nullptr };
-  wr::Buffer<uint32_t>   index_buffer_;
-  wr::Buffer<ImDrawVert> vertex_buffer_;
+  GraphicsStage* stage_{ nullptr };
+  struct FrameData;
+  std::vector<FrameData> frames_in_flight;
+  uint32_t               frame_index_{ 0 };
 
   wr::Image               imgui_texture_;
   wr::Sampler             font_sampler_;

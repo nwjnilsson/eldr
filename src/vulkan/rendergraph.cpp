@@ -6,19 +6,11 @@
 #include <eldr/vulkan/wrappers/framebuffer.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
+#include <deque>
+
 using namespace eldr::core;
 
 namespace eldr::vk {
-// void BufferResource::addVertexAttribute(VkFormat format, uint32_t offset)
-// {
-//   vertex_attributes_.push_back({
-//     .location = static_cast<uint32_t>(vertex_attributes_.size()),
-//     .binding  = 0,
-//     .format   = format,
-//     .offset   = offset,
-//   });
-// }
-
 RenderStage& RenderStage::writesTo(const RenderResource* resource)
 {
   if (unlikely(writes_.contains(resource))) {
@@ -47,6 +39,12 @@ GraphicsStage& GraphicsStage::writesTo(const TextureResource* resource,
   return *this;
 }
 
+GraphicsStage& GraphicsStage::readsFrom(const RenderResource* resource)
+{
+  RenderStage::readsFrom(resource);
+  return *this;
+}
+
 // void TextureResource::setFlags(TextureFlags flags)
 // {
 // #ifdef DEBUG
@@ -72,7 +70,6 @@ void TextureResource::setSampleCount(VkSampleCountFlagBits sample_count)
 void TextureResource::resolvesTo(TextureResource* target)
 {
   Assert(target->sample_count_ == VK_SAMPLE_COUNT_1_BIT);
-  // TODO: how to count resolve targets in read/write dependency?
   resolve_ = target;
 }
 
@@ -90,23 +87,6 @@ bool RenderStage::hasReadDependency(
   }
   return false;
 }
-
-// void GraphicsStage::bindBuffer(const BufferResource* buffer,
-//                                const uint32_t        binding)
-// {
-//   buffer_bindings_.emplace(buffer, binding);
-// }
-
-// void GraphicsStage::usesShader(const wr::Shader& shader)
-// {
-//   shaders_.push_back({
-//     .sType               =
-//     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = {}, .flags
-//     = {}, .stage               = shader.stage(), .module              =
-//     shader.module(), .pName               = shader.entryPoint().c_str(),
-//     .pSpecializationInfo = {},
-//   });
-// }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
                                       const wr::CommandBuffer& cb) const
@@ -196,6 +176,9 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
     if (texture == nullptr) {
       continue;
     }
+    if (stage->resolves_.contains(texture)) {
+      continue;
+    }
     if (const auto* image = texture->physical_->as<PhysicalImage>()) {
       const PhysicalImage*  resolve_image;
       VkImageView           resolve_view{ VK_NULL_HANDLE };
@@ -243,205 +226,120 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
   }
 }
 
-// void RenderGraph::buildRenderPass(const GraphicsStage*   stage,
-//                                   PhysicalGraphicsStage& physical) const
-// {
-//   std::vector<VkAttachmentDescription> attachments;
-//   std::vector<VkAttachmentReference>   resolve_refs;
-//   std::vector<VkAttachmentReference>   color_refs;
-//   std::vector<VkAttachmentReference>   depth_refs;
-//   // Build vulkan attachments. For every texture resource that stage writes
-//   to,
-//   // we create a corresponding VkAttachmentDescription and attach it to the
-//   // render pass.
-//   for (size_t i = 0; i < stage->writes_.size(); i++) {
-//     const auto* resource = stage->writes_[i];
-//     const auto* texture  = resource->as<TextureResource>();
-//     if (texture == nullptr) {
-//       continue;
-//     }
-//
-//     VkAttachmentDescription attachment{};
-//     attachment.flags   = 0;
-//     attachment.format  = texture->format_;
-//     attachment.samples = stage->sample_count_;
-//     attachment.loadOp  = stage->clears_screen_ ?
-//     VK_ATTACHMENT_LOAD_OP_CLEAR
-//                                                :
-//                                                VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//     attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-//     attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-//     attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-//
-//     bool msaa_enabled{ stage->sample_count_ != VK_SAMPLE_COUNT_1_BIT };
-//
-//     switch (texture->usage_) {
-//       case TextureUsage::BackBuffer: {
-//         if (!stage->clears_screen_ && !msaa_enabled) {
-//           attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//           attachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
-//         }
-//         attachment.samples = VK_SAMPLE_COUNT_1_BIT; // use only one sample
-//         when
-//                                                     // resolving to back
-//                                                     buffer
-//         attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//         attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//         const VkAttachmentReference bb_ref{
-//           static_cast<uint32_t>(i),
-//           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-//         };
-//         if (msaa_enabled)
-//           resolve_refs.push_back(bb_ref);
-//         else
-//           color_refs.push_back(bb_ref);
-//       } break;
-//       case TextureUsage::ColorBuffer:
-//         assert(msaa_enabled);
-//         if (!stage->clears_screen_) {
-//           attachment.initialLayout =
-//           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; attachment.loadOp =
-//           VK_ATTACHMENT_LOAD_OP_LOAD;
-//         }
-//         attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-//         color_refs.push_back(
-//           { static_cast<uint32_t>(i), attachment.finalLayout });
-//         break;
-//       case TextureUsage::DepthStencilBuffer:
-//         attachment.finalLayout =
-//           VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-//         depth_refs.push_back(
-//           { static_cast<uint32_t>(i),
-//             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
-//         break;
-//       default:
-//         assert(false);
-//     }
-//     attachments.push_back(attachment);
-//   }
-//
-//   const VkSubpassDescription subpass_description{
-//     .flags                = 0,
-//     .pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS,
-//     .inputAttachmentCount = 0,
-//     .pInputAttachments    = nullptr,
-//     .colorAttachmentCount = static_cast<std::uint32_t>(color_refs.size()),
-//     .pColorAttachments    = color_refs.data(),
-//     .pResolveAttachments  = resolve_refs.data(),
-//     .pDepthStencilAttachment =
-//       !depth_refs.empty() ? depth_refs.data() : nullptr,
-//     .preserveAttachmentCount = 0,
-//     .pPreserveAttachments    = nullptr,
-//   };
-//
-//   const VkSubpassDependency subpass_dependency{
-//     .srcSubpass   = VK_SUBPASS_EXTERNAL,
-//     .dstSubpass   = 0,
-//     .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-//                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-//     .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-//                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-//     .srcAccessMask = 0,
-//     .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-//                      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-//     .dependencyFlags = 0,
-//   };
-//
-//   // TODO: make a render pass builder? see how it pans out with dynamic
-//   // rendering, dunno where I will end up
-//   physical.render_pass_ =
-//     wr::RenderPass{ device_, attachments, subpass_description,
-//                     subpass_dependency };
-// }
-
-// void RenderGraph::buildPipelineLayout(const RenderStage* stage,
-//                                       PhysicalStage&     physical) const
-//{
-//   const VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-//     .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-//     .pNext          = nullptr,
-//     .flags          = 0,
-//     .setLayoutCount =
-//     static_cast<uint32_t>(stage->descriptor_layouts_.size()), .pSetLayouts
-//     = stage->descriptor_layouts_.data(), .pushConstantRangeCount =
-//       static_cast<uint32_t>(stage->push_constant_ranges_.size()),
-//     .pPushConstantRanges = stage->push_constant_ranges_.data(),
-//   };
-//
-//   if (const auto result = vkCreatePipelineLayout(
-//         device_.logical(), &pipeline_layout_ci, nullptr,
-//         &physical.pipelineLayout());
-//       result != VK_SUCCESS) {
-//     ThrowVk(result, "vkCreatePipelineLayout(): failed for pipeline layout
-//     {}!",
-//             stage->name());
-//   }
-// }
-
-// void RenderGraph::buildGraphicsPipeline(const GraphicsStage*   stage,
-//                                         PhysicalGraphicsStage& physical)
-//                                         const
-// {
-//
-//   // Build buffer and vertex layout bindings. For every buffer resource
-//   that
-//   // stage reads from, we create a corresponding attribute binding and
-//   vertex
-//   // binding description.
-//   // std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
-//   // std::vector<VkVertexInputBindingDescription>   vertex_bindings;
-//   // for (const auto* resource : stage->reads_) {
-//   //   const auto* buffer_resource = resource->as<BufferResource>();
-//   //   if (buffer_resource == nullptr) {
-//   //     continue;
-//   //   }
-//
-//   //   // Don't mess with index buffers here.
-//   //   if (buffer_resource->usage_ == BufferUsage::IndexBuffer) {
-//   //     continue;
-//   //   }
-//
-//   //   // We use std::unordered_map::at() here to ensure that a binding
-//   value
-//   //   // exists for buffer_resource.
-//   //   const uint32_t binding =
-//   stage->buffer_bindings_.at(buffer_resource);
-//   //   for (auto attribute_description :
-//   buffer_resource->vertex_attributes_)
-//   {
-//   //     attribute_description.binding = binding;
-//   //     attribute_descriptions.push_back(attribute_description);
-//   //   }
-//
-//   //   vertex_bindings.push_back({
-//   //     .binding   = binding,
-//   //     .stride    =
-//   static_cast<uint32_t>(buffer_resource->element_size_),
-//   //     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-//   //   });
-//   // }
-//
-//   PipelineBuilder pipeline_builder;
-//   pipeline_builder.setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-//     .setPolygonMode(VK_POLYGON_MODE_FILL)
-//     .setCullMode(stage->cull_mode_,
-//                  VK_FRONT_FACE_COUNTER_CLOCKWISE) // cull mode should
-//                  probably
-//                                                   // not be a member of
-//                                                   stage
-//     .setMultisampling(stage->sample_count_)
-//     .setDepthFormat(device_.findDepthFormat()) // should be set from depth
-//                                                // texture in the end
-//     .enableBlendingAlphaBlend();
-//   physical.pipeline_ = pipeline_builder.build(device_, stage->name());
-// }
-
 void RenderGraph::compile()
 {
+  Log(Trace, "Compiling render graph...");
 #ifdef DEBUG
-  // Initial validity checks
-  // int presentable{ 0 };
+  // ---------------------------------------------------------------------------
+  // Validity checks
+  // There is some nasty code in this section but it is mainly a placeholder for
+  // more advanced validation/scheduling algorithms that might come later.
+  // ---------------------------------------------------------------------------
+  // Check that each texture resource is only cleared by one stage
+  for (const auto& texture : texture_resources_) {
+    int count{ 0 };
+    for (const auto& stage : stages_) {
+      if (const auto* g_stage = stage->as<GraphicsStage>()) {
+        if (g_stage->writes_.contains(texture.get())) {
+          if (g_stage->load_store_ops_.at(texture.get()).first ==
+              LoadOp::Clear) {
+            count++;
+          }
+        }
+      }
+    }
+    if (count > 1) {
+      Throw("Texture resource \"{}\" is cleared by more than one stage.",
+            texture->name_);
+    }
+  }
+
+  // Check for unschedulable WAW dependency where:
+  // Stage A writes to resource X and Y with LoadOp::Clear and LoadOp::Load,
+  // respectively.
+  // Stage B writes to resource X and Y with LoadOp::Load and
+  // LoadOp::Clear, respectively.
+  // In this scenario, neither A nor B can be scheduled first because either X
+  // or Y will be cleared after being written to. There's probably a much
+  // smarter and more efficient way to do this but this seems to work for now.
+  for (size_t i{ 0 }; i < stages_.size(); ++i) {
+    const auto* g_stage1 = stages_[i]->as<GraphicsStage>();
+    if (not g_stage1) {
+      continue;
+    }
+    for (size_t j{ i + 1 }; j < stages_.size(); ++j) {
+      const auto* g_stage2 = stages_[j]->as<GraphicsStage>();
+      if (not g_stage2) {
+        continue;
+      }
+      std::unordered_set<const TextureResource*> candidates;
+      for (const auto* write1 : g_stage1->writes_) {
+        const auto* texture1 = write1->as<TextureResource>();
+        if (not texture1) {
+          continue;
+        }
+
+        if ((g_stage2->writes_.contains(texture1)) or
+            (texture1->resolve_ and
+             g_stage2->writes_.contains(texture1->resolve_))) {
+          candidates.insert(texture1);
+        }
+      }
+      for (auto it1 = candidates.begin(); it1 != candidates.end(); ++it1) {
+        for (auto it2 = std::next(it1); it2 != candidates.end(); ++it2) {
+          const auto* const      t1 = *it1;
+          const auto* const      t2 = *it2;
+          const TextureResource* k11;
+          const TextureResource* k12;
+          const TextureResource* k21;
+          const TextureResource* k22;
+          if (g_stage1->writes_.contains(t1)) {
+            k11 = t1;
+          }
+          else {
+            k11 = t1->resolve_;
+            Assert(t1->resolve_);
+          }
+          if (g_stage1->writes_.contains(t2)) {
+            k12 = t2;
+          }
+          else {
+            k12 = t2->resolve_;
+            Assert(t2->resolve_);
+          }
+          if (g_stage2->writes_.contains(t1)) {
+            k21 = t1;
+          }
+          else {
+            k21 = t1->resolve_;
+            Assert(t1->resolve_);
+          }
+          if (g_stage2->writes_.contains(t2)) {
+            k22 = t2;
+          }
+          else {
+            k22 = t2->resolve_;
+            Assert(t2->resolve_);
+          }
+          const LoadOp l11{ g_stage1->load_store_ops_.at(k11).first };
+          const LoadOp l12{ g_stage1->load_store_ops_.at(k12).first };
+          const LoadOp l21{ g_stage2->load_store_ops_.at(k21).first };
+          const LoadOp l22{ g_stage2->load_store_ops_.at(k22).first };
+          if ((l11 == LoadOp::Clear and l12 == LoadOp::Load and
+               l21 == LoadOp::Load and l22 == LoadOp::Clear) or
+              (l11 == LoadOp::Load and l12 == LoadOp::Clear and
+               l21 == LoadOp::Clear and l22 == LoadOp::Load)) {
+            Throw("Unschedulable WAW dependency detected between stages \"{}\" "
+                  "and \"{}\"",
+                  g_stage1->name_,
+                  g_stage2->name_);
+          }
+        }
+      }
+    }
+  }
+
+  // Check MSAA sample counts for textures and resolve targets
   for (const auto& texture : texture_resources_) {
     if (texture->resolve_) {
       if (texture->sample_count_ == VK_SAMPLE_COUNT_1_BIT)
@@ -459,21 +357,37 @@ void RenderGraph::compile()
               texture->resolve_->sample_count_);
       }
     }
-    // if (texture->flags_ & TextureFlags::Presentable) {
-    //   presentable++;
-    // }
   }
-  // Assert(presentable == 1,
-  //        "The render graph expects only a single texture with the Presentable
-  //        " "flag.");
 #endif
 
-  // TODO: The topology sort needs to check the resolve targets too, as this is
-  // technically a write, even though these are not explicitly included as
-  // attachments
+  // ---------------------------------------------------------------------------
+  // Add resolve textures to write sets
+  // ---------------------------------------------------------------------------
+  for (auto& stage : stages_) {
+    std::vector<TextureResource*> resolves;
+    if (auto* g_stage = stage->as<GraphicsStage>()) {
+      for (const auto* resource : g_stage->writes_) {
+        if (const auto* texture = resource->as<TextureResource>()) {
+          if (texture->resolve_) {
+            resolves.push_back(texture->resolve_);
+            g_stage->load_store_ops_.insert(std::make_pair(
+              texture->resolve_, g_stage->load_store_ops_.at(texture)));
+          }
+        }
+      }
+      for (auto* texture : resolves) {
+        g_stage->writes_.insert(texture);
+        g_stage->resolves_.insert(texture);
+      }
+    }
+  }
 
+  // ---------------------------------------------------------------------------
+  // Compilation/scheduling
+  // ---------------------------------------------------------------------------
   // TODO: the topology sorting implemented here has not been extensively
   // tested, but it works for the two stages I'm currently using...
+
   // Make a copy of all reads to use when topology sorting to avoid
   // modifying the real graph
   std::unordered_map<RenderStage*, std::unordered_set<const RenderResource*>>
@@ -485,17 +399,17 @@ void RenderGraph::compile()
   // Set up the topology sort
   std::vector<RenderStage*> q_set{}; // stages with no read dependencies
   for (auto& kv : reads) {
-    bool has_read_dep = false;
+    bool has_raw_dep{ false };
     for (const auto* resource : kv.second) {
       for (const auto& stage : stages_) {
         if (stage.get() == kv.first)
           continue;
         if (stage->writes_.contains(resource)) {
-          has_read_dep = true;
+          has_raw_dep = true;
         }
       }
     }
-    if (!has_read_dep) {
+    if (not has_raw_dep) {
       reads[kv.first].clear();
       q_set.push_back(kv.first);
     }
@@ -508,11 +422,12 @@ void RenderGraph::compile()
   // same command buffer without a memory barrier between. Another way of doing
   // this would be to first do a regular topology sort where the nodes end up in
   // a flat vector, and then figure out where the memory barriers are needed.
+  std::vector<std::vector<RenderStage*>> t_sorted_stack;
   while (!q_set.empty()) {
-    stage_stack_.emplace_back(q_set);
+    t_sorted_stack.emplace_back(q_set);
     q_set.clear();
-    for (auto q_stage : stage_stack_.back()) {
-      for (auto write : q_stage->writes_) {
+    for (auto* q_stage : t_sorted_stack.back()) {
+      for (auto* write : q_stage->writes_) {
         for (auto& kv : reads) {
           if (reads[kv.first].contains(write)) {
             reads[kv.first].erase(write);
@@ -526,32 +441,59 @@ void RenderGraph::compile()
   // Does any node still have incoming edges? If so, the graph is invalid
   for (auto& kv : reads) {
     if (!kv.second.empty()) {
-      Throw("Render Graph contains cyclic dependencies!");
+      Throw("Render graph contains cyclic dependencies.");
     }
   }
+
+  // Schedule passes within each group. Stages that clear resources go first.
+  for (const auto& v : t_sorted_stack) {
+    std::deque<RenderStage*> group_schedule;
+    for (size_t i{ 0 }; i < v.size(); ++i) {
+      auto* stage = v[i]->as<GraphicsStage>();
+      if (not stage) {
+        group_schedule.push_back(v[i]);
+        continue;
+      }
+      bool has_clear{ false };
+      for (const auto* write : stage->writes_) {
+        if (const auto* texture = write->as<TextureResource>()) {
+          if (stage->load_store_ops_.at(texture).first == LoadOp::Clear) {
+            has_clear = true;
+            break;
+          }
+        }
+      }
+      if (has_clear) {
+        group_schedule.push_front(stage);
+      }
+      else {
+        group_schedule.push_back(stage);
+      }
+    }
+    stage_stack_.emplace_back(group_schedule.begin(), group_schedule.end());
+  }
+
 #ifdef DEBUG
   std::ostringstream ss;
-  ss << "{\n";
   for (size_t i = 0; i < stage_stack_.size(); ++i) {
-    ss << "  Stage group " << i + 1 << ": {";
+    ss << "  - Stage group " << i + 1 << ": [ ";
     for (size_t j = 0; j < stage_stack_[i].size() - 1; ++j) {
       ss << stage_stack_[i][j]->name_ + ", ";
     }
-    ss << stage_stack_[i].back()->name_ << "}\n";
+    ss << stage_stack_[i].back()->name_ << " ]\n";
   }
-  ss << "}";
   Log(Debug, "Proposed stage order:\n{}", ss.str());
 #endif
 
   Log(Trace, "Allocating physical resource for buffers:");
   for (auto& buffer_resource : buffer_resources_) {
-    Log(Trace, "   - {}", buffer_resource->name_);
+    Log(Trace, "  - {}", buffer_resource->name_);
     buffer_resource->physical_ = std::make_unique<PhysicalBuffer>();
   }
 
   Log(Trace, "Allocating physical resource for texture:");
   for (auto& texture : texture_resources_) {
-    Log(Trace, "   - {}", texture->name_);
+    Log(Trace, "  - {}", texture->name_);
 
     // if (texture_resource->usage_ == TextureUsage::BackBuffer) {
     //   texture_resource->physical_ = std::make_shared<PhysicalBackBuffer>();
@@ -576,7 +518,7 @@ void RenderGraph::compile()
         break;
     }
     if (texture.get() == backBuffer()) {
-      usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+      usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // to copy to swapchain
     }
 
     const wr::ImageCreateInfo texture_info{

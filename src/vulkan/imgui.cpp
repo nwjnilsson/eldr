@@ -13,6 +13,11 @@
 using namespace eldr::core;
 
 namespace eldr::vk {
+struct ImGuiOverlay::FrameData {
+  wr::Buffer<uint32_t>   index_buffer;
+  wr::Buffer<ImDrawVert> vertex_buffer;
+};
+
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                            const wr::Swapchain& swapchain,
                            RenderGraph*         render_graph)
@@ -117,6 +122,8 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
 
   buildPipeline();
 
+  frames_in_flight.resize(max_frames_in_flight);
+
   // Setup blend attachment.
   // stage_->setBlendAttachment({
   //   .blendEnable         = VK_TRUE,
@@ -203,14 +210,15 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
   }
   // TODO: use gpu buffers, and also implement resizing index/vertex data is far
   // below buffer size
-  if (index_buffer_.size() >= index_data.size())
-    index_buffer_.uploadData(index_data); // assuming cpu to gpu buffer.
+  auto& ibuffer = frames_in_flight[frame_index_].index_buffer;
+  if (ibuffer.size() >= index_data.size())
+    ibuffer.uploadData(index_data);
   else
-    index_buffer_ = { device_,
-                      "imgui index buffer",
-                      index_data,
-                      +BufferUsage::Index,
-                      +HostAccess::Sequential };
+    ibuffer = { device_,
+                "imgui index buffer",
+                index_data,
+                +BufferUsage::Index,
+                +HostAccess::Sequential };
 
   std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
@@ -219,14 +227,16 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_data.push_back(cmd_list->VtxBuffer.Data[j]);
     }
   }
-  if (vertex_buffer_.size() >= vertex_data.size())
-    vertex_buffer_.uploadData(vertex_data); // assuming cpu to gpu buffer.
+
+  auto& vbuffer = frames_in_flight[frame_index_].vertex_buffer;
+  if (vbuffer.size() >= vertex_data.size())
+    vbuffer.uploadData(vertex_data); // assuming cpu to gpu buffer.
   else {
-    vertex_buffer_ = { device_,
-                       "ImGui vertex buffer",
-                       vertex_data,
-                       +BufferUsage::Vertex,
-                       +HostAccess::Sequential };
+    vbuffer = { device_,
+                "ImGui vertex buffer",
+                vertex_data,
+                +BufferUsage::Vertex,
+                +HostAccess::Sequential };
   }
 
   stage_->setOnRecord([&](const wr::CommandBuffer& cb) {
@@ -234,8 +244,8 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     if (imgui_draw_data == nullptr) {
       return;
     }
-    cb.bindIndexBuffer(index_buffer_);
-    VkBuffer vbuffers[]{ vertex_buffer_.vk() };
+    cb.bindIndexBuffer(ibuffer);
+    VkBuffer vbuffers[]{ vbuffer.vk() };
     cb.bindVertexBuffers(vbuffers);
 
     const ImGuiIO& io = ImGui::GetIO();
@@ -287,5 +297,6 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
       vertex_offset += cmd_list->VtxBuffer.Size;
     }
   });
+  frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
 } // namespace eldr::vk
