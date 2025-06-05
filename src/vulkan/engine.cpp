@@ -1,4 +1,5 @@
 // Ensure that vma implementation is included
+#include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
 #include <eldr/app/window.hpp>
 #include <eldr/buildinfo.hpp>
@@ -411,9 +412,9 @@ void VulkanEngine::updateScenes(uint32_t current_image)
     scene_data_.proj               = proj;
     scene_data_.view               = view;
     scene_data_.viewproj           = proj * view;
-    scene_data_.ambient_color      = {};
-    scene_data_.sunlight_color     = {};
-    scene_data_.sunlight_direction = {};
+    scene_data_.ambient_color      = Vec4f{ .1f };
+    scene_data_.sunlight_color     = Vec4f{ 1, 1, 1, 1.f };
+    scene_data_.sunlight_direction = Vec4f{ 0, 1, 0.5, 1.f };
     const GpuModelData model_data[]{ { .model_mat = model } };
     const GpuSceneData scene_data[]{ scene_data_ };
     d_->frames_in_flight[current_image].scene_data_buffer.uploadData(
@@ -449,7 +450,12 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     DescriptorWriter writer;
     writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
       .updateSet(device, frame_descriptor);
-    //    writer.reset();
+
+    writer.reset();
+    writer
+      .writeCombinedImageSampler(
+        1, d_->error_texture, d_->default_sampler_linear)
+      .updateSet(device, draw.material->data.descriptor_set);
     //
     // writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
     //   .writeCombinedImageSampler(
@@ -656,12 +662,10 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
     .setPolygonMode(VK_POLYGON_MODE_FILL)
-    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
     .setMultisampling(s_->msaa_sample_count)
     .disableBlending()
-    .enableDepthtest(
-      true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op
-                                            // as i used in rendergraph
+    .enableDepthtest(true, VK_COMPARE_OP_LESS)
 
     // render format
     //.setColorAttachmentFormat(back_buffer_->format_)

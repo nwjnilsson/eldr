@@ -169,9 +169,9 @@ void ImGuiOverlay::buildPipeline()
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
     .setPolygonMode(VK_POLYGON_MODE_FILL)
-    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+    .setCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
     .setMultisamplingNone()
-    .disableBlending()
+    .enableBlendingAlphaBlend()
     .enableDepthtest(
       true, VK_COMPARE_OP_GREATER_OR_EQUAL) // TODO: not the same compare op
                                             // as i used in rendergraph

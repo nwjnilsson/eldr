@@ -26,7 +26,7 @@ Bitmap::Bitmap(std::string_view                name,
                Vec2u                           size,
                size_t                          channel_count,
                const std::vector<std::string>& channel_names,
-               byte*                           data)
+               byte_t*                         data)
   : name_(name), pixel_format_(px_format), component_format_(component_format),
     size_(size), data_(data), owns_data_(false)
 
@@ -41,7 +41,7 @@ Bitmap::Bitmap(std::string_view                name,
   rebuildStruct(channel_count, channel_names);
 
   if (!data_) {
-    data_      = std::make_unique<byte[]>(bufferSize());
+    data_      = std::make_unique<byte_t[]>(bufferSize());
     owns_data_ = true;
   }
 }
@@ -54,7 +54,7 @@ Bitmap::Bitmap(const Bitmap& bitmap)
     premultiplied_alpha_(bitmap.premultiplied_alpha_), owns_data_(true)
 {
   const size_t size{ bufferSize() };
-  data_ = std::make_unique<byte[]>(size);
+  data_ = std::make_unique<byte_t[]>(size);
   memcpy(data(), bitmap.data(), size);
 }
 
@@ -416,10 +416,10 @@ void Bitmap::readJpeg(Stream* stream)
   size_t row_stride =
     (size_t) cinfo.output_width * (size_t) cinfo.output_components;
 
-  data_      = std::make_unique<byte[]>(bufferSize());
+  data_      = std::make_unique<byte_t[]>(bufferSize());
   owns_data_ = true;
 
-  auto scanlines = std::make_unique<byte*[]>(size_.y);
+  auto scanlines = std::make_unique<byte_t*[]>(size_.y);
 
   for (size_t i = 0; i < size_.y; ++i)
     scanlines[i] = data() + row_stride * i;
@@ -646,7 +646,7 @@ void Bitmap::readPng(Stream* stream)
   //  metadata_.set_string(text_ptr->key, text_ptr->text);
 
   auto fs = dynamic_cast<FileStream*>(stream);
-  Log(Debug,
+  Log(Trace,
       "Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
       fs ? fs->path().string() : "<stream>",
       size_.x,
@@ -655,7 +655,7 @@ void Bitmap::readPng(Stream* stream)
       component_format_);
 
   const size_t size{ bufferSize() };
-  data_      = std::make_unique<byte[]>(size);
+  data_      = std::make_unique<byte_t[]>(size);
   owns_data_ = true;
 
   rows             = new png_bytep[size_.y];
@@ -680,10 +680,10 @@ void Bitmap::rgbToRgba()
   rebuildStruct();
 
   if (owns_data_) {
-    size_t size{ bufferSize() };
-    auto   tmp{ std::make_unique<byte[]>(size) };
-    byte*  p_tmp{ tmp.get() };
-    byte*  p_data{ data() };
+    size_t  size{ bufferSize() };
+    auto    tmp{ std::make_unique<byte_t[]>(size) };
+    byte_t* p_tmp{ tmp.get() };
+    byte_t* p_data{ data() };
 
     // TODO: This may need to be optimized for high resolution textures.
     // A 1024x1024 texture was converted in about a millisecond on my laptop.
@@ -697,7 +697,7 @@ void Bitmap::rgbToRgba()
         p_tmp[rgba_index]     = p_data[rgb_index];
         p_tmp[rgba_index + 1] = p_data[rgb_index + 1];
         p_tmp[rgba_index + 2] = p_data[rgb_index + 2];
-        p_tmp[rgba_index + 3] = byte{ 0xff };
+        p_tmp[rgba_index + 3] = byte_t{ 0xff };
       }
     }
     data_ = std::move(tmp);
@@ -715,20 +715,16 @@ Bitmap Bitmap::createCheckerboard()
   constexpr auto   component_format{ StructType::UInt8 };
   constexpr Vec2f  size{ 512, 512 };
   constexpr size_t channel_count{ 4 };
+  constexpr size_t color_count{ 2 };
   // 8x8 checkerboard pattern of squares.
   constexpr uint32_t square_dimension{ 64 };
   // pink, purple
-  constexpr std::array<std::array<unsigned char, 4>, 2> colors{
+  constexpr std::array<std::array<uint8_t, channel_count>, color_count> colors{
     { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
   };
 
-  const auto getColor = [](uint32_t x,
-                           uint32_t y,
-                           uint32_t square_dimension,
-                           size_t   colors) -> int {
-    return static_cast<int>((static_cast<std::size_t>(x / square_dimension) +
-                             static_cast<std::size_t>(y / square_dimension)) %
-                            colors);
+  const auto getColor = [](uint32_t x, uint32_t y) -> uint32_t {
+    return ((x / square_dimension) + (y / square_dimension)) % color_count;
   };
 
   // Performance could be improved by copying complete rows after one or two
@@ -736,12 +732,15 @@ Bitmap Bitmap::createCheckerboard()
   Bitmap checkerboard{
     "Checkerboard", pixel_format, component_format, size, channel_count
   };
-  for (uint32_t y = 0; y < checkerboard.height(); y++) {
-    for (uint32_t x = 0; x < checkerboard.width(); x++) {
-      const int color_id = getColor(x, y, square_dimension, colors.size());
-      std::memcpy(checkerboard.data(),
-                  &colors[color_id][0],
-                  channel_count * sizeof(colors[color_id][0]));
+
+  for (uint32_t i{ 0 }; i < checkerboard.height(); ++i) {
+    for (uint32_t j{ 0 }; j < checkerboard.width(); ++j) {
+      const uint32_t color_idx{ getColor(i, j) };
+      std::memcpy(checkerboard.data() +
+                    i * checkerboard.width() * channel_count +
+                    j * channel_count,
+                  &colors[color_idx],
+                  channel_count);
     }
   }
   return checkerboard;

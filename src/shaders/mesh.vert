@@ -22,7 +22,7 @@ layout(buffer_reference, std430) readonly buffer VertexBuffer {
     Vertex vertices[];
 };
 
-layout(push_constant) uniform constants {
+layout(push_constant) uniform Constants {
     mat4 render_matrix;
     VertexBuffer vertex_buffer;
 } push_constants;

@@ -6,8 +6,6 @@
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
-#include <fmt/ostream.h>
-
 #include <filesystem>
 #include <span>
 #include <string>
@@ -17,7 +15,6 @@ namespace eldr {
 
 class Bitmap {
   ELDR_IMPORT_CORE_TYPES();
-  using byte = std::byte;
 
 public:
   enum class PixelFormat {
@@ -52,7 +49,7 @@ public:
          Vec2u                           size,
          size_t                          channel_count,
          const std::vector<std::string>& channel_names = {},
-         byte*                           data          = nullptr);
+         byte_t*                         data          = nullptr);
 
   Bitmap(const std::filesystem::path& path, FileFormat = FileFormat::Auto);
 
@@ -74,16 +71,16 @@ public:
   StructType componentFormat() const { return component_format_; }
 
   /// Return a pointer to the underlying data
-  byte* data() { return data_.get(); }
+  byte_t* data() { return data_.get(); }
 
   /// Return a pointer to the underlying data (const)
-  const byte* data() const { return data_.get(); }
+  const byte_t* data() const { return data_.get(); }
 
   /// Return a span of the underlying data
-  std::span<byte> bytes() { return std::span{ data_.get(), bufferSize() }; }
+  std::span<byte_t> bytes() { return std::span{ data_.get(), bufferSize() }; }
 
   /// Return a span of the underlying data (const)
-  std::span<const byte> bytes() const
+  std::span<const byte_t> bytes() const
   {
     return std::span{ data_.get(), bufferSize() };
   }
@@ -161,15 +158,15 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  std::string             name_{ "undefined" };
-  PixelFormat             pixel_format_;
-  StructType              component_format_;
-  Vec2u                   size_{};
-  std::unique_ptr<Struct> struct_{};
-  bool                    srgb_gamma_{ false };
-  bool                    premultiplied_alpha_{ false };
-  std::unique_ptr<byte[]> data_{};
-  bool                    owns_data_{ false };
+  std::string               name_{ "undefined" };
+  PixelFormat               pixel_format_;
+  StructType                component_format_;
+  Vec2u                     size_{};
+  std::unique_ptr<Struct>   struct_{};
+  bool                      srgb_gamma_{ false };
+  bool                      premultiplied_alpha_{ false };
+  std::unique_ptr<byte_t[]> data_{};
+  bool                      owns_data_{ false };
 };
 
 extern std::ostream& operator<<(std::ostream&              os,
