@@ -6,11 +6,15 @@
 namespace eldr::vk::wr {
 class Shader {
 public:
-  Shader() = default;
+  Shader();
   Shader(const Device&,
          std::string_view      name,
          std::string_view      file_name,
          VkShaderStageFlagBits stage);
+  Shader(Shader&&) noexcept;
+  ~Shader();
+
+  Shader& operator=(Shader&&);
 
   [[nodiscard]] VkShaderStageFlagBits stage() const { return stage_; }
   [[nodiscard]] VkShaderModule        module() const;
@@ -26,6 +30,6 @@ private:
   std::string           entry_point_{ "main" };
   VkShaderStageFlagBits stage_;
   class ShaderImpl;
-  std::shared_ptr<ShaderImpl> d_;
+  std::unique_ptr<ShaderImpl> d_;
 };
 } // namespace eldr::vk::wr

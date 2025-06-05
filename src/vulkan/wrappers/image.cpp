@@ -94,6 +94,11 @@ Image::ImageImpl::~ImageImpl()
 //------------------------------------------------------------------------------
 // Image
 //------------------------------------------------------------------------------
+Image::Image()                   = default;
+Image::Image(Image&&) noexcept   = default;
+Image::~Image()                  = default;
+Image& Image::operator=(Image&&) = default;
+
 Image::Image(const Device& device, const ImageCreateInfo& image_info)
   : name_(image_info.name), size_(image_info.extent),
     format_(image_info.format), mip_levels_(image_info.mip_levels)
@@ -126,7 +131,7 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
     .pUserData      = {},
     .priority       = {},
   };
-  d_          = std::make_shared<ImageImpl>(device, image_ci, alloc_ci);
+  d_          = std::make_unique<ImageImpl>(device, image_ci, alloc_ci);
   image_view_ = ImageView{ device, *this, image_info.aspect_flags };
 
   if (image_info.final_layout != VK_IMAGE_LAYOUT_UNDEFINED) {
@@ -188,7 +193,7 @@ Image Image::createSwapchainImage(const Device&    device,
   image.name_   = name;
   image.size_   = extent;
   image.format_ = format;
-  image.d_      = std::make_shared<ImageImpl>(device, vkimage);
+  image.d_      = std::make_unique<ImageImpl>(device, vkimage);
   const ImageViewCreateInfo image_view_ci{
     .image        = image.d_->image_,
     .format       = format,

@@ -11,8 +11,8 @@ public:
   RenderPassImpl(const Device&                 device,
                  const VkRenderPassCreateInfo& render_pass_ci);
   ~RenderPassImpl();
-  const Device device_;
-  VkRenderPass render_pass_{ VK_NULL_HANDLE };
+  const Device& device_;
+  VkRenderPass  render_pass_{ VK_NULL_HANDLE };
 };
 
 RenderPass::RenderPassImpl::RenderPassImpl(
@@ -50,7 +50,7 @@ RenderPass::RenderPass(const Device&                      device,
     .dependencyCount = 1,
     .pDependencies   = &subpass_dependency,
   };
-  d_ = std::make_shared<RenderPassImpl>(device, render_pass_ci);
+  d_ = std::make_unique<RenderPassImpl>(device, render_pass_ci);
 }
 
 VkRenderPass RenderPass::vk() const { return d_->render_pass_; }

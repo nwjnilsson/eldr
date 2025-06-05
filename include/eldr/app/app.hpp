@@ -1,5 +1,7 @@
 #pragma once
 #include <eldr/app/fwd.hpp>
+#include <eldr/app/keyboardmouseinput.hpp>
+#include <eldr/app/window.hpp>
 #include <eldr/core/stopwatch.hpp>
 #include <eldr/render/scene.hpp>
 
@@ -66,10 +68,10 @@ public:
   static constexpr uint32_t height = 720;
 
 private:
-  std::unique_ptr<KeyboardMouseInput> input_data_;
-  std::unique_ptr<Window>             window_;
-  std::unique_ptr<vk::VulkanEngine>   vk_engine_;
-  Scene                               scene_;
+  KeyboardMouseInput input_data_;
+  Window             window_;
+
+  std::unique_ptr<vk::VulkanEngine> vk_engine_;
 
   float     frame_time_{};
   StopWatch stop_watch_{};

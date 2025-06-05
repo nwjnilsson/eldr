@@ -33,6 +33,13 @@ DescriptorSetLayout::DescriptorSetLayoutImpl::~DescriptorSetLayoutImpl()
 //------------------------------------------------------------------------------
 // DescriptorSetLayout
 //------------------------------------------------------------------------------
+DescriptorSetLayout::DescriptorSetLayout() = default;
+DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout&&) noexcept =
+  default;
+DescriptorSetLayout::~DescriptorSetLayout() = default;
+DescriptorSetLayout&
+DescriptorSetLayout::operator=(DescriptorSetLayout&&) = default;
+
 DescriptorSetLayout::DescriptorSetLayout(
   const Device&                           device,
   std::span<VkDescriptorSetLayoutBinding> bindings,
@@ -45,11 +52,8 @@ DescriptorSetLayout::DescriptorSetLayout(
     .bindingCount = static_cast<uint32_t>(bindings.size()),
     .pBindings    = bindings.data(),
   };
-  d_ = std::make_shared<DescriptorSetLayoutImpl>(device, layout_ci);
+  d_ = std::make_unique<DescriptorSetLayoutImpl>(device, layout_ci);
 }
 
-VkDescriptorSetLayout DescriptorSetLayout::vk() const
-{
-  return d_->layout_;
-}
+VkDescriptorSetLayout DescriptorSetLayout::vk() const { return d_->layout_; }
 } // namespace eldr::vk::wr

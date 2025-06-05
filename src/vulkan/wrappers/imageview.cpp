@@ -37,8 +37,8 @@ public:
   ImageViewImpl(const Device&                device,
                 const VkImageViewCreateInfo& image_view_ci);
   ~ImageViewImpl();
-  const Device device_;
-  VkImageView  image_view_{ VK_NULL_HANDLE };
+  const Device& device_;
+  VkImageView   image_view_{ VK_NULL_HANDLE };
 };
 
 ImageView::ImageViewImpl::ImageViewImpl(
@@ -57,12 +57,17 @@ ImageView::ImageViewImpl::~ImageViewImpl()
 }
 
 //------------------------------------------------------------------------------
-// ImageViewImpl
+// ImageView
 //------------------------------------------------------------------------------
+ImageView::ImageView()                       = default;
+ImageView::ImageView(ImageView&&) noexcept   = default;
+ImageView::~ImageView()                      = default;
+ImageView& ImageView::operator=(ImageView&&) = default;
+
 ImageView::ImageView(const Device&              device,
                      const ImageViewCreateInfo& image_view_ci)
   : aspect_flags_(image_view_ci.aspect_flags),
-    d_(std::make_shared<ImageViewImpl>(device, vkImageViewCI(image_view_ci)))
+    d_(std::make_unique<ImageViewImpl>(device, vkImageViewCI(image_view_ci)))
 {
 }
 
@@ -77,7 +82,7 @@ ImageView::ImageView(const Device&      device,
     .aspect_flags = aspect_flags,
     .mip_levels   = image.mipLevels(),
   };
-  d_ = std::make_shared<ImageViewImpl>(device, vkImageViewCI(image_view_ci));
+  d_ = std::make_unique<ImageViewImpl>(device, vkImageViewCI(image_view_ci));
 }
 
 VkImageView ImageView::vk() const { return d_->image_view_; }

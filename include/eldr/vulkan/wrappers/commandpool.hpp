@@ -6,10 +6,12 @@
 namespace eldr::vk::wr {
 class CommandPool {
 public:
-  CommandPool() = default;
+  CommandPool();
   CommandPool(const Device&                  device,
               const VkCommandPoolCreateFlags flags =
                 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+  CommandPool(CommandPool&&) noexcept;
+  ~CommandPool();
 
   [[nodiscard]] VkCommandPool vk() const;
 
@@ -19,8 +21,8 @@ private:
   // std::string name_;
 
   class CommandPoolImpl;
-  std::shared_ptr<CommandPoolImpl> d_;
+  std::unique_ptr<CommandPoolImpl> d_;
 
-  std::vector<CommandBuffer> command_buffers_{};
+  std::vector<CommandBuffer> command_buffers_;
 };
 } // namespace eldr::vk::wr

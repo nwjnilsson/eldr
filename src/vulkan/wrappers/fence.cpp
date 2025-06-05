@@ -10,8 +10,8 @@ class Fence::FenceImpl {
 public:
   FenceImpl(const Device& device, const VkFenceCreateInfo& fence_ci);
   ~FenceImpl();
-  const Device device_;
-  VkFence      fence_{ VK_NULL_HANDLE };
+  const Device& device_;
+  VkFence       fence_{ VK_NULL_HANDLE };
 };
 
 Fence::FenceImpl::FenceImpl(const Device&            device,
@@ -32,11 +32,13 @@ Fence::FenceImpl::~FenceImpl()
 //------------------------------------------------------------------------------
 // Fence
 //------------------------------------------------------------------------------
+Fence::Fence()  = default;
+Fence::~Fence() = default;
 Fence::Fence(const Device& device)
 {
   VkFenceCreateInfo fence_ci{};
   fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  d_             = std::make_shared<FenceImpl>(device, fence_ci);
+  d_             = std::make_unique<FenceImpl>(device, fence_ci);
 }
 
 VkFence Fence::vk() const { return d_->fence_; }

@@ -81,6 +81,10 @@ Instance::InstanceImpl::~InstanceImpl()
 //------------------------------------------------------------------------------
 // Instance
 //------------------------------------------------------------------------------
+Instance::Instance()                      = default;
+Instance::~Instance()                     = default;
+Instance& Instance::operator=(Instance&&) = default;
+
 Instance::Instance(const VkApplicationInfo&   app_info,
                    std::vector<const char*>&& extensions)
 {
@@ -178,7 +182,7 @@ Instance::Instance(const VkApplicationInfo&   app_info,
   instance_ci.ppEnabledExtensionNames = extensions.data();
 
   // Create instance
-  d_ = std::make_shared<InstanceImpl>(instance_ci);
+  d_ = std::make_unique<InstanceImpl>(instance_ci);
 }
 
 VkInstance Instance::vk() const { return d_->instance_; }

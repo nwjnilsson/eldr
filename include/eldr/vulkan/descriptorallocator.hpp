@@ -5,13 +5,13 @@
 #include <vector>
 
 namespace eldr::vk {
+struct PoolSizeRatio {
+  VkDescriptorType type;
+  float            ratio;
+};
+
 class DescriptorAllocator {
 public:
-  struct PoolSizeRatio {
-    VkDescriptorType type;
-    float            ratio;
-  };
-
   DescriptorAllocator() = default;
   DescriptorAllocator(uint32_t max_sets, std::span<const PoolSizeRatio> ratios);
 

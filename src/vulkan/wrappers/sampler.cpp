@@ -9,8 +9,8 @@ class Sampler::SamplerImpl {
 public:
   SamplerImpl(const Device& device, const VkSamplerCreateInfo& ci);
   ~SamplerImpl();
-  const Device device_;
-  VkSampler    sampler_{ VK_NULL_HANDLE };
+  const Device& device_;
+  VkSampler     sampler_{ VK_NULL_HANDLE };
 };
 
 Sampler::SamplerImpl::SamplerImpl(const Device&              device,
@@ -32,6 +32,11 @@ Sampler::SamplerImpl::~SamplerImpl()
 //------------------------------------------------------------------------------
 // Sampler
 //------------------------------------------------------------------------------
+Sampler::Sampler()                     = default;
+Sampler::Sampler(Sampler&&) noexcept   = default;
+Sampler::~Sampler()                    = default;
+Sampler& Sampler::operator=(Sampler&&) = default;
+
 Sampler::Sampler(const Device&       device,
                  VkFilter            mag_filter,
                  VkFilter            min_filter,
@@ -62,7 +67,7 @@ Sampler::Sampler(const Device&       device,
     .unnormalizedCoordinates = VK_FALSE,
   };
 
-  d_ = std::make_shared<SamplerImpl>(device, sampler_info);
+  d_ = std::make_unique<SamplerImpl>(device, sampler_info);
 }
 
 VkSampler Sampler::vk() const { return d_->sampler_; }

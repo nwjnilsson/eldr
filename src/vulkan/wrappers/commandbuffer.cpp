@@ -16,7 +16,7 @@ public:
   CommandBufferImpl(const Device&                     device,
                     const VkCommandBufferAllocateInfo alloc_info);
   ~CommandBufferImpl();
-  const Device    device_;
+  const Device&   device_;
   VkCommandPool   command_pool_;
   VkCommandBuffer command_buffer_{ VK_NULL_HANDLE };
   Fence           wait_fence_;
@@ -40,6 +40,10 @@ CommandBuffer::CommandBufferImpl::~CommandBufferImpl()
 //------------------------------------------------------------------------------
 // CommandBuffer
 //------------------------------------------------------------------------------
+CommandBuffer::CommandBuffer()                         = default;
+CommandBuffer::~CommandBuffer()                        = default;
+CommandBuffer::CommandBuffer(CommandBuffer&&) noexcept = default;
+
 CommandBuffer::CommandBuffer(const Device&      device,
                              const CommandPool& command_pool,
                              std::string_view   name)
@@ -51,7 +55,7 @@ CommandBuffer::CommandBuffer(const Device&      device,
   alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = 1;
 
-  d_ = std::make_shared<CommandBufferImpl>(device, alloc_info);
+  d_ = std::make_unique<CommandBufferImpl>(device, alloc_info);
 }
 
 const CommandBuffer& CommandBuffer::pipelineBarrier(
@@ -546,19 +550,34 @@ const CommandBuffer& CommandBuffer::copyDataToImage(
 }
 
 const CommandBuffer&
-CommandBuffer::copyBuffer(AllocatedBuffer&               dst,
-                          const AllocatedBuffer&         src,
-                          std::span<const VkBufferCopy2> copy_regions) const
+CommandBuffer::copyDataToBuffer(AllocatedBuffer&        dst,
+                                std::span<const byte_t> src) const
 {
-  Assert(dst.sizeAlloc() >= src.sizeAlloc());
+  const VkBufferCopy2 copy_regions[]{ {
+    .sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+    .pNext     = {},
+    .srcOffset = 0,
+    .dstOffset = 0,
+    .size      = src.size_bytes(),
+  } };
+
+  auto& staging{ createStagingBuffer(
+    fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src) };
+
   const VkCopyBufferInfo2 copy_info{
     .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
     .pNext       = {},
-    .srcBuffer   = src.vk(),
+    .srcBuffer   = staging.vk(),
     .dstBuffer   = dst.vk(),
-    .regionCount = static_cast<uint32_t>(copy_regions.size()),
-    .pRegions    = copy_regions.data(),
+    .regionCount = 1,
+    .pRegions    = copy_regions,
   };
+  return copyBuffer(copy_info);
+}
+
+const CommandBuffer&
+CommandBuffer::copyBuffer(const VkCopyBufferInfo2& copy_info) const
+{
   vkCmdCopyBuffer2(d_->command_buffer_, &copy_info);
   return *this;
 }
@@ -585,11 +604,11 @@ const AllocatedBuffer&
 CommandBuffer::createStagingBuffer(const std::string&      name,
                                    std::span<const byte_t> src) const
 {
-  staging_buffers_.push_back(Buffer<byte_t>{ d_->device_,
-                                             name,
-                                             src,
-                                             +BufferUsage::TransferSrc,
-                                             +HostAccess::Sequential });
+  Buffer<byte_t> buff{
+    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential
+  };
+  staging_buffers_.emplace_back(
+    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential);
   return staging_buffers_.back();
 }
 

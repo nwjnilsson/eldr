@@ -12,9 +12,13 @@ struct ImageViewCreateInfo {
 
 class ImageView {
 public:
-  ImageView() = default;
+  ImageView();
   ImageView(const Device&, const ImageViewCreateInfo& image_view_ci);
   ImageView(const Device&, const Image&, VkImageAspectFlags);
+  ImageView(ImageView&&) noexcept;
+  ~ImageView();
+
+  ImageView& operator=(ImageView&&);
 
   [[nodiscard]] VkImageAspectFlags aspectFlags() const { return aspect_flags_; }
   [[nodiscard]] VkImageView        vk() const;
@@ -28,6 +32,6 @@ private:
   VkImageAspectFlags aspect_flags_{ VK_IMAGE_ASPECT_NONE };
 
   class ImageViewImpl;
-  std::shared_ptr<ImageViewImpl> d_;
+  std::unique_ptr<ImageViewImpl> d_;
 };
 } // namespace eldr::vk::wr

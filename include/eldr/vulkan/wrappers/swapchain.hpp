@@ -7,8 +7,12 @@
 namespace eldr::vk::wr {
 class Swapchain {
 public:
-  Swapchain() = default;
+  Swapchain();
   Swapchain(const Device&, const Surface&, VkExtent2D);
+  Swapchain(Swapchain&&) noexcept;
+  ~Swapchain();
+
+  Swapchain& operator=(Swapchain&&);
 
   [[nodiscard]] const VkExtent2D& extent() const { return extent_; }
   [[nodiscard]] VkSwapchainKHR    vk() const;
@@ -36,7 +40,7 @@ public:
 
 private:
   class SwapchainImpl;
-  std::shared_ptr<SwapchainImpl> d_;
+  std::unique_ptr<SwapchainImpl> d_;
 
   VkExtent2D         extent_;
   VkSurfaceFormatKHR surface_format_;

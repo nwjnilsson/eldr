@@ -18,8 +18,8 @@ class ImGuiOverlay {
 public:
   ImGuiOverlay() = delete;
   ImGuiOverlay(const wr::Device&, const wr::Swapchain&, RenderGraph*);
-  ImGuiOverlay(ImGuiOverlay&&)      = delete;
-  ImGuiOverlay(const ImGuiOverlay&) = delete;
+  ImGuiOverlay(const ImGuiOverlay&)     = delete;
+  ImGuiOverlay(ImGuiOverlay&&) noexcept = delete;
   ~ImGuiOverlay();
 
   void update(DescriptorAllocator& descriptors);
@@ -28,9 +28,9 @@ private:
   void buildPipeline();
 
 private:
-  const wr::Device    device_;
-  const wr::Swapchain swapchain_;
-  float               scale_{ 1.0f };
+  const wr::Device&    device_;
+  const wr::Swapchain& swapchain_;
+  float                scale_{ 1.0f };
 
   // BufferResource* ibuffer_{ nullptr };
   // BufferResource* vbuffer_{ nullptr };

@@ -14,7 +14,7 @@ public:
 
   void reset();
 
-  PipelineBuilder& addDescriptorSetLayout(wr::DescriptorSetLayout layout)
+  PipelineBuilder& addDescriptorSetLayout(const wr::DescriptorSetLayout& layout)
   {
     descriptor_layouts_.push_back(layout.vk());
     return *this;

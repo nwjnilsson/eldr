@@ -13,11 +13,12 @@ public:
              std::span<VkAttachmentDescription> attachments,
              const VkSubpassDescription&        subpass_description,
              const VkSubpassDependency&         subpass_dependency);
+  ~RenderPass() = default;
 
   [[nodiscard]] VkRenderPass vk() const;
 
 private:
   class RenderPassImpl;
-  std::shared_ptr<RenderPassImpl> d_;
+  std::unique_ptr<RenderPassImpl> d_;
 };
 } // namespace eldr::vk::wr

@@ -10,8 +10,8 @@ public:
   SemaphoreImpl(const Device&                device,
                 const VkSemaphoreCreateInfo& semaphore_ci);
   ~SemaphoreImpl();
-  const Device device_;
-  VkSemaphore  semaphore_{ VK_NULL_HANDLE };
+  const Device& device_;
+  VkSemaphore   semaphore_{ VK_NULL_HANDLE };
 };
 
 Semaphore::SemaphoreImpl::SemaphoreImpl(
@@ -32,6 +32,10 @@ Semaphore::SemaphoreImpl::~SemaphoreImpl()
 //------------------------------------------------------------------------------
 // Semaphore
 //------------------------------------------------------------------------------
+Semaphore::Semaphore()                     = default;
+Semaphore::Semaphore(Semaphore&&) noexcept = default;
+Semaphore::~Semaphore()                    = default;
+
 Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
 {
   const VkSemaphoreCreateInfo semaphore_ci{
@@ -39,7 +43,7 @@ Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
     .pNext = {},
     .flags = flags,
   };
-  d_ = std::make_shared<SemaphoreImpl>(device, semaphore_ci);
+  d_ = std::make_unique<SemaphoreImpl>(device, semaphore_ci);
 }
 
 VkSemaphore        Semaphore::vk() const { return d_->semaphore_; }

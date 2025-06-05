@@ -11,7 +11,7 @@ public:
   DescriptorPoolImpl(const Device&                     device,
                      const VkDescriptorPoolCreateInfo& ci);
   ~DescriptorPoolImpl();
-  const Device     device_;
+  const Device&    device_;
   VkDescriptorPool pool_{ VK_NULL_HANDLE };
 };
 
@@ -34,6 +34,8 @@ DescriptorPool::DescriptorPoolImpl::~DescriptorPoolImpl()
 //------------------------------------------------------------------------------
 // DescriptorPool
 //------------------------------------------------------------------------------
+DescriptorPool::DescriptorPool()  = default;
+DescriptorPool::~DescriptorPool() = default;
 DescriptorPool::DescriptorPool(const Device&                         device,
                                uint32_t                              max_sets,
                                std::span<const VkDescriptorPoolSize> pool_sizes,
@@ -47,8 +49,10 @@ DescriptorPool::DescriptorPool(const Device&                         device,
     .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
     .pPoolSizes    = pool_sizes.data(),
   };
-  d_ = std::make_shared<DescriptorPoolImpl>(device, pool_ci);
+  d_ = std::make_unique<DescriptorPoolImpl>(device, pool_ci);
 }
+DescriptorPool::DescriptorPool(DescriptorPool&&) noexcept   = default;
+DescriptorPool& DescriptorPool::operator=(DescriptorPool&&) = default;
 
 VkDescriptorPool DescriptorPool::vk() const { return d_->pool_; }
 

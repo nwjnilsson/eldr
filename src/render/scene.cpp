@@ -188,7 +188,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   auto scene           = std::make_shared<Scene>();
   scene->vk_scene_data = std::make_shared<vk::SceneData>();
   // Just an estimate of what will be needed
-  const std::vector<vk::DescriptorAllocator::PoolSizeRatio> sizes{
+  const std::vector<vk::PoolSizeRatio> sizes{
     { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
@@ -216,8 +216,8 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       engine.device(), min_filter, mag_filter, mipmap_mode, VK_LOD_CLAMP_NONE);
   }
 
-  std::vector<vk::wr::Image> images;
-  images.resize(gltf.images.size(), engine.errorImage());
+  // std::vector<vk::wr::Image> images;
+  // images.resize(gltf.images.size(), engine.errorImage());
 
   int data_index{ 0 };
   std::vector<GltfMetallicRoughness::MaterialConstants>
@@ -265,7 +265,8 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
         gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
           .samplerIndex.value();
 
-      material_resources.color_texture = &images[img];
+      // material_resources.color_texture = &images[img];
+      material_resources.color_texture = &engine.errorImage();
       material_resources.color_sampler =
         &scene->vk_scene_data->samplers[sampler];
     }

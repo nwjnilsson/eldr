@@ -7,15 +7,19 @@ namespace eldr::vk::wr {
 
 class DescriptorSetLayout {
 public:
-  DescriptorSetLayout() = default;
+  DescriptorSetLayout();
   DescriptorSetLayout(const Device&,
                       std::span<VkDescriptorSetLayoutBinding>,
                       VkDescriptorSetLayoutCreateFlags flags);
+  DescriptorSetLayout(DescriptorSetLayout&&) noexcept;
+  ~DescriptorSetLayout();
+
+  DescriptorSetLayout& operator=(DescriptorSetLayout&&);
 
   [[nodiscard]] VkDescriptorSetLayout vk() const;
 
 private:
   class DescriptorSetLayoutImpl;
-  std::shared_ptr<DescriptorSetLayoutImpl> d_;
+  std::unique_ptr<DescriptorSetLayoutImpl> d_;
 };
 } // namespace eldr::vk::wr

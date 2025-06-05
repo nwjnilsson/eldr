@@ -92,13 +92,10 @@ private:
 
 private:
   const app::Window& window_;
-  const Scene*       scene_;
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
-
-  std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
   // Hide vulkan implementation details to avoid pulling in every single vulkan
   // related type when including engine.hpp
@@ -106,6 +103,8 @@ private:
   std::unique_ptr<EngineData> d_;
   struct Settings;
   std::unique_ptr<Settings> s_;
+
+  std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
   GpuSceneData scene_data_;
 

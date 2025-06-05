@@ -12,7 +12,7 @@ public:
   FramebufferImpl(const Device&                  device,
                   const VkFramebufferCreateInfo& framebuffer_ci);
   ~FramebufferImpl();
-  const Device  device_;
+  const Device& device_;
   VkFramebuffer framebuffer_{ VK_NULL_HANDLE };
 };
 
@@ -50,7 +50,7 @@ Framebuffer::Framebuffer(const Device&                   device,
     .height          = swapchain.extent().height,
     .layers          = 1,
   };
-  d_ = std::make_shared<FramebufferImpl>(device, framebuffer_ci);
+  d_ = std::make_unique<FramebufferImpl>(device, framebuffer_ci);
 }
 
 VkFramebuffer Framebuffer::vk() const { return d_->framebuffer_; }

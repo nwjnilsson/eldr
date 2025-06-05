@@ -12,8 +12,8 @@ class Surface::SurfaceImpl {
 public:
   SurfaceImpl(const Instance& instance, const app::Window& window);
   ~SurfaceImpl();
-  const Instance instance_;
-  VkSurfaceKHR   surface_{ VK_NULL_HANDLE };
+  const Instance& instance_;
+  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
 };
 
 Surface::SurfaceImpl::SurfaceImpl(const Instance&    instance,
@@ -34,8 +34,12 @@ Surface::SurfaceImpl::~SurfaceImpl()
 //------------------------------------------------------------------------------
 // Surface
 //------------------------------------------------------------------------------
+Surface::Surface()                     = default;
+Surface::~Surface()                    = default;
+Surface& Surface::operator=(Surface&&) = default;
+
 Surface::Surface(const Instance& instance, const app::Window& window)
-  : d_(std::make_shared<SurfaceImpl>(instance, window))
+  : d_(std::make_unique<SurfaceImpl>(instance, window))
 {
 }
 

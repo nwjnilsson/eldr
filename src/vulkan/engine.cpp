@@ -232,7 +232,7 @@ void VulkanEngine::setupFrameData()
 
     // TODO: I will need to come back to this eventually and understand how to
     // set this dynamically, I can't thik atm
-    std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes{
+    std::vector<PoolSizeRatio> frame_sizes{
       { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
       { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 }
     };

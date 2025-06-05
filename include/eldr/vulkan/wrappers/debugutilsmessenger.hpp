@@ -5,11 +5,14 @@
 namespace eldr::vk::wr {
 class DebugUtilsMessenger {
 public:
-  DebugUtilsMessenger() = default;
+  DebugUtilsMessenger();
   DebugUtilsMessenger(const Instance& instance);
+  ~DebugUtilsMessenger();
+
+  DebugUtilsMessenger& operator=(DebugUtilsMessenger&&);
 
 private:
   class DebugUtilsMessengerImpl;
-  std::shared_ptr<DebugUtilsMessengerImpl> d_;
+  std::unique_ptr<DebugUtilsMessengerImpl> d_;
 };
 } // namespace eldr::vk::wr

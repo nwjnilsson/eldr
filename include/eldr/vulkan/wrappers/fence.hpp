@@ -5,8 +5,10 @@ namespace eldr::vk::wr {
 
 class Fence {
 public:
-  Fence() = default;
+  Fence();
   Fence(const Device& device);
+  Fence(Fence&&) noexcept = default;
+  ~Fence();
 
   [[nodiscard]] VkFence vk() const;
 
@@ -16,6 +18,6 @@ public:
 
 private:
   class FenceImpl;
-  std::shared_ptr<FenceImpl> d_;
+  std::unique_ptr<FenceImpl> d_;
 };
 } // namespace eldr::vk::wr

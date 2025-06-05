@@ -66,7 +66,7 @@ public:
   SwapchainImpl(const Device&                   device,
                 const VkSwapchainCreateInfoKHR& swapchain_ci);
   ~SwapchainImpl();
-  const Device   device_;
+  const Device&  device_;
   VkSwapchainKHR swapchain_{ VK_NULL_HANDLE };
 };
 
@@ -89,6 +89,11 @@ Swapchain::SwapchainImpl::~SwapchainImpl()
 // -----------------------------------------------------------------------------
 // Swapchain
 // -----------------------------------------------------------------------------
+Swapchain::Swapchain()                       = default;
+Swapchain::Swapchain(Swapchain&&) noexcept   = default;
+Swapchain::~Swapchain()                      = default;
+Swapchain& Swapchain::operator=(Swapchain&&) = default;
+
 Swapchain::Swapchain(const Device&  device,
                      const Surface& surface,
                      VkExtent2D     extent)
@@ -162,7 +167,7 @@ void Swapchain::setupSwapchain(const Device&  device,
   }
 
   Log(core::Trace, "Creating swapchain...");
-  d_ = std::make_shared<SwapchainImpl>(device, swapchain_ci);
+  d_ = std::make_unique<SwapchainImpl>(device, swapchain_ci);
 
   // Clear data from old swapchain
   images_.clear();

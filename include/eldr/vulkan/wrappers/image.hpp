@@ -21,11 +21,14 @@ class Image {
   ELDR_IMPORT_CORE_TYPES();
 
 public:
-  Image() = default;
+  Image();
   Image(const Device&, const ImageCreateInfo&);
   Image(const Device&, const Bitmap&);
   Image(const Device&, const Bitmap&, uint32_t mip_levels);
-  virtual ~Image() = default;
+  Image(Image&&) noexcept;
+  ~Image();
+
+  Image& operator=(Image&&);
 
   [[nodiscard]] static Image createSwapchainImage(
     const Device&, VkImage, std::string_view name, VkExtent2D, VkFormat);
@@ -58,7 +61,7 @@ protected:
 
   ImageView image_view_;
   class ImageImpl;
-  std::shared_ptr<ImageImpl> d_;
+  std::unique_ptr<ImageImpl> d_;
 };
 
 } // namespace eldr::vk::wr

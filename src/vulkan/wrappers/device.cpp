@@ -1,15 +1,18 @@
-#include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 
+#include <deque>
 #include <mutex>
 #include <set>
 
 namespace eldr::vk::wr {
 namespace {
+// -----------------------------------------------------------------------------
+// Helper functions
+// -----------------------------------------------------------------------------
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physical_device,
                                      VkSurfaceKHR     surface)
 {
@@ -95,13 +98,23 @@ bool isDeviceSuitable(VkPhysicalDevice                device,
   SwapchainSupportDetails swapchain_support{ getSwapchainSupportDetails(
     device, surface) };
 
+  constexpr VkImageUsageFlagBits required_usage_bits[]{
+    VK_IMAGE_USAGE_TRANSFER_DST_BIT
+  };
+  bool has_required_usage{ true };
+  for (auto required : required_usage_bits) {
+    if (not(swapchain_support.capabilities.supportedUsageFlags & required)) {
+      has_required_usage = false;
+    }
+  }
+
   VkPhysicalDeviceFeatures supported_features;
   vkGetPhysicalDeviceFeatures(device, &supported_features);
 
   return extensions.empty() && indices.isComplete() &&
          !swapchain_support.formats.empty() &&
          !swapchain_support.present_modes.empty() &&
-         supported_features.samplerAnisotropy;
+         supported_features.samplerAnisotropy && has_required_usage;
 }
 
 VkPhysicalDevice
@@ -110,7 +123,7 @@ selectPhysicalDevice(VkInstance                      instance,
                      const std::vector<const char*>& device_extensions)
 {
   uint32_t gpu_count;
-  VkResult err = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
+  VkResult err{ vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr) };
   if (err != VK_SUCCESS)
     Throw("vkEnumeratePhysicalDevices(): {}", err);
 
@@ -139,14 +152,9 @@ selectPhysicalDevice(VkInstance                      instance,
       return device;
     }
   }
-  // Return integrated GPU if no discrete one is present. TODO: I haven't really
-  // thought about what happens when the integrated gpu is returned while the
-  // rest of the code may depend on certain extensions being available. I guess
-  // this would cause problems but I'll leave that to future me.
-  return gpus[0];
+  Throw("Failed to find a suitable physical device.");
 }
 } // namespace
-
 // -----------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -162,8 +170,8 @@ public:
   VkDevice         device_{ VK_NULL_HANDLE };
   VmaAllocator     allocator_{ VK_NULL_HANDLE };
   // One command pool per thread
-  mutable std::vector<CommandPool> command_pools_;
-  mutable std::mutex               mutex_;
+  mutable std::mutex              mutex_;
+  mutable std::deque<CommandPool> command_pools_;
 };
 
 Device::DeviceImpl::DeviceImpl(VkPhysicalDevice          physical,
@@ -185,7 +193,7 @@ Device::DeviceImpl::DeviceImpl(VkPhysicalDevice          physical,
 Device::DeviceImpl::~DeviceImpl()
 {
   // Ensure that command pools can be cleared properly
-  std::lock_guard<std::mutex> guard(mutex_);
+  std::lock_guard lock(mutex_);
   command_pools_.clear();
   vmaDestroyAllocator(allocator_);
   vkDestroyDevice(device_, nullptr);
@@ -194,6 +202,10 @@ Device::DeviceImpl::~DeviceImpl()
 //------------------------------------------------------------------------------
 // Device
 //------------------------------------------------------------------------------
+Device::Device()                    = default;
+Device::~Device()                   = default;
+Device& Device::operator=(Device&&) = default;
+
 Device::Device(const Instance&                 instance,
                const Surface&                  surface,
                const std::vector<const char*>& device_extensions)
@@ -282,7 +294,7 @@ Device::Device(const Instance&                 instance,
   };
 
   // Create device
-  d_ = std::make_shared<DeviceImpl>(physical_device, device_ci, allocator_ci);
+  d_ = std::make_unique<DeviceImpl>(physical_device, device_ci, allocator_ci);
 
   // Get queues
   vkGetDeviceQueue(
@@ -355,7 +367,7 @@ CommandPool& Device::threadGraphicsPool() const
 {
   thread_local CommandPool* thread_graphics_pool{ nullptr };
   if (thread_graphics_pool == nullptr) {
-    std::scoped_lock locker(d_->mutex_);
+    std::lock_guard lock(d_->mutex_);
     thread_graphics_pool = &d_->command_pools_.emplace_back(*this);
   }
   return *thread_graphics_pool;

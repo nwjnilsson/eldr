@@ -9,7 +9,7 @@ namespace eldr::vk::wr {
 /// inherit from Pipeline
 class Pipeline {
 public:
-  Pipeline() = default;
+  Pipeline();
   Pipeline(const Device&                     device,
            std::string_view                  name,
            const VkPipelineLayoutCreateInfo& layout_ci,
@@ -18,6 +18,10 @@ public:
            std::string_view                  name,
            const VkPipelineLayoutCreateInfo& layout_ci,
            VkComputePipelineCreateInfo&      pipeline_ci);
+  Pipeline(Pipeline&&) noexcept;
+  ~Pipeline();
+
+  Pipeline& operator=(Pipeline&&);
 
   [[nodiscard]] VkPipeline       vk() const;
   [[nodiscard]] VkPipelineLayout layout() const;
@@ -26,7 +30,7 @@ protected:
 protected:
   std::string name_;
   class PipelineImpl;
-  std::shared_ptr<PipelineImpl> d_;
+  std::unique_ptr<PipelineImpl> d_;
 };
 
 // Support for compute pipelines can be added if needed

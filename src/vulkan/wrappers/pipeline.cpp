@@ -17,7 +17,7 @@ public:
   ~PipelineImpl();
 
   void createPipelineLayout(const VkPipelineLayoutCreateInfo& layout_ci);
-  const Device     device_;
+  const Device&    device_;
   VkPipeline       pipeline_{ VK_NULL_HANDLE };
   VkPipelineLayout pipeline_layout_{ VK_NULL_HANDLE };
 };
@@ -70,12 +70,17 @@ void Pipeline::PipelineImpl::createPipelineLayout(
 //------------------------------------------------------------------------------
 // Pipeline
 //------------------------------------------------------------------------------
+Pipeline::Pipeline()                      = default;
+Pipeline::Pipeline(Pipeline&&) noexcept   = default;
+Pipeline::~Pipeline()                     = default;
+Pipeline& Pipeline::operator=(Pipeline&&) = default;
+
 Pipeline::Pipeline(const Device&                     device,
                    std::string_view                  name,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkGraphicsPipelineCreateInfo&     pipeline_ci)
   : name_(name),
-    d_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
+    d_(std::make_unique<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 
@@ -84,7 +89,7 @@ Pipeline::Pipeline(const Device&                     device,
                    const VkPipelineLayoutCreateInfo& layout_ci,
                    VkComputePipelineCreateInfo&      pipeline_ci)
   : name_(name),
-    d_(std::make_shared<PipelineImpl>(device, layout_ci, pipeline_ci))
+    d_(std::make_unique<PipelineImpl>(device, layout_ci, pipeline_ci))
 {
 }
 

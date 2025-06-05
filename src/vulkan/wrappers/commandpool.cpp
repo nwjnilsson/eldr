@@ -11,7 +11,7 @@ class CommandPool::CommandPoolImpl {
 public:
   CommandPoolImpl(const Device& device, const VkCommandPoolCreateInfo& pool_ci);
   ~CommandPoolImpl();
-  const Device  device_;
+  const Device& device_;
   VkCommandPool pool_{ VK_NULL_HANDLE };
 };
 
@@ -33,6 +33,10 @@ CommandPool::CommandPoolImpl::~CommandPoolImpl()
 //------------------------------------------------------------------------------
 // CommandPool
 //------------------------------------------------------------------------------
+CommandPool::CommandPool()                       = default;
+CommandPool::~CommandPool()                      = default;
+CommandPool::CommandPool(CommandPool&&) noexcept = default;
+
 CommandPool::CommandPool(const Device&                  device,
                          const VkCommandPoolCreateFlags flags)
 {
@@ -42,7 +46,7 @@ CommandPool::CommandPool(const Device&                  device,
   pool_ci.queueFamilyIndex =
     device.queueFamilyIndices().graphics_family.value();
 
-  d_ = std::make_shared<CommandPoolImpl>(device, pool_ci);
+  d_ = std::make_unique<CommandPoolImpl>(device, pool_ci);
 }
 
 const CommandBuffer& CommandPool::requestCommandBuffer()

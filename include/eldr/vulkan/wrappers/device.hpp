@@ -23,10 +23,13 @@ struct QueueFamilyIndices {
 
 class Device {
 public:
-  Device() = default;
+  Device();
   Device(const Instance&,
          const Surface&,
          const std::vector<const char*>& device_extensions);
+  ~Device();
+
+  Device& operator=(Device&&);
 
   [[nodiscard]] std::string name() const
   {
@@ -69,7 +72,7 @@ private:
 
 private:
   class DeviceImpl;
-  std::shared_ptr<DeviceImpl> d_;
+  std::unique_ptr<DeviceImpl> d_;
   VkPhysicalDeviceProperties  physical_device_props_;
   QueueFamilyIndices          queue_family_indices_;
   VkQueue                     p_queue_{ VK_NULL_HANDLE }; // present

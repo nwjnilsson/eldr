@@ -7,14 +7,17 @@ namespace eldr::vk::wr {
 
 class Instance {
 public:
-  Instance() = default;
+  Instance();
   Instance(const VkApplicationInfo&, std::vector<const char*>&& extensions);
+  ~Instance();
+
+  Instance& operator=(Instance&&);
 
   [[nodiscard]] VkInstance vk() const;
 
 private:
   class InstanceImpl;
-  std::shared_ptr<InstanceImpl> d_;
+  std::unique_ptr<InstanceImpl> d_;
 };
 
 //[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);

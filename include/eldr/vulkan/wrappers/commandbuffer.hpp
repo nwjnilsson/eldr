@@ -1,6 +1,6 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
-#include <eldr/vulkan/wrappers/allocatedbuffer.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
 
 #include <span>
 
@@ -8,10 +8,12 @@ namespace eldr::vk::wr {
 
 class CommandBuffer {
 public:
-  CommandBuffer() = default;
+  CommandBuffer();
   CommandBuffer(const Device&      device_,
                 const CommandPool& command_pool,
                 std::string_view   name);
+  CommandBuffer(CommandBuffer&&) noexcept;
+  ~CommandBuffer();
 
   const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
@@ -100,20 +102,30 @@ public:
                   std::span<const byte_t> src,
                   std::span<const VkBufferImageCopy2>) const;
 
+  template <typename T>
   const CommandBuffer&
-  copyBuffer(AllocatedBuffer&               dst,
-             const AllocatedBuffer&         src,
-             std::span<const VkBufferCopy2> copy_regions) const;
+  copyBuffer(Buffer<T>&                     dst,
+             const Buffer<T>&               src,
+             std::span<const VkBufferCopy2> copy_regions) const
+  {
+    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    const VkCopyBufferInfo2 copy_info{
+      .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+      .pNext       = {},
+      .srcBuffer   = src.vk(),
+      .dstBuffer   = dst.vk(),
+      .regionCount = static_cast<uint32_t>(copy_regions.size()),
+      .pRegions    = copy_regions.data(),
+    };
+    return copyBuffer(copy_info);
+  }
 
   template <typename T>
   const CommandBuffer&
-  copyDataToBuffer(AllocatedBuffer&               dst,
+  copyDataToBuffer(Buffer<T>&                     dst,
                    std::span<const T>             src,
                    std::span<const VkBufferCopy2> copy_regions) const
   {
-    Assert(dst.sizeElem() == sizeof(T),
-           "The element size of the buffer does not match the element size of "
-           "the source array.");
     return copyBuffer(
       dst,
       createStagingBuffer(
@@ -148,9 +160,19 @@ public:
   void                             waitFence() const;
 
 private:
+  const CommandBuffer& copyBuffer(const VkCopyBufferInfo2& copy_info) const;
+
+  //----------------------------------------------------------------------------
+  // Only for use in AllocatedBuffer
+  friend AllocatedBuffer;
+  const CommandBuffer& copyDataToBuffer(AllocatedBuffer&        dst,
+                                        std::span<const byte_t> src) const;
+  //----------------------------------------------------------------------------
+
+private:
   std::string name_;
   class CommandBufferImpl;
-  std::shared_ptr<CommandBufferImpl>   d_;
-  mutable std::vector<AllocatedBuffer> staging_buffers_;
+  std::unique_ptr<CommandBufferImpl>  d_;
+  mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

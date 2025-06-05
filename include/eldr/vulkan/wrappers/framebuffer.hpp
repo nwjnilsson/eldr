@@ -12,13 +12,15 @@ public:
               const RenderPass&               render_pass,
               const std::vector<VkImageView>& attachments,
               const Swapchain&                swapchain);
+  Framebuffer(Framebuffer&&) noexcept = default;
+  ~Framebuffer()                      = default;
 
   [[nodiscard]] VkFramebuffer vk() const;
 
 private:
   // std::string name_;
   class FramebufferImpl;
-  std::shared_ptr<FramebufferImpl> d_;
+  std::unique_ptr<FramebufferImpl> d_;
 };
 
 } // namespace eldr::vk::wr

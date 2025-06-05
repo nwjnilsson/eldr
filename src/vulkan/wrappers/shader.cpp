@@ -42,7 +42,7 @@ public:
              std::string_view                name,
              const VkShaderModuleCreateInfo& shader_module_ci);
   ~ShaderImpl();
-  const Device   device_;
+  const Device&  device_;
   VkShaderModule shader_module_{ VK_NULL_HANDLE };
 };
 
@@ -65,6 +65,11 @@ Shader::ShaderImpl::~ShaderImpl()
 //------------------------------------------------------------------------------
 // Shader
 //------------------------------------------------------------------------------
+Shader::Shader()                    = default;
+Shader::Shader(Shader&&) noexcept   = default;
+Shader::~Shader()                   = default;
+Shader& Shader::operator=(Shader&&) = default;
+
 Shader::Shader(const Device&         device,
                std::string_view      name,
                std::string_view      filename,
@@ -79,7 +84,7 @@ Shader::Shader(const Device&         device,
     .codeSize = bytecode.size(),
     .pCode    = reinterpret_cast<const uint32_t*>(bytecode.data()),
   };
-  d_ = std::make_shared<ShaderImpl>(device, filename, shader_module_ci);
+  d_ = std::make_unique<ShaderImpl>(device, filename, shader_module_ci);
 }
 
 VkShaderModule Shader::module() const { return d_->shader_module_; }

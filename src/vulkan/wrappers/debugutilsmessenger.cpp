@@ -66,7 +66,7 @@ public:
     const VkDebugUtilsMessengerCreateInfoEXT& debug_report_ci);
   ~DebugUtilsMessengerImpl();
 
-  const Instance           instance_;
+  const Instance&          instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
 };
 
@@ -95,6 +95,12 @@ DebugUtilsMessenger::DebugUtilsMessengerImpl::~DebugUtilsMessengerImpl()
 //------------------------------------------------------------------------------
 // DebugUtilsMessenger
 //------------------------------------------------------------------------------
+
+DebugUtilsMessenger::DebugUtilsMessenger()  = default;
+DebugUtilsMessenger::~DebugUtilsMessenger() = default;
+DebugUtilsMessenger&
+DebugUtilsMessenger::operator=(DebugUtilsMessenger&&) = default;
+
 DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
 {
   const VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{
@@ -110,7 +116,7 @@ DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
     .pfnUserCallback = vkDebugReportCallback,
     .pUserData       = {},
   };
-  d_ = std::make_shared<DebugUtilsMessengerImpl>(instance, debug_report_ci);
+  d_ = std::make_unique<DebugUtilsMessengerImpl>(instance, debug_report_ci);
 }
 
 } // namespace eldr::vk::wr

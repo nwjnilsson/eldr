@@ -14,9 +14,8 @@ namespace eldr::app {
 // -----------------------------------------------------------------------------
 
 App::App()
-  : input_data_(std::make_unique<KeyboardMouseInput>()),
-    window_(std::make_unique<Window>(width, height)),
-    vk_engine_(std::make_unique<vk::VulkanEngine>(*window_))
+  : input_data_(), window_(width, height),
+    vk_engine_(std::make_unique<vk::VulkanEngine>(window_))
 {
   setupWindowCallbacks();
   setupInputCallbacks();
@@ -33,10 +32,10 @@ void App::keyCallback(
 
   switch (action) {
     case GLFW_PRESS:
-      input_data_->pressKey(key);
+      input_data_.pressKey(key);
       break;
     case GLFW_RELEASE:
-      input_data_->releaseKey(key);
+      input_data_.releaseKey(key);
       break;
     default:
       break;
@@ -47,7 +46,7 @@ void App::cursorPositionCallback(GLFWwindow* /*window*/,
                                  double x_pos,
                                  double y_pos)
 {
-  input_data_->setCursorPos(x_pos, y_pos);
+  input_data_.setCursorPos(x_pos, y_pos);
 }
 
 void App::mouseButtonCallback(GLFWwindow* /*window*/,
@@ -60,10 +59,10 @@ void App::mouseButtonCallback(GLFWwindow* /*window*/,
   }
   switch (action) {
     case GLFW_PRESS:
-      input_data_->pressMouseButton(button);
+      input_data_.pressMouseButton(button);
       break;
     case GLFW_RELEASE:
-      input_data_->releaseMouseButton(button);
+      input_data_.releaseMouseButton(button);
       break;
     default:
       break;
@@ -83,7 +82,7 @@ void App::run()
   Assert(scene);
   vk_engine_->addScene("Suzanne", scene);
 
-  while (!window_->shouldClose()) {
+  while (!window_.shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
     updateImGui();
@@ -97,14 +96,14 @@ void App::setupWindowCallbacks()
   // ---------------------------------------------------------------------------
   // Set up window
   // ---------------------------------------------------------------------------
-  window_->setUserPointer(this);
+  window_.setUserPointer(this);
   auto resize_lambda = [](GLFWwindow* glfw_window, int width, int height) {
     auto app = reinterpret_cast<App*>(glfwGetWindowUserPointer(glfw_window));
-    app->window_->resize(static_cast<uint32_t>(width),
-                         static_cast<uint32_t>(height));
+    app->window_.resize(static_cast<uint32_t>(width),
+                        static_cast<uint32_t>(height));
     app->vk_engine_->invalidateSwapchain();
   };
-  window_->setResizeCallback(resize_lambda);
+  window_.setResizeCallback(resize_lambda);
 }
 
 void App::setupInputCallbacks()
@@ -115,44 +114,44 @@ void App::setupInputCallbacks()
       auto* app = static_cast<App*>(glfwGetWindowUserPointer(window));
       app->keyCallback(window, key, scancode, action, mods);
     };
-  window_->setKeyboardButtonCallback(lambda_key_callback);
+  window_.setKeyboardButtonCallback(lambda_key_callback);
 
   auto lambda_cursor_position_callback =
     [](GLFWwindow* window, double xpos, double ypos) {
       auto* app = static_cast<App*>(glfwGetWindowUserPointer(window));
       app->cursorPositionCallback(window, xpos, ypos);
     };
-  window_->setCursorPositionCallback(lambda_cursor_position_callback);
+  window_.setCursorPositionCallback(lambda_cursor_position_callback);
 
   auto lambda_mouse_button_callback =
     [](GLFWwindow* window, int button, int action, int mods) {
       auto* app = static_cast<App*>(glfwGetWindowUserPointer(window));
       app->mouseButtonCallback(window, button, action, mods);
     };
-  window_->setMouseButtonCallback(lambda_mouse_button_callback);
+  window_.setMouseButtonCallback(lambda_mouse_button_callback);
 
   auto lambda_mouse_scroll_callback =
     [](GLFWwindow* window, double xoffset, double yoffset) {
       auto* app = static_cast<App*>(glfwGetWindowUserPointer(window));
       app->mouseScrollCallback(window, xoffset, yoffset);
     };
-  window_->setMouseScrollCallback(lambda_mouse_scroll_callback);
+  window_.setMouseScrollCallback(lambda_mouse_scroll_callback);
 }
 
 void App::updateImGui()
 {
 
-  auto cursor_pos = input_data_->cursorPos();
+  auto cursor_pos = input_data_.cursorPos();
 
   ImGuiIO& io     = ImGui::GetIO();
   io.DeltaTime    = frame_time_;
   io.MousePos     = ImVec2(static_cast<float>(cursor_pos[0]),
                        static_cast<float>(cursor_pos[1]));
-  io.MouseDown[0] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
-  io.MouseDown[1] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
-  io.MouseDown[2] = input_data_->isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
+  io.MouseDown[0] = input_data_.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+  io.MouseDown[1] = input_data_.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+  io.MouseDown[2] = input_data_.isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
 
-  window_->setTitle(fmt::format(
+  window_.setTitle(fmt::format(
     "Eldr - {} - {} fps", vk_engine_->deviceName(), std::round(io.Framerate)));
   static bool show_demo_window = true;
   vk_engine_->updateImGui([&]() {
