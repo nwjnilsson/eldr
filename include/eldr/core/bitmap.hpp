@@ -2,17 +2,16 @@
  * Bitmap class adapted from Mitsuba3
  */
 #pragma once
-
 #include <eldr/core/fwd.hpp>
-#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
-namespace eldr::core {
+namespace eldr {
 
 class Bitmap {
   ELDR_IMPORT_CORE_TYPES();
@@ -44,13 +43,13 @@ public:
     Unknown
   };
 
-  // Creates default checker tile texture
-  Bitmap();
-  Bitmap(PixelFormat px_format, Struct::Type component_format,
-         const Vec2u& size, size_t channel_count,
-         const std::string&              name          = "undefined",
+  Bitmap(std::string_view                name,
+         PixelFormat                     px_format,
+         StructType                      component_format,
+         Vec2u                           size,
+         size_t                          channel_count,
          const std::vector<std::string>& channel_names = {},
-         uint8_t*                        data          = nullptr);
+         byte_t*                         data          = nullptr);
 
   Bitmap(const std::filesystem::path& path, FileFormat = FileFormat::Auto);
 
@@ -69,19 +68,22 @@ public:
   PixelFormat pixelFormat() const { return pixel_format_; }
 
   /// Return the component format of this bitmap
-  Struct::Type componentFormat() const { return component_format_; }
-
-  /// Return a pointer to the underlying bitmap storage
-  void* data() { return data_.get(); }
-
-  /// Return a pointer to the underlying bitmap storage
-  const void* data() const { return data_.get(); }
+  StructType componentFormat() const { return component_format_; }
 
   /// Return a pointer to the underlying data
-  uint8_t* uint8Data() { return data_.get(); }
+  byte_t* data() { return data_.get(); }
 
   /// Return a pointer to the underlying data (const)
-  const uint8_t* uint8Data() const { return data_.get(); }
+  const byte_t* data() const { return data_.get(); }
+
+  /// Return a span of the underlying data
+  std::span<byte_t> bytes() { return std::span{ data_.get(), bufferSize() }; }
+
+  /// Return a span of the underlying data (const)
+  std::span<const byte_t> bytes() const
+  {
+    return std::span{ data_.get(), bufferSize() };
+  }
 
   /// Return the bitmap dimensions in pixels
   const Vec2u& size() const { return size_; }
@@ -96,11 +98,16 @@ public:
   size_t pixelCount() const { return static_cast<size_t>(size_.x * size_.y); }
   size_t bytesPerPixel() const;
   size_t bufferSize() const;
-  static FileFormat detectFileFormat(Stream* stream);
-
+  bool   srgbGamma() const { return srgb_gamma_; }
   // Convert RGB to RGBA, adding an opaque alpha channel.
   // This is useful for creating Vulkan images, which require RGBA.
-  void rgbToRgba();
+  void              rgbToRgba();
+  static FileFormat detectFileFormat(Stream* stream);
+
+  // Creates default checker tile texture
+  static Bitmap createCheckerboard();
+  // Creates default white texture
+  static Bitmap createDefaultWhite();
 
 protected:
   void rebuildStruct(size_t                          channel_count = 0,
@@ -151,26 +158,23 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
-  std::string                name_{ "undefined" };
-  core::Logger               log_{ core::requestLogger("core") };
-  PixelFormat                pixel_format_;
-  Struct::Type               component_format_;
-  Vec2u                      size_{};
-  std::unique_ptr<Struct>    struct_{};
-  bool                       srgb_gamma_{ false };
-  bool                       premultiplied_alpha_{ false };
-  std::unique_ptr<uint8_t[]> data_{};
-  bool                       owns_data_{ false };
+  std::string               name_{ "undefined" };
+  PixelFormat               pixel_format_;
+  StructType                component_format_;
+  Vec2u                     size_{};
+  std::unique_ptr<Struct>   struct_{};
+  bool                      srgb_gamma_{ false };
+  bool                      premultiplied_alpha_{ false };
+  std::unique_ptr<byte_t[]> data_{};
+  bool                      owns_data_{ false };
 };
 
 extern std::ostream& operator<<(std::ostream&              os,
                                 const Bitmap::PixelFormat& value);
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Bitmap::FileFormat& value);
-} // namespace eldr::core
+} // namespace eldr
 template <>
-struct fmt::formatter<eldr::core::Bitmap::PixelFormat>
-  : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
 template <>
-struct fmt::formatter<eldr::core::Bitmap::FileFormat> : fmt::ostream_formatter {
-};
+struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};

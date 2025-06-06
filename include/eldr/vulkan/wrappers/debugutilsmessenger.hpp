@@ -1,16 +1,18 @@
 #pragma once
+#include <eldr/vulkan/fwd.hpp>
 
-#include <eldr/vulkan/common.hpp>
-
+#include <memory>
 namespace eldr::vk::wr {
 class DebugUtilsMessenger {
 public:
-  DebugUtilsMessenger() = delete;
+  DebugUtilsMessenger();
   DebugUtilsMessenger(const Instance& instance);
   ~DebugUtilsMessenger();
 
+  DebugUtilsMessenger& operator=(DebugUtilsMessenger&&);
+
 private:
-  const Instance&          instance_;
-  VkDebugUtilsMessengerEXT debug_messenger_;
+  class DebugUtilsMessengerImpl;
+  std::unique_ptr<DebugUtilsMessengerImpl> d_;
 };
 } // namespace eldr::vk::wr

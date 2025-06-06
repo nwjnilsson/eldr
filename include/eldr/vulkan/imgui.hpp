@@ -1,13 +1,13 @@
 #pragma once
-
-#include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
+#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
+#include <eldr/vulkan/wrappers/image.hpp>
+#include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <eldr/vulkan/wrappers/sampler.hpp>
+#include <eldr/vulkan/wrappers/shader.hpp>
+#include <eldr/vulkan/wrappers/swapchain.hpp>
 
 #include <imgui.h>
-
-#include <memory>
-#include <vector>
 
 class GLFWwindow;
 namespace eldr::vk {
@@ -17,30 +17,34 @@ class ImGuiOverlay {
 
 public:
   ImGuiOverlay() = delete;
-  ImGuiOverlay(const wr::Device&, const wr::Swapchain&, RenderGraph*,
-               TextureResource* back_buffer);
-  ImGuiOverlay(ImGuiOverlay&&)      = delete;
-  ImGuiOverlay(const ImGuiOverlay&) = delete;
+  ImGuiOverlay(const wr::Device&, const wr::Swapchain&, RenderGraph*);
+  ImGuiOverlay(const ImGuiOverlay&)     = delete;
+  ImGuiOverlay(ImGuiOverlay&&) noexcept = delete;
   ~ImGuiOverlay();
 
-  void update(uint32_t frame_index);
+  void update(DescriptorAllocator& descriptors);
+
+private:
+  void buildPipeline();
 
 private:
   const wr::Device&    device_;
   const wr::Swapchain& swapchain_;
-  core::Logger         log_{};
   float                scale_{ 1.0f };
 
-  BufferResource* index_buffer_{ nullptr };
-  BufferResource* vertex_buffer_{ nullptr };
-  GraphicsStage*  stage_{ nullptr };
+  // BufferResource* ibuffer_{ nullptr };
+  // BufferResource* vbuffer_{ nullptr };
+  GraphicsStage* stage_{ nullptr };
+  struct FrameData;
+  std::vector<FrameData> frames_in_flight;
+  uint32_t               frame_index_{ 0 };
 
-  std::unique_ptr<wr::GpuTexture>     imgui_texture_;
-  std::unique_ptr<wr::Shader>         vertex_shader_;
-  std::unique_ptr<wr::Shader>         fragment_shader_;
-  std::vector<wr::ResourceDescriptor> descriptors_;
-  std::vector<std::uint32_t>          index_data_;
-  std::vector<ImDrawVert>             vertex_data_;
+  wr::Image               imgui_texture_;
+  wr::Sampler             font_sampler_;
+  wr::Shader              vertex_shader_;
+  wr::Shader              fragment_shader_;
+  wr::DescriptorSetLayout imgui_layout_;
+  wr::Pipeline            imgui_pipeline_;
 
   struct PushConstantBlock {
     Vec2f scale;

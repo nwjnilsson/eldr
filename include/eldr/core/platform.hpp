@@ -1,5 +1,11 @@
 #pragma once
 
+#define EL_EXPAND(x) x
+#define EL_COUNT(_1, _2, _3, _4, _5, COUNT, ...) COUNT
+#define EL_VA_SIZE(...) EL_EXPAND(EL_COUNT(__VA_ARGS__, 5, 4, 3, 2, 1))
+#define EL_CAT_HELPER(a, b) a##b
+#define EL_CAT(a, b) EL_CAT_HELPER(a, b)
+
 // Reduce namespace pollution from windows.h
 #if defined(_WIN32)
 #  if !defined(WIN32_LEAN_AND_MEAN)

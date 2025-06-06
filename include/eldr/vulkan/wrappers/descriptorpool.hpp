@@ -1,22 +1,26 @@
 #pragma once
+#include <eldr/vulkan/vulkan.hpp>
 
-#include <eldr/vulkan/common.hpp>
-
-#include <vector>
+#include <span>
 
 namespace eldr::vk::wr {
-
 class DescriptorPool {
 public:
-  DescriptorPool(const Device&, const std::vector<VkDescriptorPoolSize>&,
-                 VkDescriptorPoolCreateFlags flags, uint32_t max_sets);
+  DescriptorPool();
+  DescriptorPool(const Device&                         device,
+                 uint32_t                              max_sets,
+                 std::span<const VkDescriptorPoolSize> pool_sizes,
+                 VkDescriptorPoolCreateFlags           flags = 0);
+  DescriptorPool(DescriptorPool&&) noexcept;
   ~DescriptorPool();
 
-  VkDescriptorPool get() const { return descriptor_pool_; }
+  DescriptorPool& operator=(DescriptorPool&&);
+
+  [[nodiscard]] VkDescriptorPool vk() const;
+  void                           reset(VkDescriptorPoolResetFlags flags = 0);
 
 private:
-  const Device& device_;
-
-  VkDescriptorPool descriptor_pool_{ VK_NULL_HANDLE };
+  class DescriptorPoolImpl;
+  std::unique_ptr<DescriptorPoolImpl> d_;
 };
 } // namespace eldr::vk::wr

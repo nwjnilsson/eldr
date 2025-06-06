@@ -1,27 +1,23 @@
 #pragma once
-#include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/wrappers/commandpool.hpp>
+#include <eldr/vulkan/vulkan.hpp>
+#include <eldr/vulkan/wrappers/buffer.hpp>
 
 #include <span>
-#include <vector>
 
 namespace eldr::vk::wr {
 
 class CommandBuffer {
 public:
-  CommandBuffer() = delete;
-  CommandBuffer(const Device&      device_, const CommandPool&,
-                const std::string& name);
+  CommandBuffer();
+  CommandBuffer(const Device&      device_,
+                const CommandPool& command_pool,
+                std::string_view   name);
   CommandBuffer(CommandBuffer&&) noexcept;
-  CommandBuffer(const CommandBuffer&) = delete;
   ~CommandBuffer();
 
-  CommandBuffer& operator=(const CommandBuffer&) = delete;
-  CommandBuffer& operator=(CommandBuffer&&)      = delete;
-
-  const VkCommandBuffer& get() const { return command_buffer_; }
-  const CommandBuffer&   begin(VkCommandBufferUsageFlags usage = 0) const;
-  const CommandBuffer&   beginRenderPass(const VkRenderPassBeginInfo&) const;
+  const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
+  const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
+  const CommandBuffer& beginRendering(const VkRenderingInfoKHR&) const;
   // const CommandBuffer&   beginSingleCommand() const;
   const CommandBuffer& drawIndexed(uint32_t index_count,
                                    uint32_t instance_count = 1,
@@ -29,74 +25,120 @@ public:
                                    int32_t  vertex_offset  = 0,
                                    uint32_t first_instance = 0) const;
   const CommandBuffer& endRenderPass() const;
+  const CommandBuffer& endRendering() const;
   const CommandBuffer& end() const;
   const CommandBuffer& submit(const VkSubmitInfo& submit_info) const;
-  const CommandBuffer& submitAndWait(const VkSubmitInfo& submit_info) const;
+  /// @brief Submits and waits for commands to execute
   const CommandBuffer& submitAndWait() const;
   const CommandBuffer& submit() const;
   const CommandBuffer& reset() const;
-  const CommandBuffer&
-  bindIndexBuffer(const GpuBuffer&,
-                  VkIndexType  index_type = VK_INDEX_TYPE_UINT32,
-                  VkDeviceSize offset     = 0) const;
 
+  const CommandBuffer& bindIndexBuffer(const Buffer<uint32_t>& buffer,
+                                       VkDeviceSize offset = 0) const;
+
+  /// @brief Bind vertex buffers. Note that the type is VkBuffer here and not
+  /// Buffer, because the underlying call to vkCmdBindVertexBuffers expects
+  /// an array of VkBuffer.
   const CommandBuffer&
-  bindVertexBuffers(std::span<const VkBuffer>, uint32_t first_binding = 0,
-                    std::span<const VkDeviceSize> offsets = {}) const;
+  bindVertexBuffers(std::span<const VkBuffer>,
+                    uint32_t                      first_binding = 0,
+                    std::span<const VkDeviceSize> offsets       = {}) const;
 
   const CommandBuffer& bindDescriptorSets(
-    std::span<const VkDescriptorSet> desc_sets, VkPipelineLayout layout,
-    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS,
-    uint32_t first_set = 0, std::span<const uint32_t> dyn_offsets = {}) const;
+    std::span<const VkDescriptorSet> desc_sets,
+    VkPipelineLayout                 layout,
+    VkPipelineBindPoint       bind_point  = VK_PIPELINE_BIND_POINT_GRAPHICS,
+    uint32_t                  first_set   = 0,
+    std::span<const uint32_t> dyn_offsets = {}) const;
 
   const CommandBuffer& bindPipeline(
-    VkPipeline          pipeline,
+    const Pipeline&     pipeline,
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
 
+  const CommandBuffer& pipelineBarrier(
+    std::span<const VkImageMemoryBarrier2>  img_mem_barriers,
+    std::span<const VkMemoryBarrier2>       mem_barriers,
+    std::span<const VkBufferMemoryBarrier2> buf_mem_barriers) const;
+
   const CommandBuffer&
-  pipelineBarrier(VkPipelineStageFlags                   src_stage_flags,
-                  VkPipelineStageFlags                   dst_stage_flags,
-                  std::span<const VkImageMemoryBarrier>  img_mem_barriers,
-                  std::span<const VkMemoryBarrier>       mem_barriers     = {},
-                  std::span<const VkBufferMemoryBarrier> buf_mem_barriers = {},
-                  VkDependencyFlags                      dep_flags = 0) const;
+  pipelineImageMemoryBarrier(const VkImageMemoryBarrier2& barrier) const;
   const CommandBuffer&
-  pipelineImageMemoryBarrier(VkPipelineStageFlags        src_stage_flags,
-                             VkPipelineStageFlags        dst_stage_flags,
-                             const VkImageMemoryBarrier& barrier) const;
+  pipelineMemoryBarrier(const VkMemoryBarrier2& barrier) const;
   const CommandBuffer&
-  pipelineMemoryBarrier(VkPipelineStageFlags   src_stage_flags,
-                        VkPipelineStageFlags   dst_stage_flags,
-                        const VkMemoryBarrier& barrier) const;
+  pipelineBufferMemoryBarrier(const VkBufferMemoryBarrier2& barrier) const;
+
   const CommandBuffer& setViewport(std::span<const VkViewport> viewports,
                                    uint32_t first_viewport) const;
   const CommandBuffer& setScissor(std::span<const VkRect2D> scissors,
                                   uint32_t first_scissor) const;
   const CommandBuffer& fullBarrier() const;
 
-  const CommandBuffer& transitionImageLayout(const GpuImage&,
-                                             VkImageLayout old_layout,
-                                             VkImageLayout new_layout,
-                                             uint32_t      mip_levels) const;
+  const CommandBuffer&
+  transitionImageLayout(Image&,
+                        VkImageLayout new_layout,
+                        bool          force_layout_undefined = false) const;
+
+  const CommandBuffer& blitImage(const Image&       src_image,
+                                 VkImageLayout      src_layout,
+                                 const Image&       dst_image,
+                                 VkImageLayout      dst_layout,
+                                 const VkImageBlit& blit,
+                                 VkFilter           filter) const;
+
+  const CommandBuffer& generateMipmaps(const Image& image) const;
 
   const CommandBuffer&
-  blitImage(const GpuImage& src_image, VkImageLayout src_layout,
-            const GpuImage& dst_image, VkImageLayout dst_layout,
-            const VkImageBlit& blit, VkFilter filter) const;
+  copyImage(Image&                        dst,
+            const Image&                  src,
+            std::span<const VkImageCopy2> copy_regions) const;
 
-  const CommandBuffer& generateMipmaps(const GpuImage& image,
-                                       uint32_t        mip_levels) const;
+  const CommandBuffer&
+  copyBufferToImage(Image&                              dst,
+                    const AllocatedBuffer&              src,
+                    std::span<const VkBufferImageCopy2> copy_regions) const;
 
-  const CommandBuffer& copyBufferToImage(VkBuffer buffer, VkImage image,
-                                         const VkBufferImageCopy&) const;
-  const CommandBuffer& copyBufferToImage(const void* data, VkDeviceSize,
-                                         VkImage, const VkBufferImageCopy&,
-                                         const std::string& name) const;
+  const CommandBuffer&
+  copyDataToImage(Image&                  dst,
+                  std::span<const byte_t> src,
+                  std::span<const VkBufferImageCopy2>) const;
+
+  template <typename T>
+  const CommandBuffer&
+  copyBuffer(Buffer<T>&                     dst,
+             const Buffer<T>&               src,
+             std::span<const VkBufferCopy2> copy_regions) const
+  {
+    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    const VkCopyBufferInfo2 copy_info{
+      .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+      .pNext       = {},
+      .srcBuffer   = src.vk(),
+      .dstBuffer   = dst.vk(),
+      .regionCount = static_cast<uint32_t>(copy_regions.size()),
+      .pRegions    = copy_regions.data(),
+    };
+    return copyBuffer(copy_info);
+  }
+
+  template <typename T>
+  const CommandBuffer&
+  copyDataToBuffer(Buffer<T>&                     dst,
+                   std::span<const T>             src,
+                   std::span<const VkBufferCopy2> copy_regions) const
+  {
+    return copyBuffer(
+      dst,
+      createStagingBuffer(
+        fmt::format("Staging buffer #{}", staging_buffers_.size() + 1),
+        std::as_bytes(src)),
+      copy_regions);
+  }
 
   const CommandBuffer& pushConstants(VkPipelineLayout   layout,
-                                     VkShaderStageFlags stage, uint32_t size,
-                                     const void*  data,
-                                     VkDeviceSize offset = 0) const;
+                                     VkShaderStageFlags stage,
+                                     uint32_t           size,
+                                     const void*        data,
+                                     VkDeviceSize       offset = 0) const;
   template <typename T>
   const CommandBuffer& pushConstant(const VkPipelineLayout   layout,
                                     const T&                 data,
@@ -106,22 +148,49 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] VkBuffer createStagingBuffer(const void*        data,
-                                             VkDeviceSize       buffer_size,
-                                             const std::string& name) const;
+  [[nodiscard]] const Buffer<byte_t>&
+  createStagingBuffer(const std::string&      name,
+                      std::span<const byte_t> data) const;
 
   [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] VkCommandBuffer    vk() const;
+  [[nodiscard]] VkCommandBuffer*   vkp() const;
   [[nodiscard]] VkResult           fenceStatus() const;
   void                             resetFence() const;
   void                             waitFence() const;
 
 private:
-  const Device&      device_;
-  const CommandPool& command_pool_;
-  std::string        name_;
+  const CommandBuffer& copyBuffer(const VkCopyBufferInfo2& copy_info) const;
 
-  VkCommandBuffer                command_buffer_{ VK_NULL_HANDLE };
-  std::unique_ptr<Fence>         wait_fence_;
-  mutable std::vector<GpuBuffer> staging_buffers_;
+  // Specifically for staging buffer copies
+  template <typename T>
+  const CommandBuffer&
+  copyBuffer(Buffer<T>&                     dst,
+             const Buffer<byte_t>&          src,
+             std::span<const VkBufferCopy2> copy_regions) const
+  {
+    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    const VkCopyBufferInfo2 copy_info{
+      .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+      .pNext       = {},
+      .srcBuffer   = src.vk(),
+      .dstBuffer   = dst.vk(),
+      .regionCount = static_cast<uint32_t>(copy_regions.size()),
+      .pRegions    = copy_regions.data(),
+    };
+    return copyBuffer(copy_info);
+  }
+  //----------------------------------------------------------------------------
+  // Only for use in AllocatedBuffer
+  friend AllocatedBuffer;
+  const CommandBuffer& copyDataToBuffer(AllocatedBuffer&        dst,
+                                        std::span<const byte_t> src) const;
+  //----------------------------------------------------------------------------
+
+private:
+  std::string name_;
+  class CommandBufferImpl;
+  std::unique_ptr<CommandBufferImpl>  d_;
+  mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
 } // namespace eldr::vk::wr

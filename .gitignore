@@ -40,3 +40,7 @@ build/
 # Subproject files (excluding .wrap files)
 subprojects/*
 !subprojects/*.wrap
+
+# Certain assets
+assets/textures/
+assets/models/

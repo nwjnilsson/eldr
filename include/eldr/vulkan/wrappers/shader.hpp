@@ -1,33 +1,35 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 #include <string>
 
 namespace eldr::vk::wr {
 class Shader {
 public:
-  Shader() = delete;
-  Shader(const Device&, VkShaderStageFlagBits, const std::string& name,
-         const std::string& file_name, const std::string& entry_point = "main");
-
+  Shader();
+  Shader(const Device&,
+         std::string_view      name,
+         std::string_view      file_name,
+         VkShaderStageFlagBits stage);
   Shader(Shader&&) noexcept;
-  Shader(const Shader&) = delete;
   ~Shader();
 
-  Shader& operator=(const Shader&) = delete;
-  Shader& operator=(Shader&&)      = delete;
+  Shader& operator=(Shader&&);
 
   [[nodiscard]] VkShaderStageFlagBits stage() const { return stage_; }
-  [[nodiscard]] VkShaderModule        module() const { return shader_module_; }
+  [[nodiscard]] VkShaderModule        module() const;
 
   [[nodiscard]] const std::string& entryPoint() const { return entry_point_; }
 
 private:
-  const Device&         device_;
-  std::string           name_{};
+  std::string name_;
+  // Entry point can be used when combining multiple fragment shaders into a
+  // single shader module to differentiate between the behaviours, but currently
+  // I'm using one fragment shader per shader module (thus the entry point is
+  // always "main" for now)
   std::string           entry_point_{ "main" };
-  VkShaderStageFlagBits stage_{};
-  VkShaderModule        shader_module_{ VK_NULL_HANDLE };
+  VkShaderStageFlagBits stage_;
+  class ShaderImpl;
+  std::unique_ptr<ShaderImpl> d_;
 };
 } // namespace eldr::vk::wr

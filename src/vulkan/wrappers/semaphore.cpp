@@ -2,29 +2,51 @@
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
 namespace eldr::vk::wr {
-Semaphore::Semaphore(const Device& device) : device_(device)
+//------------------------------------------------------------------------------
+// SemaphoreImpl
+//------------------------------------------------------------------------------
+class Semaphore::SemaphoreImpl {
+public:
+  SemaphoreImpl(const Device&                device,
+                const VkSemaphoreCreateInfo& semaphore_ci);
+  ~SemaphoreImpl();
+  const Device& device_;
+  VkSemaphore   semaphore_{ VK_NULL_HANDLE };
+};
+
+Semaphore::SemaphoreImpl::SemaphoreImpl(
+  const Device& device, const VkSemaphoreCreateInfo& semaphore_ci)
+  : device_(device)
+{
+  if (const VkResult result{ vkCreateSemaphore(
+        device_.logical(), &semaphore_ci, nullptr, &semaphore_) };
+      result != VK_SUCCESS)
+    Throw("Failed to create semaphore ({})", result);
+}
+
+Semaphore::SemaphoreImpl::~SemaphoreImpl()
+{
+  vkDestroySemaphore(device_.logical(), semaphore_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// Semaphore
+//------------------------------------------------------------------------------
+Semaphore::Semaphore()                     = default;
+Semaphore::Semaphore(Semaphore&&) noexcept = default;
+Semaphore::~Semaphore()                    = default;
+
+Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
 {
   const VkSemaphoreCreateInfo semaphore_ci{
     .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     .pNext = {},
-    .flags = {},
+    .flags = flags,
   };
-
-  if (const auto result = vkCreateSemaphore(device_.logical(), &semaphore_ci,
-                                            nullptr, &semaphore_);
-      result != VK_SUCCESS)
-    ThrowVk(result, "vkCreateSemaphore(): ");
+  d_ = std::make_unique<SemaphoreImpl>(device, semaphore_ci);
 }
 
-Semaphore::Semaphore(Semaphore&& other)
-  : device_(other.device_), semaphore_(other.semaphore_)
-{
-  other.semaphore_ = VK_NULL_HANDLE;
-}
+VkSemaphore        Semaphore::vk() const { return d_->semaphore_; }
+const VkSemaphore* Semaphore::vkp() const { return &d_->semaphore_; }
 
-Semaphore::~Semaphore()
-{
-  if (semaphore_ != VK_NULL_HANDLE)
-    vkDestroySemaphore(device_.logical(), semaphore_, nullptr);
-}
 } // namespace eldr::vk::wr

@@ -2,92 +2,98 @@
  * Struct class adapted from Mitsuba3
  */
 #pragma once
+#include <eldr/core/fwd.hpp>
+
+#include <fmt/ostream.h>
 
 #include <string>
 #include <vector>
 
-#include <spdlog/fmt/ostr.h>
+namespace eldr {
 
-namespace eldr::core {
+enum class StructType {
+  // Invalid/unspecified
+  Invalid = 0,
+
+  // Signed and unsigned integer values
+  UInt8,
+  Int8,
+  UInt16,
+  Int16,
+  UInt32,
+  Int32,
+  UInt64,
+  Int64,
+
+  // Floating point values
+  Float16,
+  Float32,
+  Float64,
+};
+
+enum class ByteOrder { LittleEndian, BigEndian, HostByteOrder };
+
+/// Field-specific flags
+enum class StructProperty : FlagRep {
+  /// No flags set (default value)
+  Empty = 0x00,
+
+  /**
+   * Specifies whether an integer field encodes a normalized value in the
+   * range [0, 1]. The flag is ignored if specified for floating point
+   * valued fields.
+   */
+  Normalized = 0x01,
+
+  /**
+   * Specifies whether the field encodes a sRGB gamma-corrected value.
+   * Assumes \c Normalized is also specified.
+   */
+  Gamma = 0x02,
+
+  /**
+   * In \ref FieldConverter::convert, check that the field value matches
+   * the specified default value. Otherwise, return a failure
+   */
+  Assert = 0x04,
+
+  /**
+   * In \ref FieldConverter::convert, when the field is missing in the
+   * source record, replace it by the specified default value
+   */
+  Default = 0x08,
+
+  /**
+   * In \ref FieldConverter::convert, when an input structure contains a
+   * weight field, the value of all entries are considered to be
+   * expressed relative to its value. Converting to an un-weighted
+   * structure entails a division by the weight.
+   */
+  Weight = 0x10,
+
+  /**
+   * Specifies whether the field encodes an alpha premultiplied value
+   */
+  PremultipliedAlpha = 0x20,
+
+  /**
+   * Specifies whether the field encodes an alpha value
+   */
+  Alpha = 0x40
+};
+} // namespace eldr
+ELDR_DECLARE_FLAG_SPEC(eldr, StructProperty)
+
+namespace eldr {
 class Struct {
 public:
-  enum class Type : uint32_t {
-    // Invalid/unspecified
-    Invalid = 0,
-
-    // Signed and unsigned integer values
-    UInt8,
-    Int8,
-    UInt16,
-    Int16,
-    UInt32,
-    Int32,
-    UInt64,
-    Int64,
-
-    // Floating point values
-    Float16,
-    Float32,
-    Float64,
-  };
-
-  enum class ByteOrder { LittleEndian, BigEndian, HostByteOrder };
-  /// Field-specific flags
-  enum class Flags : uint32_t {
-    /// No flags set (default value)
-    Empty = 0x00,
-
-    /**
-     * Specifies whether an integer field encodes a normalized value in the
-     * range [0, 1]. The flag is ignored if specified for floating point
-     * valued fields.
-     */
-    Normalized = 0x01,
-
-    /**
-     * Specifies whether the field encodes a sRGB gamma-corrected value.
-     * Assumes \c Normalized is also specified.
-     */
-    Gamma = 0x02,
-
-    /**
-     * In \ref FieldConverter::convert, check that the field value matches
-     * the specified default value. Otherwise, return a failure
-     */
-    Assert = 0x04,
-
-    /**
-     * In \ref FieldConverter::convert, when the field is missing in the
-     * source record, replace it by the specified default value
-     */
-    Default = 0x08,
-
-    /**
-     * In \ref FieldConverter::convert, when an input structure contains a
-     * weight field, the value of all entries are considered to be
-     * expressed relative to its value. Converting to an un-weighted
-     * structure entails a division by the weight.
-     */
-    Weight = 0x10,
-
-    /**
-     * Specifies whether the field encodes an alpha premultiplied value
-     */
-    PremultipliedAlpha = 0x20,
-
-    /**
-     * Specifies whether the field encodes an alpha value
-     */
-    Alpha = 0x40
-  };
-
   /// Field specifier with size and offset
   struct Field {
     /// Name of the field
     std::string name;
 
     /// Type identifier
-    Type type;
+    StructType type;
 
     /// Size in bytes
     size_t size;
@@ -96,7 +102,7 @@ public:
     size_t offset;
 
     /// Additional flags
-    uint32_t flags;
+    StructPropertyFlags flags;
 
     /// Default value
     double default_;
@@ -148,9 +154,10 @@ public:
 
   /// Append a new field to the \c Struct; determines size and offset
   /// automatically
-  Struct& append(const std::string& name, Type type,
-                 uint32_t flags    = (uint32_t) Flags::Empty,
-                 double   default_ = 0.0);
+  Struct& append(const std::string&  name,
+                 StructType          type,
+                 StructPropertyFlags flags    = +StructProperty::Empty,
+                 double              default_ = 0.0);
 
   /// Append a new field to the \c Struct (manual version)
   Struct& append(Field field)
@@ -181,12 +188,12 @@ public:
   ByteOrder byteOrder() const { return byte_order_; }
 
   /// Return the byte order of the host machine
-  static ByteOrder host_byte_order()
+  static ByteOrder hostByteOrder()
   {
 #if defined(LITTLE_ENDIAN)
     return ByteOrder::LittleEndian;
 #elif defined(BIG_ENDIAN)
-    return ByteOrder::LittleEndian;
+    return ByteOrder::BigEndian;
 #else
 #  error Either LITTLE_ENDIAN or BIG_ENDIAN must be defined!
 #endif
@@ -233,27 +240,27 @@ public:
   std::string toString() const; // override;
 
   /// Check whether the given type is an unsigned type
-  static bool isUnsigned(Type type)
+  static bool isUnsigned(StructType type)
   {
-    return type == Type::UInt8 || type == Type::UInt16 ||
-           type == Type::UInt32 || type == Type::UInt64;
+    return type == StructType::UInt8 || type == StructType::UInt16 ||
+           type == StructType::UInt32 || type == StructType::UInt64;
   }
 
   /// Check whether the given type is a signed type
-  static bool isSigned(Type type) { return !isUnsigned(type); }
+  static bool isSigned(StructType type) { return !isUnsigned(type); }
 
   /// Check whether the given type is an integer type
-  static bool isInteger(Type type) { return !isFloat(type); }
+  static bool isInteger(StructType type) { return !isFloat(type); }
 
   /// Check whether the given type is a floating point type
-  static bool isFloat(Type type)
+  static bool isFloat(StructType type)
   {
-    return type == Type::Float16 || type == Type::Float32 ||
-           type == Type::Float64;
+    return type == StructType::Float16 || type == StructType::Float32 ||
+           type == StructType::Float64;
   }
 
   /// Return the representable range of the given type
-  static std::pair<double, double> range(Type type);
+  static std::pair<double, double> range(StructType type);
 
 protected:
   std::vector<Field> fields_;
@@ -261,8 +268,8 @@ protected:
   ByteOrder          byte_order_;
 };
 
-extern std::ostream& operator<<(std::ostream& os, const Struct::Type& type);
+extern std::ostream& operator<<(std::ostream& os, const StructType& type);
 
-} // namespace eldr::core
-template <>
-struct fmt::formatter<eldr::core::Struct::Type> : fmt::ostream_formatter {};
+} // namespace eldr
+
+template <> struct fmt::formatter<eldr::StructType> : fmt::ostream_formatter {};

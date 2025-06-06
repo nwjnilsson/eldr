@@ -1,21 +1,21 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
-
-// fwd
-struct GLFWwindow;
+#include <eldr/app/fwd.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
 class Surface {
 public:
-  Surface(const Instance&, GLFWwindow*);
+  Surface();
+  Surface(const Instance&, const app::Window&);
   ~Surface();
 
-  VkSurfaceKHR get() const { return surface_; }
+  Surface& operator=(Surface&&);
+
+  [[nodiscard]] VkSurfaceKHR vk() const;
 
 private:
-  const Instance& instance_;
-  VkSurfaceKHR    surface_{ VK_NULL_HANDLE };
+  class SurfaceImpl;
+  std::unique_ptr<SurfaceImpl> d_;
 };
 } // namespace eldr::vk::wr

@@ -1,24 +1,23 @@
 #pragma once
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
 class Fence {
 public:
-  Fence(const Device&);
-  Fence(Fence&&);
+  Fence();
+  Fence(const Device& device);
+  Fence(Fence&&) noexcept = default;
   ~Fence();
 
-  VkFence get() const { return fence_; }
+  [[nodiscard]] VkFence vk() const;
 
-  void reset() const;
-  [[nodiscard]] VkResult
-  wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
+  VkResult reset() const;
+  VkResult wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
 
 private:
-  const Device& device_;
-
-  VkFence fence_{ VK_NULL_HANDLE };
+  class FenceImpl;
+  std::unique_ptr<FenceImpl> d_;
 };
 } // namespace eldr::vk::wr

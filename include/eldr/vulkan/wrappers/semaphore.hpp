@@ -1,22 +1,20 @@
 #pragma once
-
-#include <eldr/vulkan/common.hpp>
-#include <eldr/vulkan/fwd.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
 namespace eldr::vk::wr {
 
 class Semaphore {
 public:
-  Semaphore(const Device& device_);
-  Semaphore(Semaphore&&);
+  Semaphore();
+  Semaphore(const Device& device, VkSemaphoreCreateFlags flags = 0);
+  Semaphore(Semaphore&&) noexcept;
   ~Semaphore();
 
-  VkSemaphore        get() const { return semaphore_; }
-  const VkSemaphore* ptr() const { return &semaphore_; }
+  [[nodiscard]] VkSemaphore        vk() const;
+  [[nodiscard]] const VkSemaphore* vkp() const;
 
 private:
-  const Device& device_;
-
-  VkSemaphore semaphore_{ VK_NULL_HANDLE };
+  class SemaphoreImpl;
+  std::unique_ptr<SemaphoreImpl> d_;
 };
 } // namespace eldr::vk::wr

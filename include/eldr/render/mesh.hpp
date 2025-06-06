@@ -3,36 +3,82 @@
 #include <eldr/core/math.hpp>
 #include <eldr/render/shape.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace eldr {
-class Mesh : public Shape {
-  ELDR_IMPORT_CORE_TYPES();
+
+// TODO: decide how to deal with materials. I think an enumeration like this
+// could be of use for the Vulkan side of things (selecting pipeline etc) but
+// the path tracing side will deal with it differently maybe
+enum class MaterialType : uint8_t {
+  Metallic,
+};
+
+struct GeoSurface {
+  uint32_t                  start_index;
+  uint32_t                  count;
+  std::shared_ptr<Material> material;
+};
+
+class Mesh final : public Shape {
+  ELDR_IMPORT_CORE_TYPES()
 
 public:
-  Mesh(std::vector<Vec3f>&& positions, std::vector<Vec3f>&& normals,
-       std::vector<Vec2f>&& texcoords);
+  Mesh(std::string_view          name,
+       std::vector<Point3f>&&    positions,
+       std::vector<Point2f>&&    texcoords,
+       std::vector<Color4f>&&    colors,
+       std::vector<Vec3f>&&      normals,
+       std::vector<GeoSurface>&& surfaces);
+  ~Mesh() override = default;
 
-  const std::vector<Vec3f>& vertexPositions() const
+  /// Accessors
+  [[nodiscard]] const std::vector<Point3f>& vtxPositions() const
   {
-    return vertex_positions_;
+    return vtx_positions_;
   }
 
-  const std::vector<Vec3f>& vertexNormals() const { return vertex_normals_; }
-
-  const std::vector<Vec2f>& vertexTexCoords() const
+  /// @brief Get a vector of vtx texture coordinates for this mest
+  [[nodiscard]] const std::vector<Point2f>& vtxTexCoords() const
   {
-    return vertex_texcoords_;
+    return vtx_texcoords_;
+  }
+
+  /// @brief Get a vector of vtx colors from this mesh
+  [[nodiscard]] const std::vector<Color4f>& vtxColors() const
+  {
+    return vtx_colors_;
+  }
+
+  /// @brief Get a vector of vtx normals from this mesh
+  [[nodiscard]] const std::vector<Vec3f>& vtxNormals() const
+  {
+    return vtx_normals_;
+  }
+
+  /// @brief Get a vector surface info from this mesh
+  [[nodiscard]] const std::vector<GeoSurface>& surfaces() const
+  {
+    return surfaces_;
   }
 
 protected:
-  std::string name_;
-  // uint32_t    vertex_count_ = 0;
-  // uint32_t    face_count_   = 0;
+  std::vector<Point3f>    vtx_positions_;
+  std::vector<Point2f>    vtx_texcoords_;
+  std::vector<Color4f>    vtx_colors_;
+  std::vector<Vec3f>      vtx_normals_;
+  std::vector<GeoSurface> surfaces_;
 
-  std::vector<Vec3f> vertex_positions_;
-  std::vector<Vec3f> vertex_normals_;
-  std::vector<Vec2f> vertex_texcoords_;
+  // std::optional<vk::wr::GpuBuffer>
 };
+
+// template <>
+// std::optional<std::vector<std::shared_ptr<Shape>>>
+// Mesh::loadObj<Shape>(vk::VulkanEngine*, std::filesystem::path);
+//
+// template <>
+// std::optional<std::vector<std::shared_ptr<Mesh>>>
+// Mesh::loadObj<Mesh>(vk::VulkanEngine*, std::filesystem::path);
 } // namespace eldr

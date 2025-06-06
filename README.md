@@ -28,7 +28,7 @@ $ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
     python3-pip python3-setuptools python3-wheel libvulkan-dev xcb libxcb-xkb-dev \
     wayland-protocols
 ```
-Meson provides additional dependencies such as libpng, glfw, spdlog etc.
+Meson provides additional dependencies such as libpng, glfw etc.
 
 For debugging:
 ```

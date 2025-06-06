@@ -1,25 +1,25 @@
 #pragma once
+#include <eldr/vulkan/vulkan.hpp>
 
-#include <eldr/vulkan/common.hpp>
-
-#include <string>
 #include <vector>
 
 namespace eldr::vk::wr {
 
 class Instance {
 public:
+  Instance();
   Instance(const VkApplicationInfo&, std::vector<const char*>&& extensions);
   ~Instance();
 
-  [[nodiscard]] static bool isExtensionAvailable(const std::string& extension);
+  Instance& operator=(Instance&&);
 
-  [[nodiscard]] static bool isLayerSupported(const std::string& layer);
-
-  VkInstance get() const { return instance_; }
+  [[nodiscard]] VkInstance vk() const;
 
 private:
-  core::Logger log_{ core::requestLogger("vulkan-engine") };
-  VkInstance   instance_{ VK_NULL_HANDLE };
+  class InstanceImpl;
+  std::unique_ptr<InstanceImpl> d_;
 };
+
+//[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);
+//[[nodiscard]] static bool isLayerSupported(const std::string& layer);
 } // namespace eldr::vk::wr

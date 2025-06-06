@@ -10,26 +10,29 @@ namespace eldr {
 // using the error code 'type'
 // expect([x, this] { return x < y; } ErrorCode::type);
 
-enum class ErrorAction { ignore, throwing, terminate, log };
+enum class ErrorAction { Ignore, Throwing, Terminate, Log };
 
-enum class ErrorCode { range_error, length_error, value_error };
+enum class ErrorCode { RangeError, LengthError, ValueError };
 
-const std::string error_code_name[]{ "range error", "length error",
+const std::string error_code_name[]{ "range error",
+                                     "length error",
                                      "value error" };
 
-constexpr ErrorAction default_error_action = ErrorAction::throwing;
+constexpr ErrorAction default_error_action{ ErrorAction::Throwing };
 
 template <ErrorAction action = default_error_action, class C>
 constexpr void expect(C cond, ErrorCode code)
 {
-  if constexpr (action == ErrorAction::log)
+  if constexpr (action == ErrorAction::Log)
     if (!cond())
-      spdlog::error("expect() failure: {} ->", int(code),
-                    error_code_name[int(code)]);
-  if constexpr (action == ErrorAction::throwing)
+      Log(core::Error,
+          "expect() failure: {} ->",
+          static_cast<int>(code),
+          error_code_name[static_cast<int>(code)]);
+  if constexpr (action == ErrorAction::Throwing)
     if (!cond())
-      throw code;
-  if constexpr (action == ErrorAction::terminate)
+      Throw("{}", error_code_name[static_cast<int>(code)]);
+  if constexpr (action == ErrorAction::Terminate)
     if (!cond())
       std::terminate();
 

@@ -5,46 +5,11 @@
 #include <vector>
 namespace eldr::vk::wr {
 
-static std::vector<char> loadShader(const std::string& file_name);
-
-Shader::Shader(const Device& device, VkShaderStageFlagBits stage,
-               const std::string& name, const std::string& file_name,
-               const std::string& entry_point)
-  : device_(device), name_(name), entry_point_(entry_point), stage_(stage)
-{
-  auto                           bytecode = loadShader(file_name);
-  const VkShaderModuleCreateInfo shader_ci{
-    .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-    .pNext    = nullptr,
-    .flags    = 0,
-    .codeSize = bytecode.size(),
-    .pCode    = reinterpret_cast<const uint32_t*>(bytecode.data()),
-  };
-
-  if (const VkResult result = vkCreateShaderModule(
-        device_.logical(), &shader_ci, nullptr, &shader_module_);
-      result != VK_SUCCESS) {
-    ThrowVk(result,
-            "vkCreateShaderModule(): failed to create shader module {}!, ",
-            name_);
-  }
-}
-
-Shader::Shader(Shader&& other) noexcept : device_(other.device_)
-{
-  stage_         = other.stage_;
-  name_          = std::move(other.name_);
-  entry_point_   = std::move(other.entry_point_);
-  shader_module_ = std::exchange(other.shader_module_, nullptr);
-}
-
-Shader::~Shader()
-{
-  if (shader_module_ != VK_NULL_HANDLE)
-    vkDestroyShaderModule(device_.logical(), shader_module_, nullptr);
-}
-
-static std::vector<char> loadShader(const std::string& file_name)
+//------------------------------------------------------------------------------
+// Shader helper
+//------------------------------------------------------------------------------
+namespace {
+std::vector<char> loadShader(std::string_view filename)
 {
   // TODO: maybe allow more flexibility in loading shaders and don't hardcode
   // path to shader directory
@@ -53,7 +18,7 @@ static std::vector<char> loadShader(const std::string& file_name)
     Throw("loadShader(): Environment not set up correctly");
   }
   std::string shader_path =
-    fmt::format("{}/assets/shaders/{}", std::string(env_p), file_name);
+    fmt::format("{}/assets/shaders/{}", std::string(env_p), filename);
   std::ifstream file(shader_path, std::ios::ate | std::ios::binary);
 
   if (!file.is_open()) {
@@ -67,5 +32,61 @@ static std::vector<char> loadShader(const std::string& file_name)
   file.close();
   return buffer;
 }
+} // namespace
+//------------------------------------------------------------------------------
+// ShaderImpl
+//------------------------------------------------------------------------------
+class Shader::ShaderImpl {
+public:
+  ShaderImpl(const Device&                   device,
+             std::string_view                name,
+             const VkShaderModuleCreateInfo& shader_module_ci);
+  ~ShaderImpl();
+  const Device&  device_;
+  VkShaderModule shader_module_{ VK_NULL_HANDLE };
+};
+
+Shader::ShaderImpl::ShaderImpl(const Device&                   device,
+                               std::string_view                filename,
+                               const VkShaderModuleCreateInfo& shader_module_ci)
+  : device_(device)
+{
+  if (const VkResult result{ vkCreateShaderModule(
+        device_.logical(), &shader_module_ci, nullptr, &shader_module_) };
+      result != VK_SUCCESS)
+    Throw("Failed to create shader module '{}'! ({})", filename, result);
+}
+
+Shader::ShaderImpl::~ShaderImpl()
+{
+  vkDestroyShaderModule(device_.logical(), shader_module_, nullptr);
+}
+
+//------------------------------------------------------------------------------
+// Shader
+//------------------------------------------------------------------------------
+Shader::Shader()                    = default;
+Shader::Shader(Shader&&) noexcept   = default;
+Shader::~Shader()                   = default;
+Shader& Shader::operator=(Shader&&) = default;
+
+Shader::Shader(const Device&         device,
+               std::string_view      name,
+               std::string_view      filename,
+               VkShaderStageFlagBits stage)
+  : name_(name), stage_(stage)
+{
+  auto                           bytecode = loadShader(filename);
+  const VkShaderModuleCreateInfo shader_module_ci{
+    .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+    .pNext    = nullptr,
+    .flags    = 0,
+    .codeSize = bytecode.size(),
+    .pCode    = reinterpret_cast<const uint32_t*>(bytecode.data()),
+  };
+  d_ = std::make_unique<ShaderImpl>(device, filename, shader_module_ci);
+}
+
+VkShaderModule Shader::module() const { return d_->shader_module_; }
 
 } // namespace eldr::vk::wr

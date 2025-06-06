@@ -1,26 +1,21 @@
 /**
  * Struct implementation adapted from the Mitsuba project
  */
-#include <eldr/core/common.hpp>
 #include <eldr/core/hash.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
-#include <spdlog/fmt/ostr.h>
+#include <sstream>
 
 #include <cmath>
 
-namespace eldr::core {
-constexpr bool hasFlag(uint32_t flags, Struct::Flags f)
-{
-  return (flags & static_cast<uint32_t>(f)) != 0;
-}
-
-Struct::Struct(bool pack, Struct::ByteOrder byte_order)
+namespace eldr {
+Struct::Struct(bool pack, ByteOrder byte_order)
   : pack_(pack), byte_order_(byte_order)
 {
-  if (byte_order_ == Struct::ByteOrder::HostByteOrder)
-    byte_order_ = host_byte_order();
+  if (byte_order_ == ByteOrder::HostByteOrder)
+    byte_order_ = hostByteOrder();
 }
 
 Struct::Struct(const Struct& s)
@@ -59,8 +54,10 @@ bool Struct::hasField(const std::string& name) const
   return false;
 }
 
-Struct& Struct::append(const std::string& name, Struct::Type type,
-                       uint32_t flags, double default_)
+Struct& Struct::append(const std::string&  name,
+                       StructType          type,
+                       StructPropertyFlags flags,
+                       double              default_)
 {
   Field f;
   f.name     = name;
@@ -75,23 +72,23 @@ Struct& Struct::append(const std::string& name, Struct::Type type,
     f.offset         = last.offset + last.size;
   }
   switch (type) {
-    case Type::Int8:
-    case Type::UInt8:
+    case StructType::Int8:
+    case StructType::UInt8:
       f.size = 1;
       break;
-    case Type::Int16:
-    case Type::UInt16:
-    case Type::Float16:
+    case StructType::Int16:
+    case StructType::UInt16:
+    case StructType::Float16:
       f.size = 2;
       break;
-    case Type::Int32:
-    case Type::UInt32:
-    case Type::Float32:
+    case StructType::Int32:
+    case StructType::UInt32:
+    case StructType::Float32:
       f.size = 4;
       break;
-    case Type::Int64:
-    case Type::UInt64:
-    case Type::Float64:
+    case StructType::Int64:
+    case StructType::UInt64:
+    case StructType::Float64:
       f.size = 8;
       break;
     default:
@@ -103,43 +100,43 @@ Struct& Struct::append(const std::string& name, Struct::Type type,
   return *this;
 }
 
-std::ostream& operator<<(std::ostream& os, const Struct::Type& value)
+std::ostream& operator<<(std::ostream& os, const StructType& value)
 {
   switch (value) {
-    case Struct::Type::Int8:
+    case StructType::Int8:
       os << "int8";
       break;
-    case Struct::Type::UInt8:
+    case StructType::UInt8:
       os << "uint8";
       break;
-    case Struct::Type::Int16:
+    case StructType::Int16:
       os << "int16";
       break;
-    case Struct::Type::UInt16:
+    case StructType::UInt16:
       os << "uint16";
       break;
-    case Struct::Type::Int32:
+    case StructType::Int32:
       os << "int32";
       break;
-    case Struct::Type::UInt32:
+    case StructType::UInt32:
       os << "uint32";
       break;
-    case Struct::Type::Int64:
+    case StructType::Int64:
       os << "int64";
       break;
-    case Struct::Type::UInt64:
+    case StructType::UInt64:
       os << "uint64";
       break;
-    case Struct::Type::Float16:
+    case StructType::Float16:
       os << "float16";
       break;
-    case Struct::Type::Float32:
+    case StructType::Float32:
       os << "float32";
       break;
-    case Struct::Type::Float64:
+    case StructType::Float64:
       os << "float64";
       break;
-    case Struct::Type::Invalid:
+    case StructType::Invalid:
       os << "invalid";
       break;
     default:
@@ -162,19 +159,19 @@ std::string Struct::toString() const
     }
     os << "  " << f.type;
     os << " " << f.name << "; // @" << f.offset;
-    if (hasFlag(f.flags, Flags::Normalized))
+    if (f.flags.hasFlag(StructProperty::Normalized))
       os << ", normalized";
-    if (hasFlag(f.flags, Flags::Gamma))
+    if (f.flags.hasFlag(StructProperty::Gamma))
       os << ", gamma";
-    if (hasFlag(f.flags, Flags::Weight))
+    if (f.flags.hasFlag(StructProperty::Weight))
       os << ", weight";
-    if (hasFlag(f.flags, Flags::Alpha))
+    if (f.flags.hasFlag(StructProperty::Alpha))
       os << ", alpha";
-    if (hasFlag(f.flags, Flags::PremultipliedAlpha))
+    if (f.flags.hasFlag(StructProperty::PremultipliedAlpha))
       os << ", premultiplied alpha";
-    if (hasFlag(f.flags, Flags::Default))
+    if (f.flags.hasFlag(StructProperty::Default))
       os << ", default=" << f.default_;
-    if (hasFlag(f.flags, Flags::Assert))
+    if (f.flags.hasFlag(StructProperty::Assert))
       os << ", assert=" << f.default_;
     if (!f.blend.empty()) {
       os << ", blend = <";
@@ -214,7 +211,7 @@ Struct::Field& Struct::field(const std::string& name)
   Throw("Unable to find field \"%s\"", name);
 }
 
-std::pair<double, double> Struct::range(Struct::Type type)
+std::pair<double, double> Struct::range(StructType type)
 {
   std::pair<double, double> result;
 
@@ -225,18 +222,18 @@ std::pair<double, double> Struct::range(Struct::Type type)
     break;
 
   switch (type) {
-    COMPUTE_RANGE(Type::UInt8, uint8_t);
-    COMPUTE_RANGE(Type::Int8, int8_t);
-    COMPUTE_RANGE(Type::UInt16, uint16_t);
-    COMPUTE_RANGE(Type::Int16, int16_t);
-    COMPUTE_RANGE(Type::UInt32, uint32_t);
-    COMPUTE_RANGE(Type::Int32, int32_t);
-    COMPUTE_RANGE(Type::UInt64, uint64_t);
-    COMPUTE_RANGE(Type::Int64, int64_t);
-    COMPUTE_RANGE(Type::Float32, float);
-    COMPUTE_RANGE(Type::Float64, double);
+    COMPUTE_RANGE(StructType::UInt8, uint8_t);
+    COMPUTE_RANGE(StructType::Int8, int8_t);
+    COMPUTE_RANGE(StructType::UInt16, uint16_t);
+    COMPUTE_RANGE(StructType::Int16, int16_t);
+    COMPUTE_RANGE(StructType::UInt32, uint32_t);
+    COMPUTE_RANGE(StructType::Int32, int32_t);
+    COMPUTE_RANGE(StructType::UInt64, uint64_t);
+    COMPUTE_RANGE(StructType::Int64, int64_t);
+    COMPUTE_RANGE(StructType::Float32, float);
+    COMPUTE_RANGE(StructType::Float64, double);
 
-    case Type::Float16:
+    case StructType::Float16:
       result = std::make_pair(-65504, 65504);
       break;
 
@@ -273,4 +270,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-} // namespace eldr::core
+} // namespace eldr

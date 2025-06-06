@@ -1,32 +1,35 @@
+#include <eldr/app/app.hpp>
 #include <eldr/app/window.hpp>
-#include <eldr/core/common.hpp>
+#include <eldr/core/logger.hpp>
 
 #include <GLFW/glfw3.h>
 
-namespace eldr {
+namespace eldr::app {
 namespace {
-static void glfwErrorCallback(int error, const char* description)
+static void glfwErrorCallback(const int error, const char* description)
 {
-  core::requestLogger("app")->error("GLFW Error {}: {}", error, description);
+  Log(core::Error, "GLFW Error {}: {}", error, description);
 }
 } // namespace
 
-Window::Window(uint32_t width, uint32_t height) : width_(width), height_(height)
+Window::Window(const int width, const int height)
+  : width_(width), height_(height)
 {
   // Initialize GLFW
   glfwSetErrorCallback(glfwErrorCallback);
   if (!glfwInit()) {
-    Throw("[GLFW]: Failed to initialize");
+    Throw("Failed to initialize GLFW!");
   }
 
   // Vulkan pre-check
   if (!glfwVulkanSupported()) {
-    Throw("[GLFW]: Vulkan not supported");
+    Throw("Vulkan is not supported!");
   }
 
   // Create GLFW Window with Vulkan context
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfw_window_ = glfwCreateWindow(width, height, "Eldr", nullptr, nullptr);
+  glfwSetWindowUserPointer(glfw_window_, this);
 }
 
 Window::~Window()
@@ -35,40 +38,65 @@ Window::~Window()
   glfwTerminate();
 }
 
-void Window::setUserPointer(void* user)
+void Window::setResizeCallback(const ResizeFunc resize_callback)
 {
-  glfwSetWindowUserPointer(glfw_window_, user);
-}
-
-void Window::setResizeCallback(GLFWframebuffersizefun func)
-{
-  glfwSetFramebufferSizeCallback(glfw_window_, func);
+  resize_func_       = resize_callback;
+  auto resize_lambda = [](GLFWwindow* window, int width, int height) {
+    auto w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    w->resize_func_(w, width, height);
+    w->width_  = width;
+    w->height_ = height;
+  };
+  glfwSetFramebufferSizeCallback(glfw_window_, resize_lambda);
 }
 
 void Window::setTitle(const std::string& title)
 {
-  assert(!title.empty());
+  Assert(not title.empty());
   glfwSetWindowTitle(glfw_window_, title.c_str());
 }
 
-void Window::setKeyboardButtonCallback(GLFWkeyfun keyboard_button_callback)
+void Window::setKeyboardButtonCallback(const KeyFunc keyboard_button_callback)
 {
-  glfwSetKeyCallback(glfw_window_, keyboard_button_callback);
+  key_func_ = keyboard_button_callback;
+  auto key_callback =
+    [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+      auto w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+      w->key_func_(w, key, scancode, action, mods);
+    };
+  glfwSetKeyCallback(glfw_window_, key_callback);
 }
 
-void Window::setCursorPositionCallback(GLFWcursorposfun cursor_pos_callback)
+void Window::setCursorPositionCallback(const CursorPosFunc cursor_pos_callback)
 {
-  glfwSetCursorPosCallback(glfw_window_, cursor_pos_callback);
+  cursor_pos_func_     = cursor_pos_callback;
+  auto cursor_callback = [](GLFWwindow* window, double xpos, double ypos) {
+    auto w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    w->cursor_pos_func_(w, xpos, ypos);
+  };
+  glfwSetCursorPosCallback(glfw_window_, cursor_callback);
 }
 
-void Window::setMouseButtonCallback(GLFWmousebuttonfun mouse_button_callback)
+void Window::setMouseButtonCallback(const MouseButtonFunc mouse_button_callback)
 {
-  glfwSetMouseButtonCallback(glfw_window_, mouse_button_callback);
+  mouse_button_func_ = mouse_button_callback;
+  auto button_callback =
+    [](GLFWwindow* window, int button, int action, int mods) {
+      auto w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+      w->mouse_button_func_(w, button, action, mods);
+    };
+  glfwSetMouseButtonCallback(glfw_window_, button_callback);
 }
 
-void Window::setMouseScrollCallback(GLFWscrollfun mouse_scroll_callback)
+void Window::setMouseScrollCallback(const ScrollFunc mouse_scroll_callback)
 {
-  glfwSetScrollCallback(glfw_window_, mouse_scroll_callback);
+  scroll_func_ = mouse_scroll_callback;
+  auto scroll_callback =
+    [](GLFWwindow* window, double xoffset, double yoffset) {
+      auto w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+      w->scroll_func_(w, xoffset, yoffset);
+    };
+  glfwSetScrollCallback(glfw_window_, scroll_callback);
 }
 
 void Window::show() { glfwShowWindow(glfw_window_); }
@@ -85,11 +113,11 @@ std::vector<const char*> Window::getExtensions()
   return extensions;
 }
 
-void Window::resize(uint32_t width, uint32_t height)
-{
-  width_  = width;
-  height_ = height;
-}
+// void Window::resize(uint32_t width, uint32_t height)
+// {
+//   width_  = width;
+//   height_ = height;
+// }
 
 std::vector<const char*> Window::instanceExtensions() const
 {
@@ -111,4 +139,4 @@ void Window::waitForFocus() const
   }
 }
 
-} // namespace eldr
+} // namespace eldr::app

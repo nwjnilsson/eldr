@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-namespace eldr::core {
+namespace eldr {
 namespace detail {
 static Stream::EByteOrder byteOrder()
 {
@@ -130,4 +130,4 @@ std::string Stream::readToken()
 }
 
 void Stream::skip(size_t amount) { seek(tell() + amount); }
-} // namespace eldr::core
+} // namespace eldr

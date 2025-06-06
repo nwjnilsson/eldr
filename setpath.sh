@@ -20,4 +20,4 @@ elif [ "$ZSH_VERSION" ]; then
     export ELDR_DIR=$(dirname "$0:A")
 fi
 
-export PATH="$ELDR_DIR/$BUILD_DIR/src/app:$PATH"
+export PATH="$ELDR_DIR/$BUILD_DIR/src/eldr:$PATH"

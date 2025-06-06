@@ -1,12 +1,12 @@
 /**
  * MemoryStream class adapted from Mitsuba3
  */
-#include <eldr/core/common.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/core/mstream.hpp>
 
 #include <sstream>
 
-namespace eldr::core {
+namespace eldr {
 
 MemoryStream::MemoryStream(size_t capacity)
   : Stream(), capacity_(0), size_(0), pos_(0), owns_buffer_(true),
@@ -70,8 +70,8 @@ void MemoryStream::write(const void* p, size_t size)
 void MemoryStream::resize(size_t size)
 {
   if (!owns_buffer_)
-    Throw("Tried to resize a buffer, which doesn't "
-          "belong to this MemoryStream instance!");
+    Throw("Tried to resize a buffer that doesn't belong to this MemoryStream "
+          "instance!");
 
   if (data_ == nullptr)
     data_ = reinterpret_cast<uint8_t*>(std::malloc(size));
@@ -116,4 +116,4 @@ std::string MemoryStream::toString() const
   return oss.str();
 }
 
-} // namespace eldr::core
+} // namespace eldr
