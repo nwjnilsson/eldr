@@ -22,7 +22,7 @@
     EL_TOSTRING(EL_VER_MINOR) "."                                              \
     EL_TOSTRING(EL_VER_PATCH)
 
-#define EL_ENGINE_NAME "@ELDR_ENGINE_NAME"
+#define EL_ENGINE_NAME "@ELDR_ENGINE_NAME@"
 
 
 #define EL_ENGINE_VER_VARIANT @ELDR_ENGINE_VERSION_VARIANT@
