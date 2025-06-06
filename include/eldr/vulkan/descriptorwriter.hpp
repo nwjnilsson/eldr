@@ -13,11 +13,11 @@ public:
   template <typename T>
   DescriptorWriter& writeUniformBuffer(uint32_t             binding,
                                        const wr::Buffer<T>& buffer,
-                                       size_t               offset);
+                                       size_t               offset = 0);
   template <typename T>
   DescriptorWriter& writeStorageBuffer(uint32_t             binding,
                                        const wr::Buffer<T>& buffer,
-                                       size_t               offset);
+                                       size_t               offset = 0);
 
   DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
 

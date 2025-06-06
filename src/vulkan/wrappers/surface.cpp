@@ -1,7 +1,8 @@
 #include <eldr/vulkan/wrappers/instance.hpp>
 #include <eldr/vulkan/wrappers/surface.hpp>
 
-#include <eldr/app/window.hpp> // Include order matters, vulkan first
+#include <GLFW/glfw3.h>
+#include <eldr/app/window.hpp>
 
 namespace eldr::vk::wr {
 

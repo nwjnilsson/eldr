@@ -85,6 +85,7 @@ struct VulkanEngine::EngineData {
 
   // The data below is experimental, default data
   DescriptorSetLayout scene_data_descriptor_layout;
+  DescriptorSetLayout model_data_descriptor_layout;
   // DescriptorSetLayout   viking_model_descriptor_layout;
   GltfMetallicRoughness metal_rough_material;
   MaterialInstance      default_material_data;
@@ -266,6 +267,9 @@ void VulkanEngine::initDescriptors()
 
   layout_builder.reset();
 
+  layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT);
+  d_->model_data_descriptor_layout = layout_builder.build(d_->device, 0);
+
   // layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
   //   .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
   // d_->viking_model_descriptor_layout = layout_builder.build(d_->device, 0);
@@ -413,7 +417,7 @@ void VulkanEngine::updateScenes(uint32_t current_image)
     scene_data_.proj               = proj;
     scene_data_.view               = view;
     scene_data_.viewproj           = proj * view;
-    scene_data_.ambient_color      = Vec4f{ .1f };
+    scene_data_.ambient_color      = Vec4f{ .05f };
     scene_data_.sunlight_color     = Vec4f{ 1, 1, 1, 1.f };
     scene_data_.sunlight_direction = Vec4f{ 0, 1, 0.5, 1.f };
     const GpuModelData model_data[]{ { .model_mat = model } };
@@ -437,9 +441,22 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
 
   const size_t    surface_count{ main_draw_context_.opaque_surfaces.size() };
   FrameData&      frame{ d_->frames_in_flight[frame_index_] };
-  VkDescriptorSet frame_descriptor{ frame.descriptors.allocate(
+  VkDescriptorSet scene_descriptor{ frame.descriptors.allocate(
     device, d_->scene_data_descriptor_layout) };
-  size_t          idx_offset{ 0 };
+
+  VkDescriptorSet model_descriptor{ frame.descriptors.allocate(
+    device, d_->model_data_descriptor_layout) };
+
+  size_t idx_offset{ 0 };
+
+  DescriptorWriter writer;
+  writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
+    .updateSet(device, scene_descriptor);
+  writer.reset();
+
+  // TODO: model should be incorporated with mesh or draw or something
+  writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
+    .updateSet(device, model_descriptor);
 
   for (size_t i{ 0 }; i < surface_count; ++i) {
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
@@ -448,15 +465,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     // VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
     //   device, d_->viking_model_descriptor_layout) };
 
-    DescriptorWriter writer;
-    writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
-      .updateSet(device, frame_descriptor);
-
     //
-    // writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
-    //   .writeCombinedImageSampler(
-    //     1, d_->viking_texture, d_->default_sampler_linear)
-    //   .updateSet(device, d_->viking_descriptor);
 
     // cb.bindDescriptorSets(draw.material->descriptor.descriptorSets(),
     // physical.pipelineLayout(), 1);
@@ -472,7 +481,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
                     VK_SHADER_STAGE_VERTEX_BIT);
 
     std::vector<VkDescriptorSet> descriptor_sets{
-      frame_descriptor, draw.material->data.descriptor_set
+      scene_descriptor, draw.material->data.descriptor_set, model_descriptor
     };
     cb.bindDescriptorSets(descriptor_sets,
                           draw.material->data.pipeline->layout());
@@ -654,6 +663,7 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
   PipelineBuilder pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(d_->scene_data_descriptor_layout)
     .addDescriptorSetLayout(material.material_layout)
+    .addDescriptorSetLayout(d_->model_data_descriptor_layout)
     .addPushConstantRange(matrix_range)
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)

@@ -23,21 +23,23 @@ layout(buffer_reference, std430) readonly buffer VertexBuffer {
 };
 
 layout(push_constant) uniform Constants {
-    mat4 render_matrix;
+    mat4 world_matrix;
     VertexBuffer vertex_buffer;
 } push_constants;
 
-layout(set = 1, binding = 0) uniform ModelData {
-    mat4 mvp_mat;
+layout(set = 2, binding = 0) uniform ModelData {
+    mat4 model_matrix;
 } model_data;
 
 void main() {
     Vertex v = push_constants.vertex_buffer.vertices[gl_VertexIndex];
     vec4 position = vec4(v.pos, 1.0f);
-    gl_Position = scene_data.viewproj * push_constants.render_matrix * position;
+    gl_Position = scene_data.viewproj * push_constants.world_matrix *
+            model_data.model_matrix * position;
 
     out_uv.x = v.uv_x;
     out_uv.y = v.uv_y;
-    out_normal = (push_constants.render_matrix * vec4(v.normal, 0.f)).xyz;
+    out_normal = (model_data.model_matrix * push_constants.world_matrix *
+            vec4(v.normal, 0.f)).xyz;
     out_color = v.color.xyz * material_data.color_factors.xyz;
 }

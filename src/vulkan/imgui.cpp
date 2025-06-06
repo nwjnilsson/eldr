@@ -19,7 +19,7 @@ struct ImGuiOverlay::FrameData {
 
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                            const wr::Swapchain& swapchain,
-                           RenderGraph*         render_graph)
+                           RenderGraph* const   render_graph)
   : device_(device), swapchain_(swapchain)
 {
   IMGUI_CHECKVERSION();
