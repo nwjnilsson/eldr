@@ -148,7 +148,7 @@ public:
     return pushConstants(layout, stage, sizeof(data), &data, offset);
   }
 
-  [[nodiscard]] const AllocatedBuffer&
+  [[nodiscard]] const Buffer<byte_t>&
   createStagingBuffer(const std::string&      name,
                       std::span<const byte_t> data) const;
 
@@ -162,6 +162,24 @@ public:
 private:
   const CommandBuffer& copyBuffer(const VkCopyBufferInfo2& copy_info) const;
 
+  // Specifically for staging buffer copies
+  template <typename T>
+  const CommandBuffer&
+  copyBuffer(Buffer<T>&                     dst,
+             const Buffer<byte_t>&          src,
+             std::span<const VkBufferCopy2> copy_regions) const
+  {
+    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    const VkCopyBufferInfo2 copy_info{
+      .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+      .pNext       = {},
+      .srcBuffer   = src.vk(),
+      .dstBuffer   = dst.vk(),
+      .regionCount = static_cast<uint32_t>(copy_regions.size()),
+      .pRegions    = copy_regions.data(),
+    };
+    return copyBuffer(copy_info);
+  }
   //----------------------------------------------------------------------------
   // Only for use in AllocatedBuffer
   friend AllocatedBuffer;

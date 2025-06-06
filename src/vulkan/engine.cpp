@@ -244,13 +244,13 @@ void VulkanEngine::setupFrameData()
       .scene_data_buffer = { d_->device,
                              "Scene data uniform buffer",
                              elem_count,
-                             +BufferUsage::Uniform,
-                             +HostAccess::Sequential },
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
       .model_data_buffer = { d_->device,
                              "Model data uniform buffer",
                              elem_count,
-                             +BufferUsage::Uniform,
-                             +HostAccess::Sequential },
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
       .cmd_buf           = nullptr, // Set later when drawing frames
     });
   }
@@ -325,18 +325,19 @@ void VulkanEngine::updateBuffers()
       vertices.size());
 
   d_->index_buffer = {
-    d_->device,        "index buffer",
-    indices,           BufferUsage::Index | BufferUsage::TransferDst,
-    +HostAccess::None, MemoryUsage::PreferDevice
+    d_->device,
+    "index buffer",
+    indices,
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
   };
 
-  d_->vertex_buffer = { d_->device,
-                        "vertex buffer",
-                        vertices,
-                        BufferUsage::Storage | BufferUsage::TransferDst |
-                          BufferUsage::ShaderDeviceAddress,
-                        +HostAccess::DeviceAddress,
-                        MemoryUsage::PreferDevice };
+  d_->vertex_buffer = {
+    d_->device,
+    "vertex buffer",
+    vertices,
+    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+      VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+  };
 }
 
 void VulkanEngine::setupRenderGraph()
@@ -354,8 +355,8 @@ void VulkanEngine::setupRenderGraph()
   depth_buffer->setSampleCount(s_->msaa_sample_count);
 
   auto* main_stage = graph->add<GraphicsStage>("Main stage");
-  main_stage->writesTo(color_buffer, LoadOp::Clear, StoreOp::Store)
-    .writesTo(depth_buffer, LoadOp::Clear, StoreOp::Store)
+  main_stage->writesTo(color_buffer, VK_ATTACHMENT_LOAD_OP_CLEAR)
+    .writesTo(depth_buffer, VK_ATTACHMENT_LOAD_OP_CLEAR)
     .setOnRecord([&](const CommandBuffer& cb) { drawGeometry(cb); });
 }
 
@@ -451,11 +452,6 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
       .updateSet(device, frame_descriptor);
 
-    writer.reset();
-    writer
-      .writeCombinedImageSampler(
-        1, d_->error_texture, d_->default_sampler_linear)
-      .updateSet(device, draw.material->data.descriptor_set);
     //
     // writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
     //   .writeCombinedImageSampler(
@@ -679,14 +675,14 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
   // TODO: pipeline names should ultimately be constructed from the material
   // information
   material.opaque_pipeline =
-    pipeline_builder.build(device, "GltfMetallicRoughness opaque pipeline");
+    pipeline_builder.build(device, "GltfMetallicRoughness opaque");
 
   // create the transparent variant
   pipeline_builder.enableBlendingAdditive().enableDepthtest(
     false, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
-  material.transparent_pipeline = pipeline_builder.build(
-    device, "GltfMetallicRoughness transparent pipeline");
+  material.transparent_pipeline =
+    pipeline_builder.build(device, "GltfMetallicRoughness transparent");
 }
 
 } // namespace eldr::vk

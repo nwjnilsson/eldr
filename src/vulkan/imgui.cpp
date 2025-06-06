@@ -8,7 +8,6 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
-#include <vulkan/vulkan_core.h>
 
 using namespace eldr::core;
 
@@ -118,7 +117,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                                font_mip_levels };
 
   stage_ = render_graph->add<GraphicsStage>("ImGui stage");
-  stage_->writesTo(render_graph->backBuffer(), LoadOp::Load, StoreOp::Store);
+  stage_->writesTo(render_graph->backBuffer(), VK_ATTACHMENT_LOAD_OP_LOAD);
 
   buildPipeline();
 
@@ -217,8 +216,8 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     ibuffer = { device_,
                 "imgui index buffer",
                 index_data,
-                +BufferUsage::Index,
-                +HostAccess::Sequential };
+                VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT };
 
   std::vector<ImDrawVert> vertex_data;
   for (int i = 0; i < imgui_draw_data->CmdListsCount; i++) {
@@ -235,8 +234,8 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
     vbuffer = { device_,
                 "ImGui vertex buffer",
                 vertex_data,
-                +BufferUsage::Vertex,
-                +HostAccess::Sequential };
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT };
   }
 
   stage_->setOnRecord([&](const wr::CommandBuffer& cb) {

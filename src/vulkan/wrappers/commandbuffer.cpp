@@ -1,3 +1,4 @@
+#include "eldr/vulkan/vulkan.hpp"
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
@@ -600,15 +601,17 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   return *this;
 }
 
-const AllocatedBuffer&
+const Buffer<byte_t>&
 CommandBuffer::createStagingBuffer(const std::string&      name,
                                    std::span<const byte_t> src) const
 {
-  Buffer<byte_t> buff{
-    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential
-  };
   staging_buffers_.emplace_back(
-    d_->device_, name, src, +BufferUsage::TransferSrc, +HostAccess::Sequential);
+    d_->device_,
+    name,
+    src,
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VMA_ALLOCATION_CREATE_MAPPED_BIT |
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
   return staging_buffers_.back();
 }
 

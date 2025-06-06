@@ -13,6 +13,7 @@
 #include <span>
 #include <unordered_set>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace eldr::vk {
 
@@ -71,7 +72,7 @@ class BufferResource : public RenderResource {
   friend RenderGraph;
 
 public:
-  BufferResource(std::string&& name, BufferUsageFlags buffer_usage)
+  BufferResource(std::string&& name, VkBufferUsageFlags buffer_usage)
     : RenderResource(name), buffer_usage_(buffer_usage)
   {
   }
@@ -92,7 +93,7 @@ public:
   }
 
 private:
-  BufferUsageFlags buffer_usage_;
+  VkBufferUsageFlags buffer_usage_;
   // Data to upload to the GPU on a call to render().
   std::span<const byte_t> data_;
 };
@@ -228,13 +229,15 @@ public:
   GraphicsStage& operator=(GraphicsStage&&)      = delete;
 
   /// @brief Specifies that this stage writes to `resource`.
-  GraphicsStage& writesTo(const TextureResource* resource,
-                          LoadOp                 load_op,
-                          StoreOp                store_op = StoreOp::Store);
+  GraphicsStage&
+  writesTo(const TextureResource* resource,
+           VkAttachmentLoadOp     load_op,
+           VkAttachmentStoreOp    store_op = VK_ATTACHMENT_STORE_OP_STORE);
+
   GraphicsStage& readsFrom(const RenderResource* resource);
 
 private:
-  using LoadStoreOps = std::pair<LoadOp, StoreOp>;
+  using LoadStoreOps = std::pair<VkAttachmentLoadOp, VkAttachmentStoreOp>;
   std::unordered_map<const TextureResource*, LoadStoreOps> load_store_ops_;
   std::unordered_set<const TextureResource*>               resolves_;
 };

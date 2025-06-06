@@ -30,8 +30,8 @@ RenderStage& RenderStage::readsFrom(const RenderResource* resource)
 }
 
 GraphicsStage& GraphicsStage::writesTo(const TextureResource* resource,
-                                       LoadOp                 load_op,
-                                       StoreOp                store_op)
+                                       VkAttachmentLoadOp     load_op,
+                                       VkAttachmentStoreOp    store_op)
 {
   RenderStage::writesTo(resource);
   load_store_ops_.insert(
@@ -195,8 +195,12 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         resolve_flags  = VK_RESOLVE_MODE_AVERAGE_BIT;
       }
 
-      const LoadOp  load_op{ stage->load_store_ops_.at(texture).first };
-      const StoreOp store_op{ stage->load_store_ops_.at(texture).second };
+      const VkAttachmentLoadOp load_op{
+        stage->load_store_ops_.at(texture).first
+      };
+      const VkAttachmentStoreOp store_op{
+        stage->load_store_ops_.at(texture).second
+      };
       VkRenderingAttachmentInfo attachment{
         .sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext              = {},
@@ -205,8 +209,8 @@ void RenderGraph::buildAttachments(const GraphicsStage*   stage,
         .resolveMode        = resolve_flags,
         .resolveImageView   = resolve_view,
         .resolveImageLayout = resolve_layout,
-        .loadOp             = static_cast<VkAttachmentLoadOp>(load_op),
-        .storeOp            = static_cast<VkAttachmentStoreOp>(store_op),
+        .loadOp             = load_op,
+        .storeOp            = store_op,
         .clearValue         = texture->clear_value_,
       };
 
@@ -242,7 +246,7 @@ void RenderGraph::compile()
       if (const auto* g_stage = stage->as<GraphicsStage>()) {
         if (g_stage->writes_.contains(texture.get())) {
           if (g_stage->load_store_ops_.at(texture.get()).first ==
-              LoadOp::Clear) {
+              VK_ATTACHMENT_LOAD_OP_CLEAR) {
             count++;
           }
         }
@@ -321,14 +325,26 @@ void RenderGraph::compile()
             k22 = t2->resolve_;
             Assert(t2->resolve_);
           }
-          const LoadOp l11{ g_stage1->load_store_ops_.at(k11).first };
-          const LoadOp l12{ g_stage1->load_store_ops_.at(k12).first };
-          const LoadOp l21{ g_stage2->load_store_ops_.at(k21).first };
-          const LoadOp l22{ g_stage2->load_store_ops_.at(k22).first };
-          if ((l11 == LoadOp::Clear and l12 == LoadOp::Load and
-               l21 == LoadOp::Load and l22 == LoadOp::Clear) or
-              (l11 == LoadOp::Load and l12 == LoadOp::Clear and
-               l21 == LoadOp::Clear and l22 == LoadOp::Load)) {
+          const VkAttachmentLoadOp l11{
+            g_stage1->load_store_ops_.at(k11).first
+          };
+          const VkAttachmentLoadOp l12{
+            g_stage1->load_store_ops_.at(k12).first
+          };
+          const VkAttachmentLoadOp l21{
+            g_stage2->load_store_ops_.at(k21).first
+          };
+          const VkAttachmentLoadOp l22{
+            g_stage2->load_store_ops_.at(k22).first
+          };
+          if ((l11 == VK_ATTACHMENT_LOAD_OP_CLEAR and
+               l12 == VK_ATTACHMENT_LOAD_OP_LOAD and
+               l21 == VK_ATTACHMENT_LOAD_OP_LOAD and
+               l22 == VK_ATTACHMENT_LOAD_OP_CLEAR) or
+              (l11 == VK_ATTACHMENT_LOAD_OP_LOAD and
+               l12 == VK_ATTACHMENT_LOAD_OP_CLEAR and
+               l21 == VK_ATTACHMENT_LOAD_OP_CLEAR and
+               l22 == VK_ATTACHMENT_LOAD_OP_LOAD)) {
             Throw("Unschedulable WAW dependency detected between stages \"{}\" "
                   "and \"{}\"",
                   g_stage1->name_,
@@ -457,7 +473,8 @@ void RenderGraph::compile()
       bool has_clear{ false };
       for (const auto* write : stage->writes_) {
         if (const auto* texture = write->as<TextureResource>()) {
-          if (stage->load_store_ops_.at(texture).first == LoadOp::Clear) {
+          if (stage->load_store_ops_.at(texture).first ==
+              VK_ATTACHMENT_LOAD_OP_CLEAR) {
             has_clear = true;
             break;
           }
@@ -611,11 +628,10 @@ void RenderGraph::render(const wr::CommandBuffer& cb, wr::Image& target)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          physical->buffer_ = {
-            device_,           buffer_resource->name_,
-            data_size,         buffer_resource->buffer_usage_,
-            +HostAccess::None, MemoryUsage::PreferDevice
-          };
+          physical->buffer_ = { device_,
+                                buffer_resource->name_,
+                                data_size,
+                                buffer_resource->buffer_usage_ };
         }
       }
       // Upload data

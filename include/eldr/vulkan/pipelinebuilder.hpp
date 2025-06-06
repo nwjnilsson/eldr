@@ -54,7 +54,9 @@ public:
   PipelineBuilder& setColorAttachmentFormat(VkFormat format);
 
   [[nodiscard]] wr::Pipeline build(const wr::Device& device,
-                                   std::string_view  name);
+                                   std::string_view  name,
+                                   VkPipelineLayoutCreateFlags = 0,
+                                   VkPipelineCreateFlags       = 0);
 
 private:
   // Pipeline layout stuff

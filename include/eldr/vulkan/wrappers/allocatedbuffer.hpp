@@ -24,12 +24,12 @@ public:
   [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
 
 protected:
-  AllocatedBuffer(const Device&      device,
-                  const std::string& name,
-                  size_t             size_bytes,
-                  BufferUsageFlags   buffer_usage,
-                  HostAccessFlags    host_access,
-                  MemoryUsage        mem_usage);
+  AllocatedBuffer(const Device&            device,
+                  const std::string&       name,
+                  size_t                   size_bytes,
+                  VkBufferUsageFlags       buffer_usage,
+                  VmaAllocationCreateFlags host_access,
+                  VmaMemoryUsage           mem_usage);
 
   void uploadData(std::span<const byte_t> src);
 

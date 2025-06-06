@@ -23,10 +23,10 @@ public:
 
   Pipeline& operator=(Pipeline&&);
 
-  [[nodiscard]] VkPipeline       vk() const;
-  [[nodiscard]] VkPipelineLayout layout() const;
+  [[nodiscard]] const std::string& name() const { return name_; }
+  [[nodiscard]] VkPipeline         vk() const;
+  [[nodiscard]] VkPipelineLayout   layout() const;
 
-protected:
 protected:
   std::string name_;
   class PipelineImpl;

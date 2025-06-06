@@ -14,14 +14,13 @@ namespace eldr::app {
 // -----------------------------------------------------------------------------
 
 App::App()
-  : input_data_(), window_(width, height),
+  : window_(width, height),
     vk_engine_(std::make_unique<vk::VulkanEngine>(window_))
 {
   setupWindowCallbacks();
   setupInputCallbacks();
 }
-
-App::~App() {}
+App::~App() = default;
 
 void App::keyCallback(
   GLFWwindow* /*window*/, int key, int, int action, int /*mods*/)
@@ -108,7 +107,6 @@ void App::setupWindowCallbacks()
 
 void App::setupInputCallbacks()
 {
-
   auto lambda_key_callback =
     [](GLFWwindow* window, int key, int scancode, int action, int mods) {
       auto* app = static_cast<App*>(glfwGetWindowUserPointer(window));

@@ -67,7 +67,7 @@ public:
 Image::ImageImpl::ImageImpl(const Device&                  device,
                             const VkImageCreateInfo&       image_ci,
                             const VmaAllocationCreateInfo& alloc_ci)
-  : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{})
+  : GpuResourceAllocation(device, {}, {}, {})
 {
   if (const VkResult result{ vmaCreateImage(device_.allocator(),
                                             &image_ci,
@@ -80,7 +80,7 @@ Image::ImageImpl::ImageImpl(const Device&                  device,
 }
 
 Image::ImageImpl::ImageImpl(const Device& device, VkImage image)
-  : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{}), image_(image)
+  : GpuResourceAllocation(device, {}, {}, {}), image_(image)
 {
 }
 

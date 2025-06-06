@@ -3,7 +3,7 @@
 
 namespace eldr::vk::wr {
 namespace {
-VkImageViewCreateInfo vkImageViewCI(const ImageViewCreateInfo& ci)
+VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
 {
   const VkImageViewCreateInfo image_view_ci{
     .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -67,7 +67,7 @@ ImageView& ImageView::operator=(ImageView&&) = default;
 ImageView::ImageView(const Device&              device,
                      const ImageViewCreateInfo& image_view_ci)
   : aspect_flags_(image_view_ci.aspect_flags),
-    d_(std::make_unique<ImageViewImpl>(device, vkImageViewCI(image_view_ci)))
+    d_(std::make_unique<ImageViewImpl>(device, getVkImageViewCI(image_view_ci)))
 {
 }
 
@@ -82,7 +82,7 @@ ImageView::ImageView(const Device&      device,
     .aspect_flags = aspect_flags,
     .mip_levels   = image.mipLevels(),
   };
-  d_ = std::make_unique<ImageViewImpl>(device, vkImageViewCI(image_view_ci));
+  d_ = std::make_unique<ImageViewImpl>(device, getVkImageViewCI(image_view_ci));
 }
 
 VkImageView ImageView::vk() const { return d_->image_view_; }

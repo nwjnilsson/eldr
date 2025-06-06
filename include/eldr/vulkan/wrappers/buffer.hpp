@@ -10,18 +10,18 @@ namespace eldr::vk::wr {
 template <typename T> class Buffer final : public AllocatedBuffer {
 public:
   Buffer() = default;
-  Buffer(const Device&      device,
-         const std::string& name,
-         size_t             elem_count,
-         BufferUsageFlags   buffer_usage,
-         HostAccessFlags    host_access,
-         MemoryUsage        mem_usage = MemoryUsage::Auto);
-  Buffer(const Device&      device,
-         const std::string& name,
-         std::span<const T> data,
-         BufferUsageFlags   buffer_usage,
-         HostAccessFlags    host_access,
-         MemoryUsage        mem_usage = MemoryUsage::Auto);
+  Buffer(const Device&            device,
+         const std::string&       name,
+         size_t                   elem_count,
+         VkBufferUsageFlags       buffer_usage,
+         VmaAllocationCreateFlags allocation_flags = 0,
+         VmaMemoryUsage                            = VMA_MEMORY_USAGE_AUTO);
+  Buffer(const Device&            device,
+         const std::string&       name,
+         std::span<const T>       data,
+         VkBufferUsageFlags       buffer_usage,
+         VmaAllocationCreateFlags allocation_flags = 0,
+         VmaMemoryUsage           mem_usage        = VMA_MEMORY_USAGE_AUTO);
   Buffer(Buffer&&) noexcept = default;
   ~Buffer()                 = default;
 
@@ -41,17 +41,17 @@ private:
 };
 
 template <typename T>
-Buffer<T>::Buffer(const Device&      device,
-                  const std::string& name,
-                  size_t             elem_count,
-                  BufferUsageFlags   buffer_usage,
-                  HostAccessFlags    host_access,
-                  MemoryUsage        mem_usage)
+Buffer<T>::Buffer(const Device&            device,
+                  const std::string&       name,
+                  size_t                   elem_count,
+                  VkBufferUsageFlags       buffer_usage,
+                  VmaAllocationCreateFlags allocation_flags,
+                  VmaMemoryUsage           mem_usage)
   : AllocatedBuffer(device,
                     name,
                     sizeof(T) * elem_count,
                     buffer_usage,
-                    host_access,
+                    allocation_flags,
                     mem_usage),
     size_(elem_count)
 {
@@ -59,13 +59,13 @@ Buffer<T>::Buffer(const Device&      device,
 }
 
 template <typename T>
-Buffer<T>::Buffer(const Device&      device,
-                  const std::string& name,
-                  std::span<const T> data,
-                  BufferUsageFlags   buffer_usage,
-                  HostAccessFlags    host_access,
-                  MemoryUsage        mem_usage)
-  : Buffer(device, name, data.size(), buffer_usage, host_access, mem_usage)
+Buffer<T>::Buffer(const Device&            device,
+                  const std::string&       name,
+                  std::span<const T>       data,
+                  VkBufferUsageFlags       buffer_usage,
+                  VmaAllocationCreateFlags allocation_flags,
+                  VmaMemoryUsage           mem_usage)
+  : Buffer(device, name, data.size(), buffer_usage, allocation_flags, mem_usage)
 {
   uploadData(data);
 }

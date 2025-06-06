@@ -12,7 +12,7 @@ public:
   BufferImpl(const Device&                  device,
              const VkBufferCreateInfo&      buffer_ci,
              const VmaAllocationCreateInfo& alloc_ci)
-    : GpuResourceAllocation(device, {}, {}, MemoryPropertyFlags{})
+    : GpuResourceAllocation(device, {}, {}, {})
   {
     const VkResult result{ vmaCreateBuffer(device_.allocator(),
                                            &buffer_ci,
@@ -23,9 +23,8 @@ public:
     if (result != VK_SUCCESS) {
       Throw("Failed to create buffer ({})", result);
     }
-    VkMemoryPropertyFlags flags;
-    vmaGetAllocationMemoryProperties(device.allocator(), allocation_, &flags);
-    mem_flags_ = static_cast<MemoryPropertyFlags>(flags);
+    vmaGetAllocationMemoryProperties(
+      device.allocator(), allocation_, &mem_flags_);
   }
 
   ~BufferImpl() { vmaDestroyBuffer(device_.allocator(), buffer_, allocation_); }
@@ -42,12 +41,12 @@ AllocatedBuffer::~AllocatedBuffer()                            = default;
 AllocatedBuffer::AllocatedBuffer(AllocatedBuffer&&) noexcept   = default;
 AllocatedBuffer& AllocatedBuffer::operator=(AllocatedBuffer&&) = default;
 
-AllocatedBuffer::AllocatedBuffer(const Device&      device,
-                                 const std::string& name,
-                                 size_t             size_bytes,
-                                 BufferUsageFlags   buffer_usage,
-                                 HostAccessFlags    host_access,
-                                 MemoryUsage        mem_usage)
+AllocatedBuffer::AllocatedBuffer(const Device&            device,
+                                 const std::string&       name,
+                                 size_t                   size_bytes,
+                                 VkBufferUsageFlags       buffer_usage,
+                                 VmaAllocationCreateFlags allocation_flags,
+                                 VmaMemoryUsage           mem_usage)
   : name_(name), size_bytes_(size_bytes)
 {
   const VkBufferCreateInfo buffer_ci{
@@ -55,14 +54,14 @@ AllocatedBuffer::AllocatedBuffer(const Device&      device,
     .pNext                 = {},
     .flags                 = {},
     .size                  = size_bytes_,
-    .usage                 = buffer_usage.flags,
+    .usage                 = buffer_usage,
     .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
     .queueFamilyIndexCount = {},
     .pQueueFamilyIndices   = {},
   };
 
   const VmaAllocationCreateInfo alloc_ci{
-    .flags          = host_access.flags,
+    .flags          = allocation_flags,
     .usage          = static_cast<VmaMemoryUsage>(mem_usage),
     .requiredFlags  = {},
     .preferredFlags = {},
@@ -75,9 +74,11 @@ AllocatedBuffer::AllocatedBuffer(const Device&      device,
   vmaSetAllocationName(device.allocator(), d_->allocation_, name.c_str());
 
 #ifdef DEBUG
-  if (host_access.hasFlag(HostAccess::Sequential) or
-      host_access.hasFlag(HostAccess::Random)) {
-    Assert(d_->mem_flags_.hasFlag(MemoryProperty::HostVisible));
+  if ((allocation_flags &
+       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) or
+      (allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) or
+      (allocation_flags & VMA_ALLOCATION_CREATE_MAPPED_BIT)) {
+    Assert(d_->mem_flags_ & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
   }
 #endif
 }
@@ -97,14 +98,14 @@ VkDeviceAddress AllocatedBuffer::getDeviceAddress() const
 
 void AllocatedBuffer::uploadData(std::span<const byte_t> src)
 {
-  if (d_->mem_flags_.hasFlag(MemoryProperty::HostVisible)) {
+  if (d_->mem_flags_ & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
     if (src.size_bytes() > sizeAlloc()) {
       Throw("Buffer size is too small.");
     }
     // Host visible buffer, map memory and memcpy
-    Assert(d_->mem_flags_.hasFlag(MemoryProperty::HostCoherent)); // fow now
-    // if not HOST_COHERENT, a flush is needed using vmaInvalidateAllocation()
-    // / vmaFlushAllocation()
+    Assert(d_->mem_flags_ & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); // fow now
+    // TODO: if not HOST_COHERENT, a flush is needed using
+    // vmaInvalidateAllocation() / vmaFlushAllocation()
     void* dst{ nullptr };
     vmaMapMemory(d_->device_.allocator(), d_->allocation_, &dst);
     Assert(dst);
@@ -112,9 +113,8 @@ void AllocatedBuffer::uploadData(std::span<const byte_t> src)
     vmaUnmapMemory(d_->device_.allocator(), d_->allocation_);
   }
   else {
-    d_->device_.execute([&](const CommandBuffer& cb) {
-      cb.copyDataToBuffer(*this, src);
-    });
+    d_->device_.execute(
+      [&](const CommandBuffer& cb) { cb.copyDataToBuffer(*this, src); });
   }
   size_bytes_ = src.size_bytes();
 }

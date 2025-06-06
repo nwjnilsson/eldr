@@ -202,14 +202,16 @@ PipelineBuilder& PipelineBuilder::enableDepthtest(bool depth_write_enable,
   return *this;
 }
 
-wr::Pipeline PipelineBuilder::build(const wr::Device& device,
-                                    std::string_view  name)
+wr::Pipeline PipelineBuilder::build(const wr::Device&           device,
+                                    std::string_view            name,
+                                    VkPipelineLayoutCreateFlags layout_flags,
+                                    VkPipelineCreateFlags       pipeline_flags)
 {
   // Pipeline layout
   const VkPipelineLayoutCreateInfo pipeline_layout_ci{
     .sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     .pNext          = nullptr,
-    .flags          = 0,
+    .flags          = layout_flags,
     .setLayoutCount = static_cast<uint32_t>(descriptor_layouts_.size()),
     .pSetLayouts    = descriptor_layouts_.data(),
     .pushConstantRangeCount =
@@ -262,25 +264,28 @@ wr::Pipeline PipelineBuilder::build(const wr::Device& device,
     .pDynamicStates    = dynamic_states.data()
   };
 
-  VkGraphicsPipelineCreateInfo pipeline_ci{};
-  pipeline_ci.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipeline_ci.pNext      = &render_info_; // dynamic rendering info
-  pipeline_ci.stageCount = static_cast<uint32_t>(shader_stages_.size());
-  pipeline_ci.pStages    = shader_stages_.data();
-  pipeline_ci.pVertexInputState   = &vertex_input_info;
-  pipeline_ci.pInputAssemblyState = &input_assembly_;
-  pipeline_ci.pViewportState      = &viewport_state;
-  pipeline_ci.pRasterizationState = &rasterizer_;
-  pipeline_ci.pMultisampleState   = &multisampling_;
-  pipeline_ci.pDepthStencilState  = &depth_stencil_;
-  pipeline_ci.pColorBlendState    = &color_blending;
-  pipeline_ci.pDynamicState       = &dynamic_state;
-  pipeline_ci.renderPass          = VK_NULL_HANDLE; // dynamic rendering
-  pipeline_ci.subpass             = 0;
-  pipeline_ci.basePipelineIndex   = -1;
+  VkGraphicsPipelineCreateInfo pipeline_ci{
+    .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+    .pNext               = &render_info_, // dynamic rendering info
+    .flags               = pipeline_flags,
+    .stageCount          = static_cast<uint32_t>(shader_stages_.size()),
+    .pStages             = shader_stages_.data(),
+    .pVertexInputState   = &vertex_input_info,
+    .pInputAssemblyState = &input_assembly_,
+    .pTessellationState  = {},
+    .pViewportState      = &viewport_state,
+    .pRasterizationState = &rasterizer_,
+    .pMultisampleState   = &multisampling_,
+    .pDepthStencilState  = &depth_stencil_,
+    .pColorBlendState    = &color_blending,
+    .pDynamicState       = &dynamic_state,
+    .layout              = {},             // set later
+    .renderPass          = VK_NULL_HANDLE, // dynamic rendering
+    .subpass             = 0,
+    .basePipelineHandle  = {},
+    .basePipelineIndex   = -1,
+  };
 
-  // TODO: decide whether pipeline should have name, and if so, name them
-  // appropriately
   return wr::Pipeline{ device, name, pipeline_layout_ci, pipeline_ci };
 }
 } // namespace eldr::vk

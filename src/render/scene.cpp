@@ -201,11 +201,13 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
     engine.device(),
     "Material buffer",
     gltf.materials.size(),
-    +vk::BufferUsage::Uniform,
-    +vk::HostAccess::Sequential,
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    // VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
   };
 
-  // load samplers
+  //----------------------------------------------------------------------------
+  // Load Samplers
+  //----------------------------------------------------------------------------
   for (fg::Sampler& sampler : gltf.samplers) {
     VkFilter            min_filter{ extractFilter(
       sampler.minFilter.value_or(fg::Filter::Nearest)) };
@@ -216,12 +218,20 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       engine.device(), min_filter, mag_filter, mipmap_mode, VK_LOD_CLAMP_NONE);
   }
 
-  // std::vector<vk::wr::Image> images;
-  // images.resize(gltf.images.size(), engine.errorImage());
-
   int data_index{ 0 };
   std::vector<GltfMetallicRoughness::MaterialConstants>
     scene_material_constants;
+
+  //----------------------------------------------------------------------------
+  // Load textures
+  //----------------------------------------------------------------------------
+  // std::vector<vk::wr::Image> images;
+  // for (fg::Image& image : gltf.images) {
+  //   auto img = loadImage(engine, gltf, image);
+  //   if (img.has_value()) {
+  //     images.emplace_back();
+  //   }
+  // }
 
   //----------------------------------------------------------------------------
   // Load materials
@@ -265,8 +275,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
         gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
           .samplerIndex.value();
 
-      // material_resources.color_texture = &images[img];
-      material_resources.color_texture = &engine.errorImage();
+      //    material_resources.color_texture = &images[img];
       material_resources.color_sampler =
         &scene->vk_scene_data->samplers[sampler];
     }

@@ -6,10 +6,10 @@
 // Misc Vulkan types
 namespace eldr::vk {
 struct GpuResourceAllocation {
-  const wr::Device&   device_;
-  VmaAllocation       allocation_{ VK_NULL_HANDLE };
-  VmaAllocationInfo   alloc_info_;
-  MemoryPropertyFlags mem_flags_;
+  const wr::Device&     device_;
+  VmaAllocation         allocation_{ VK_NULL_HANDLE };
+  VmaAllocationInfo     alloc_info_;
+  VkMemoryPropertyFlags mem_flags_;
 };
 
 struct GpuDrawPushConstants {
