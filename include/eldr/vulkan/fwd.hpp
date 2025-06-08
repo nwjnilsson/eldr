@@ -8,7 +8,7 @@ struct Material;
 
 namespace eldr::vk {
 class VulkanEngine;
-struct SceneData;
+struct SceneResources;
 struct GpuVertex;
 class ImGuiOverlay;
 // EXPERIMENTAL

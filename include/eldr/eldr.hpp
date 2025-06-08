@@ -13,4 +13,5 @@
 
 #include <eldr/buildinfo.hpp>
 // #include <eldr/gitinfo.hpp>
+#include <eldr/core/config.hpp>
 #include <eldr/core/platform.hpp>

@@ -2,6 +2,7 @@
 #include <eldr/app/keyboardmouseinput.hpp>
 #include <eldr/app/window.hpp>
 #include <eldr/render/mesh.hpp>
+#include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
 
 #include <GLFW/glfw3.h>
@@ -83,15 +84,16 @@ void App::mouseScrollCallback(Window* /*window*/,
 
 void App::run()
 {
-  auto scene = Scene::load(*vk_engine_, { model_path }).value_or(nullptr);
+  using Spectrum = Color<float, 3>;
+  auto scene = render::Scene<float, Spectrum>::load(*vk_engine_, { model_path })
+                 .value_or(nullptr);
   Assert(scene);
-  vk_engine_->addScene("Suzanne", scene);
 
   while (!window_.shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
     updateImGui();
-    vk_engine_->drawFrame();
+    vk_engine_->drawFrame(scene.get());
     frame_time_ = stop_watch_.seconds<float>();
   }
 }

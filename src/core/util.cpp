@@ -1,3 +1,4 @@
+#include <eldr/core/logger.hpp>
 #include <eldr/core/util.hpp>
 #include <eldr/eldr.hpp>
 
@@ -56,6 +57,15 @@ int terminalWidth()
   if (width == -1)
     width = 80;
   return width;
+}
+
+std::filesystem::path eldrRootDir()
+{
+  const char* root = std::getenv("ELDR_DIR");
+  if (root == nullptr) {
+    Throw("Environment not set up correctly");
+  }
+  return std::filesystem::path(root);
 }
 
 } // namespace eldr::core::util

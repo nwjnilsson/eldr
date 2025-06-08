@@ -4,15 +4,15 @@
 #include <eldr/vulkan/fwd.hpp>
 
 #include <string>
-namespace eldr {
+namespace eldr::render {
 
 enum class ShapeType : uint8_t { Mesh, Disk, Rectangle, Sphere, Other };
 
-class Shape {
-  ELDR_IMPORT_CORE_TYPES();
+EL_VARIANT class Shape {
+  EL_IMPORT_CORE_TYPES()
 
 public:
-  // #ifdef ELDR_ENABLE_EMBREE
+  // #ifdef EL_ENABLE_EMBREE
   //   virtual RTCGeometry embreeGeometry(RTCDevice device);
   // #endif
   virtual ~Shape() = default;
@@ -35,4 +35,4 @@ protected:
   //  Medium exterior_medium_;
   ShapeType shape_type_{ ShapeType::Other };
 };
-} // namespace eldr
+} // namespace eldr::render

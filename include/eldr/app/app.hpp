@@ -18,7 +18,6 @@ class VulkanEngine;
 // -----------------------------------------------------------------------------
 namespace eldr::app {
 class App {
-  ELDR_IMPORT_CORE_TYPES();
   const std::filesystem::path model_path = "assets/models/Suzanne.gltf";
 
 public:
@@ -58,7 +57,6 @@ private:
   void setupWindowCallbacks();
   void setupInputCallbacks();
   void updateImGui();
-  void submitGeometry(const std::vector<SceneNode>&);
 
 public:
   static constexpr uint32_t width  = 1280;
@@ -70,8 +68,8 @@ private:
 
   std::unique_ptr<vk::VulkanEngine> vk_engine_;
 
-  float     frame_time_{};
-  StopWatch stop_watch_{};
+  float           frame_time_{};
+  core::StopWatch stop_watch_{};
 };
 
 } // namespace eldr::app

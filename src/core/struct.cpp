@@ -3,14 +3,14 @@
  */
 #include <eldr/core/hash.hpp>
 #include <eldr/core/logger.hpp>
-#include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
+#include <eldr/math/glm.hpp>
 
 #include <sstream>
 
 #include <cmath>
 
-namespace eldr {
+namespace eldr::core {
 Struct::Struct(bool pack, ByteOrder byte_order)
   : pack_(pack), byte_order_(byte_order)
 {
@@ -256,12 +256,12 @@ std::pair<double, double> Struct::range(StructType type)
 
 size_t hash(const Struct::Field& f)
 {
-  size_t value = hash(f.name);
-  value        = hashCombine(value, hash(f.type));
-  value        = hashCombine(value, hash(f.size));
-  value        = hashCombine(value, hash(f.offset));
-  value        = hashCombine(value, hash(f.flags));
-  value        = hashCombine(value, hash(f.default_));
+  size_t value{ hash(f.name) };
+  value = hashCombine(value, hash(f.type));
+  value = hashCombine(value, hash(f.size));
+  value = hashCombine(value, hash(f.offset));
+  value = hashCombine(value, hash(f.flags));
+  value = hashCombine(value, hash(f.default_));
   return value;
 }
 
@@ -270,4 +270,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-} // namespace eldr
+} // namespace eldr::core

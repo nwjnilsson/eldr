@@ -1,14 +1,13 @@
 #pragma once
-#include <cstdint>
+#include <eldr/core/fwd.hpp>
 #include <eldr/core/hash.hpp>
-#include <type_traits>
 
-using FlagRep = uint32_t;
-
+namespace eldr {
 template <typename T> struct is_flag_type : std::false_type {};
 template <typename T> constexpr bool is_flag_type_v = is_flag_type<T>::value;
 
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 struct Flags {
   using Rep = FlagRep;
   constexpr explicit Flags() : Flags(Rep{}) {};
@@ -27,73 +26,86 @@ struct Flags {
   Rep flags;
 };
 
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr size_t hash(Flags<T> flags)
 {
   return std::hash<FlagRep>()(flags.flags);
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator|(Flags<T> f1, Flags<T> f2)
 {
   return Flags<T>{ f1.flags | f2.flags };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator|(T f1, T f2)
 {
   return Flags<T>{ f1 } | Flags<T>{ f2 };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator|(Flags<T> f1, T f2)
 {
   return f1 | Flags<T>{ f2 };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator|=(Flags<T>& f1, T f2)
 {
   return f1 = f1 | Flags<T>{ f2 };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator&(Flags<T> f1, Flags<T> f2)
 {
   return Flags<T>{ f1.flags & f2.flags };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator&(Flags<T> f1, T f2)
 {
   return f1 & Flags<T>{ f2 };
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator&=(Flags<T>& f1, T f2)
 {
   return f1 = f1 & Flags<T>{ f2 };
 }
 
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr bool operator==(Flags<T> f1, Flags<T> f2)
 {
   return f1.flags == f2.flags;
 }
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator~(T f1)
 {
   return Flags<T>{ ~static_cast<Flags<T>::Rep>(f1) };
 }
 
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr Flags<T> operator+(T f1)
 {
   return Flags<T>{ f1 };
 }
 
-template <typename T, std::enable_if_t<is_flag_type_v<T>, bool> = true>
+template <typename T>
+  requires is_flag_type_v<T>
 constexpr bool operator!(Flags<T> f)
 {
   return not f.flags;
 }
 
 // This assumes we're in the global namespace
-#define ELDR_DECLARE_FLAG_SPEC(ns, name)                                       \
-  template <> struct is_flag_type<ns::name> : std::true_type {};               \
+#define EL_DECLARE_FLAG_SPEC(ns, name)                                         \
+  template <> struct eldr::is_flag_type<ns::name> : std::true_type {};         \
   namespace ns {                                                               \
   using name##Flags = Flags<name>;                                             \
   }
+} // namespace eldr

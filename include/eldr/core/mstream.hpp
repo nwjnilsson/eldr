@@ -5,7 +5,7 @@
 
 #include <eldr/core/stream.hpp>
 
-namespace eldr {
+namespace eldr::core {
 
 /** \brief Simple memory buffer-based stream with automatic memory management.
  * It always has read & write capabilities.
@@ -32,7 +32,6 @@ public:
    * underlying buffer. An exception is thrown e.g. when attempting
    * to extend its size.
    *
-   * \remark This constructor is not available in the python bindings.
    */
   MemoryStream(void* ptr, size_t size);
 
@@ -52,10 +51,6 @@ public:
 
   /// Whether the stream is closed (no read or write are then permitted).
   virtual bool isClosed() const override { return is_closed_; };
-
-  // =========================================================================
-  //! @{ \name Implementation of the Stream interface
-  // =========================================================================
 
   /**
    * \brief Reads a specified amount of data from the stream.
@@ -112,10 +107,10 @@ public:
   size_t capacity() const { return capacity_; }
 
   /// Return whether or not the memory stream owns the underlying buffer
-  bool owns_buffer() const { return owns_buffer_; }
+  bool ownsBuffer() const { return owns_buffer_; }
 
   /// Return the underlying raw byte array
-  const uint8_t* raw_buffer() const { return data_; }
+  const byte_t* rawBuffer() const { return data_; }
 
   //! @}
   // =========================================================================
@@ -133,8 +128,8 @@ private:
   /// False if the MemoryStream was created from a pre-allocated buffer
   bool owns_buffer_;
   /// Pointer to the memory buffer (might not be owned)
-  uint8_t* data_;
+  byte_t* data_;
   /// Whether the stream has been closed.
   bool is_closed_;
 };
-} // namespace eldr
+} // namespace eldr::core

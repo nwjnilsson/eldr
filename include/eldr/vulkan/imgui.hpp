@@ -13,7 +13,8 @@ class GLFWwindow;
 namespace eldr::vk {
 
 class ImGuiOverlay {
-  ELDR_IMPORT_CORE_TYPES();
+  using Float = float;
+  EL_IMPORT_CORE_TYPES();
 
 public:
   ImGuiOverlay() = delete;
@@ -45,11 +46,6 @@ private:
   wr::Shader              fragment_shader_;
   wr::DescriptorSetLayout imgui_layout_;
   wr::Pipeline            imgui_pipeline_;
-
-  struct PushConstantBlock {
-    Vec2f scale;
-    Vec2f translate;
-  } push_const_block_;
 };
 
 } // namespace eldr::vk

@@ -406,6 +406,6 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
   return dynamic_cast<const T*>(this);
 }
 
-// ELDR_DECLARE_ENUM_OPERATORS(TextureFlags)
+// EL_DECLARE_ENUM_OPERATORS(TextureFlags)
 
 } // namespace eldr::vk

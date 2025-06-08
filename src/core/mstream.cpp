@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-namespace eldr {
+namespace eldr::core {
 
 MemoryStream::MemoryStream(size_t capacity)
   : Stream(), capacity_(0), size_(0), pos_(0), owns_buffer_(true),
@@ -17,7 +17,7 @@ MemoryStream::MemoryStream(size_t capacity)
 
 MemoryStream::MemoryStream(void* ptr, size_t size)
   : Stream(), capacity_(size), size_(size), pos_(0), owns_buffer_(false),
-    data_(reinterpret_cast<uint8_t*>(ptr)), is_closed_(false)
+    data_(reinterpret_cast<byte_t*>(ptr)), is_closed_(false)
 {
 }
 
@@ -74,9 +74,9 @@ void MemoryStream::resize(size_t size)
           "instance!");
 
   if (data_ == nullptr)
-    data_ = reinterpret_cast<uint8_t*>(std::malloc(size));
+    data_ = reinterpret_cast<byte_t*>(std::malloc(size));
   else
-    data_ = reinterpret_cast<uint8_t*>(std::realloc(data_, size));
+    data_ = reinterpret_cast<byte_t*>(std::realloc(data_, size));
 
   if (size > capacity_)
     memset(data_ + capacity_, 0, size - capacity_);
@@ -105,7 +105,7 @@ std::string MemoryStream::toString() const
         << "  byte_order = " << byteOrder() << "," << std::endl
         << "  can_read = " << canRead() << "," << std::endl
         << "  can_write = " << canWrite() << "," << std::endl
-        << "  owns_buffer = " << owns_buffer() << "," << std::endl
+        << "  owns_buffer = " << ownsBuffer() << "," << std::endl
         << "  capacity = " << capacity() << "," << std::endl
         << "  pos = " << tell() << "," << std::endl
         << "  size = " << size() << std::endl;
@@ -116,4 +116,4 @@ std::string MemoryStream::toString() const
   return oss.str();
 }
 
-} // namespace eldr
+} // namespace eldr::core

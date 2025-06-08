@@ -1,3 +1,4 @@
+#include <eldr/core/util.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
@@ -13,16 +14,13 @@ std::vector<char> loadShader(std::string_view filename)
 {
   // TODO: maybe allow more flexibility in loading shaders and don't hardcode
   // path to shader directory
-  const char* env_p = std::getenv("ELDR_DIR");
-  if (env_p == nullptr) {
-    Throw("loadShader(): Environment not set up correctly");
-  }
-  std::string shader_path =
-    fmt::format("{}/assets/shaders/{}", std::string(env_p), filename);
+
+  std::filesystem::path shader_path =
+    core::util::eldrRootDir() / "assets/shaders/" / filename;
   std::ifstream file(shader_path, std::ios::ate | std::ios::binary);
 
   if (!file.is_open()) {
-    Throw("loadShader(): failed to open file {}!", shader_path);
+    Throw("Failed to open file {}!", shader_path.c_str());
   }
 
   size_t            file_size = (size_t) file.tellg();

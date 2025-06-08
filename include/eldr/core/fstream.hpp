@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-namespace eldr {
+namespace eldr::core {
 class EOFException : public std::runtime_error {
 public:
   EOFException(const std::string& what, size_t gcount)
@@ -64,11 +64,6 @@ public:
   /// Return the path descriptor associated with this FileStream
   const fs::path& path() const { return path_; }
 
-  // =========================================================================
-  //! @{ \name Implementation of the Stream interface
-  // Most methods can be delegated directly to the underlying
-  // standard file stream, avoiding having to deal with portability.
-  // =========================================================================
   /**
    * \brief Reads a specified amount of data from the stream.
    * Throws an exception when the stream ended prematurely.
@@ -122,4 +117,4 @@ private:
   fs::path                              path_;
   mutable std::unique_ptr<std::fstream> file_;
 };
-} // namespace eldr
+} // namespace eldr::core

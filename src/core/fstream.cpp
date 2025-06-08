@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-namespace eldr {
+namespace eldr::core {
 
 namespace detail {
 inline std::ios::openmode iosFlag(FileStream::EMode mode)
@@ -177,4 +177,4 @@ std::string FileStream::toString() const
 
   return oss.str();
 }
-} // namespace eldr
+} // namespace eldr::core

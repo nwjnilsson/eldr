@@ -4,16 +4,16 @@
  */
 
 // clang-format off
-#define EL_AUTHORS "@ELDR_AUTHORS@"
+#define EL_AUTHORS "@EL_AUTHORS@"
 
-#define EL_YEAR @ELDR_YEAR@
+#define EL_YEAR @EL_YEAR@
 
-#define EL_NAME "@ELDR_NAME@"
+#define EL_NAME "@EL_NAME@"
 
-#define EL_VER_VARIANT @ELDR_APP_VERSION_VARIANT@
-#define EL_VER_MAJOR   @ELDR_APP_VERSION_MAJOR@
-#define EL_VER_MINOR   @ELDR_APP_VERSION_MINOR@
-#define EL_VER_PATCH   @ELDR_APP_VERSION_PATCH@
+#define EL_VER_VARIANT @EL_APP_VERSION_VARIANT@
+#define EL_VER_MAJOR   @EL_APP_VERSION_MAJOR@
+#define EL_VER_MINOR   @EL_APP_VERSION_MINOR@
+#define EL_VER_PATCH   @EL_APP_VERSION_PATCH@
 
 /// Current release of Eldr
 #define EL_VERSION_STR                                                         \
@@ -22,13 +22,13 @@
     EL_TOSTRING(EL_VER_MINOR) "."                                              \
     EL_TOSTRING(EL_VER_PATCH)
 
-#define EL_ENGINE_NAME "@ELDR_ENGINE_NAME@"
+#define EL_ENGINE_NAME "@EL_ENGINE_NAME@"
 
 
-#define EL_ENGINE_VER_VARIANT @ELDR_ENGINE_VERSION_VARIANT@
-#define EL_ENGINE_VER_MAJOR   @ELDR_ENGINE_VERSION_MAJOR@
-#define EL_ENGINE_VER_MINOR   @ELDR_ENGINE_VERSION_MINOR@
-#define EL_ENGINE_VER_PATCH   @ELDR_ENGINE_VERSION_PATCH@
+#define EL_ENGINE_VER_VARIANT @EL_ENGINE_VERSION_VARIANT@
+#define EL_ENGINE_VER_MAJOR   @EL_ENGINE_VERSION_MAJOR@
+#define EL_ENGINE_VER_MINOR   @EL_ENGINE_VERSION_MINOR@
+#define EL_ENGINE_VER_PATCH   @EL_ENGINE_VERSION_PATCH@
 
 #define EL_ENGINE_VERSION_STR                                                  \
     EL_TOSTRING(EL_ENGINE_VER_VARIANT) "."                                     \

@@ -1,4 +1,5 @@
 #include <eldr/core/bitmap.hpp>
+#include <eldr/math/vector.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
@@ -16,6 +17,12 @@ struct ImGuiOverlay::FrameData {
   wr::Buffer<uint32_t>   index_buffer;
   wr::Buffer<ImDrawVert> vertex_buffer;
 };
+
+struct PushConstantBlock {
+  using Vector = CoreAliases<float>::Vector2f;
+  Vector scale;
+  Vector translate;
+} push_const_block_;
 
 ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
                            const wr::Swapchain& swapchain,
@@ -103,7 +110,8 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       Bitmap{ "ImGui font texture",
               Bitmap::PixelFormat::RGBA,
               StructType::UInt8,
-              { font_texture_width, font_texture_height },
+              static_cast<uint32_t>(font_texture_width),
+              static_cast<uint32_t>(font_texture_height),
               font_texture_channels,
               {},
               reinterpret_cast<byte_t*>(font_texture_data) },
@@ -249,10 +257,11 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
 
     const ImGuiIO& io = ImGui::GetIO();
     push_const_block_.scale =
-      Vec2f(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
-    push_const_block_.translate = Vec2f(-1.0f);
-    VkDescriptorSet  descriptor_set{ descriptors.allocate(device_,
+      Vector2f{ 2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y };
+    push_const_block_.translate = Vector2f{ -1.0f };
+    VkDescriptorSet descriptor_set{ descriptors.allocate(device_,
                                                          imgui_layout_) };
+
     DescriptorWriter writer;
     writer.writeCombinedImageSampler(0, imgui_texture_, font_sampler_)
       .updateSet(device_, descriptor_set);

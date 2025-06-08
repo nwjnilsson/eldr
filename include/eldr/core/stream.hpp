@@ -15,6 +15,7 @@
 #pragma once
 
 #include <eldr/core/arrayutils.hpp>
+#include <eldr/core/fwd.hpp>
 #include <eldr/core/platform.hpp>
 
 #include <memory>
@@ -22,7 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::core {
 namespace detail {
 template <typename T, typename SFINAE = void> struct serialization_helper;
 } // namespace detail
@@ -301,14 +302,14 @@ template <typename T, typename SFINAE> struct serialization_helper {
 template <> struct serialization_helper<std::string> {
   static std::string type_id() { return "S"; }
 
-  static void write(Stream& s, const std::string* value, size_t count,
-                    bool swap)
+  static void
+  write(Stream& s, const std::string* value, size_t count, bool swap)
   {
     for (size_t i = 0; i < count; ++i) {
       uint32_t length = (uint32_t) value->length();
       serialization_helper<uint32_t>::write(s, &length, 1, swap);
-      serialization_helper<char>::write(s, value->data(), value->length(),
-                                        swap);
+      serialization_helper<char>::write(
+        s, value->data(), value->length(), swap);
       value++;
     }
   }
@@ -319,8 +320,8 @@ template <> struct serialization_helper<std::string> {
       uint32_t length = 0;
       serialization_helper<uint32_t>::read(s, &length, 1, swap);
       value->resize(length);
-      serialization_helper<char>::read(s, const_cast<char*>(value->data()),
-                                       length, swap);
+      serialization_helper<char>::read(
+        s, const_cast<char*>(value->data()), length, swap);
       value++;
     }
   }
@@ -334,8 +335,8 @@ struct serialization_helper<std::pair<T1, T2>> {
            serialization_helper<T2>::type_id();
   }
 
-  static void write(Stream& s, const std::pair<T1, T1>* value, size_t count,
-                    bool swap)
+  static void
+  write(Stream& s, const std::pair<T1, T1>* value, size_t count, bool swap)
   {
     std::unique_ptr<T1> first(new T1[count]);
     std::unique_ptr<T2> second(new T2[count]);
@@ -370,8 +371,8 @@ template <typename T> struct serialization_helper<std::vector<T>> {
     return "V" + serialization_helper<T>::type_id();
   }
 
-  static void write(Stream& s, const std::vector<T>* value, size_t count,
-                    bool swap)
+  static void
+  write(Stream& s, const std::vector<T>* value, size_t count, bool swap)
   {
     for (size_t i = 0; i < count; ++i) {
       size_t size = value->size();
@@ -399,8 +400,8 @@ template <typename T> struct serialization_helper<std::set<T>> {
     return "S" + serialization_helper<T>::type_id();
   }
 
-  static void write(Stream& s, const std::set<T>* value, size_t count,
-                    bool swap)
+  static void
+  write(Stream& s, const std::set<T>* value, size_t count, bool swap)
   {
     for (size_t i = 0; i < count; ++i) {
       std::vector<T> temp(value->size());
@@ -426,4 +427,4 @@ template <typename T> struct serialization_helper<std::set<T>> {
 };
 
 } // namespace detail
-} // namespace eldr
+} // namespace eldr::core

@@ -1,4 +1,4 @@
-#include <eldr/core/math.hpp>
+#include <eldr/core/core.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp> // SceneData
@@ -7,76 +7,21 @@
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
+#include <eldr/vulkan/sceneresources.hpp>
+
+#include <eldr/misc/fastgltf.hpp>
+
 // TODO: use rapidobj
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-// Ignore warnings from fastgltf
-#ifdef __GNUG__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wredundant-move"
-// this doesn't quite work due to lack of gcc support, but looks like it's on
-// the way
-#  pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#  pragma GCC diagnostic ignored "-Wunused-parameter"
-#  include <fastgltf/core.hpp>
-#  include <fastgltf/glm_element_traits.hpp>
-#  include <fastgltf/tools.hpp>
-#  include <fastgltf/types.hpp>
-#  pragma GCC diagnostic pop
-#endif
-// TODO: corresponding thing for windows builds
-
 using namespace eldr::core;
 
-namespace {
-VkFilter extractFilter(fastgltf::Filter filter)
-{
-  switch (filter) {
-    // nearest samplers
-    case fastgltf::Filter::Nearest:
-    case fastgltf::Filter::NearestMipMapNearest:
-    case fastgltf::Filter::NearestMipMapLinear:
-      return VK_FILTER_NEAREST;
-
-    // linear samplers
-    case fastgltf::Filter::Linear:
-    case fastgltf::Filter::LinearMipMapNearest:
-    case fastgltf::Filter::LinearMipMapLinear:
-    default:
-      return VK_FILTER_LINEAR;
-  }
-}
-
-VkSamplerMipmapMode extractMipmapMode(fastgltf::Filter filter)
-{
-  switch (filter) {
-    case fastgltf::Filter::NearestMipMapNearest:
-    case fastgltf::Filter::LinearMipMapNearest:
-      return VK_SAMPLER_MIPMAP_MODE_NEAREST;
-
-    case fastgltf::Filter::NearestMipMapLinear:
-    case fastgltf::Filter::LinearMipMapLinear:
-    default:
-      return VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  }
-}
-} // namespace
-
-namespace eldr::vk {
-// TODO: move
-struct SceneData {
-  std::vector<vk::wr::Sampler>                             samplers;
-  vk::DescriptorAllocator                                  descriptors;
-  vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
-};
-} // namespace eldr::vk
-
-namespace eldr {
+namespace eldr::render {
 //------------------------------------------------------------------------------
 // Scene node
 //------------------------------------------------------------------------------
-void SceneNode::refreshTransform(const Mat4f& parent_matrix)
+void SceneNode::refreshTransform(const Matrix4f& parent_matrix)
 {
   world_transform = parent_matrix * local_transform;
   for (auto c : children) {
@@ -84,7 +29,7 @@ void SceneNode::refreshTransform(const Mat4f& parent_matrix)
   }
 }
 
-void SceneNode::draw(const Mat4f& top_matrix, DrawContext& ctx) const
+void SceneNode::draw(const Matrix4f& top_matrix, DrawContext& ctx) const
 {
   for (auto& c : children)
     c->draw(top_matrix, ctx);
@@ -100,9 +45,10 @@ void SceneNode::map(std::function<void(SceneNode*)> func)
 //------------------------------------------------------------------------------
 // Mesh node
 //------------------------------------------------------------------------------
-void MeshNode::draw(const Mat4f& top_matrix, DrawContext& ctx) const
+EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Matrix4f& top_matrix,
+                                                DrawContext&    ctx) const
 {
-  const Mat4f node_matrix{ top_matrix * world_transform };
+  const Matrix4f node_matrix{ top_matrix * world_transform };
 
   for (const auto& s : mesh->surfaces()) {
     const RenderObject obj{
@@ -120,15 +66,19 @@ void MeshNode::draw(const Mat4f& top_matrix, DrawContext& ctx) const
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
-void Scene::draw(const Mat4f& top_matrix, DrawContext& ctx) const
+EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx)
 {
-  for (auto& n : top_nodes) {
+  ctx.opaque_surfaces.clear();
+  const Matrix4f top_matrix{ 1.f };
+  for (auto& n : top_nodes_) {
     n->draw(top_matrix, ctx);
   }
 }
 
-std::optional<std::shared_ptr<Scene>>
-Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
+EL_VARIANT
+std::optional<std::shared_ptr<Scene<Float, Spectrum>>>
+Scene<Float, Spectrum>::loadGltf(const vk::VulkanEngine& engine,
+                                 std::filesystem::path   file_path)
 {
   namespace fg = fastgltf;
   Log(Trace, "Loading glTF: {}", file_path.c_str());
@@ -185,133 +135,36 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
     return std::nullopt;
   }
 
-  auto scene           = std::make_shared<Scene>();
-  scene->vk_scene_data = std::make_shared<vk::SceneData>();
-  // Just an estimate of what will be needed
-  const std::vector<vk::PoolSizeRatio> sizes{
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
-    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
-  };
-  scene->vk_scene_data->descriptors =
-    vk::DescriptorAllocator{ static_cast<uint32_t>(gltf.materials.size()),
-                             sizes };
-
-  scene->vk_scene_data->material_buffer = {
-    engine.device(),
-    "Material buffer",
-    gltf.materials.size(),
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    // VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-  };
-
-  //----------------------------------------------------------------------------
-  // Load Samplers
-  //----------------------------------------------------------------------------
-  for (fg::Sampler& sampler : gltf.samplers) {
-    VkFilter            min_filter{ extractFilter(
-      sampler.minFilter.value_or(fg::Filter::Nearest)) };
-    VkFilter            mag_filter{ extractFilter(
-      sampler.magFilter.value_or(fg::Filter::Nearest)) };
-    VkSamplerMipmapMode mipmap_mode{ extractMipmapMode(fg::Filter::Nearest) };
-    scene->vk_scene_data->samplers.emplace_back(
-      engine.device(), min_filter, mag_filter, mipmap_mode, VK_LOD_CLAMP_NONE);
-  }
-
-  int data_index{ 0 };
-  std::vector<GltfMetallicRoughness::MaterialConstants>
-    scene_material_constants;
-
-  //----------------------------------------------------------------------------
-  // Load textures
-  //----------------------------------------------------------------------------
-  // std::vector<vk::wr::Image> images;
-  // for (fg::Image& image : gltf.images) {
-  //   auto img = loadImage(engine, gltf, image);
-  //   if (img.has_value()) {
-  //     images.emplace_back();
-  //   }
-  // }
-
-  //----------------------------------------------------------------------------
-  // Load materials
-  //----------------------------------------------------------------------------
-  std::vector<std::shared_ptr<Material>> materials;
-  for (fg::Material& mat : gltf.materials) {
-    GltfMetallicRoughness::MaterialConstants constants;
-    constants.color_factors.x = mat.pbrData.baseColorFactor[0];
-    constants.color_factors.y = mat.pbrData.baseColorFactor[1];
-    constants.color_factors.z = mat.pbrData.baseColorFactor[2];
-    constants.color_factors.w = mat.pbrData.baseColorFactor[3];
-
-    constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
-    constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
-
-    // write material parameters to buffer
-    scene_material_constants.push_back(constants);
-
-    MaterialPass pass_type = MaterialPass::MainColor;
-    if (mat.alphaMode == fg::AlphaMode::Blend) {
-      pass_type = MaterialPass::Transparent;
-    }
-
-    GltfMetallicRoughness::MaterialResources material_resources{
-      // default the material textures
-      .color_texture       = &engine.whiteImage(),
-      .color_sampler       = &engine.defaultSamplerLinear(),
-      .metal_rough_texture = &engine.whiteImage(),
-      .metal_rough_sampler = &engine.defaultSamplerLinear(),
-
-      // set the uniform buffer for the material data
-      .data_buffer = &scene->vk_scene_data->material_buffer,
-      .data_index  = static_cast<size_t>(data_index),
-    };
-    // grab textures from gltf file
-    if (mat.pbrData.baseColorTexture.has_value()) {
-      size_t img =
-        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .imageIndex.value();
-      size_t sampler =
-        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .samplerIndex.value();
-
-      //    material_resources.color_texture = &images[img];
-      material_resources.color_sampler =
-        &scene->vk_scene_data->samplers[sampler];
-    }
-    // build material
-    auto material = std::make_shared<Material>();
-    materials.push_back(material);
-    const auto res =
-      scene->materials.insert(std::make_pair(mat.name, material));
-    if (unlikely(not res.second)) {
-      Log(Warn, "Scene contains duplicate material name ({}).", mat.name);
-    }
-    material->data = engine.metalRoughMaterial().writeMaterial(
-      engine.device(),
-      pass_type,
-      material_resources,
-      scene->vk_scene_data->descriptors);
-
-    data_index++;
-  }
-  if (unlikely(materials.empty())) {
+  if (unlikely(gltf.materials.empty())) {
     Log(Error, "glTF file contains no materials, at least one is required");
     return std::nullopt;
   }
-  scene->vk_scene_data->material_buffer.uploadData(scene_material_constants);
+  else if (unlikely(gltf.meshes.empty())) {
+    Log(Error, "glTF file contains no meshes, at least one is required");
+    return std::nullopt;
+  }
+  else if (unlikely(gltf.nodes.empty())) {
+    Log(Error, "glTF file contains no nodes, at least one is required");
+    return std::nullopt;
+  }
+
+  //----------------------------------------------------------------------------
+  // Load vulkan resources (images, samplers, materials)
+  //----------------------------------------------------------------------------
+  auto scene           = std::make_shared<Scene>();
+  scene->vk_resources_ = engine.createSceneResources(gltf);
 
   //----------------------------------------------------------------------------
   // Load meshes
   //----------------------------------------------------------------------------
-  std::vector<std::shared_ptr<Mesh>> meshes;
+  std::vector<std::shared_ptr<Scene::Mesh>> meshes;
   for (fg::Mesh& mesh : gltf.meshes) {
     std::vector<uint32_t> indices; // currently not giving this to the mesh,
                                    // TODO: might be needed
     std::vector<Point3f>    vertices;
     std::vector<Point2f>    texcoords;
     std::vector<Color4f>    colors;
-    std::vector<Vec3f>      normals;
+    std::vector<Normal3f>   normals;
     std::vector<GeoSurface> surfaces;
     surfaces.reserve(mesh.primitives.size());
 
@@ -346,19 +199,19 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 
         fg::iterateAccessor<Point3f>(gltf, pos_accessor, [&](Point3f p) {
           vertices.push_back(p);
-          texcoords.push_back({ 0, 0 });
+          texcoords.push_back(Point2f{ 0.f, 0.f });
           colors.push_back(Color4f{ 1.f });
-          normals.push_back({ 1, 0, 0 });
+          normals.push_back(Normal3f{ 1, 0, 0 });
         });
       }
 
       // load vertex normals
       auto attr_normals{ p.findAttribute("NORMAL") };
       if (attr_normals != p.attributes.end()) {
-        fg::iterateAccessorWithIndex<Vec3f>(
+        fg::iterateAccessorWithIndex<Normal3f>(
           gltf,
           gltf.accessors[attr_normals->accessorIndex],
-          [&](Vec3f n, size_t index) { normals[initial_vtx + index] = n; });
+          [&](Normal3f n, size_t index) { normals[initial_vtx + index] = n; });
       }
 
       // load UVs
@@ -382,11 +235,12 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       }
 
       if (p.materialIndex.has_value()) {
-        surface.material = materials[p.materialIndex.value()];
+        surface.material =
+          scene->vk_resources_->materials[p.materialIndex.value()];
       }
       else {
         Log(Warn, "Missing primitive material index, using index 0 instead.");
-        surface.material = materials[0];
+        surface.material = scene->vk_resources_->materials[0];
       }
       surfaces.push_back(surface);
     }
@@ -406,7 +260,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
                                           std::move(surfaces));
     meshes.emplace_back(newmesh);
     const auto res =
-      scene->meshes.insert(std::make_pair(mesh.name, std::move(newmesh)));
+      scene->meshes_.insert(std::make_pair(mesh.name, std::move(newmesh)));
     if (unlikely(not res.second)) {
       Log(Warn, "Scene contains duplicate mesh name ({}).", mesh.name);
     }
@@ -419,7 +273,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   for (fg::Node& node : gltf.nodes) {
     std::shared_ptr<SceneNode> scene_node;
     if (node.meshIndex.has_value()) {
-      auto p_mesh  = std::make_shared<MeshNode>();
+      auto p_mesh  = std::make_shared<MeshNode<Float, Spectrum>>();
       p_mesh->mesh = meshes[*node.meshIndex];
       scene_node   = std::move(p_mesh);
     }
@@ -427,38 +281,39 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
       scene_node = std::make_shared<SceneNode>();
     }
     nodes.push_back(scene_node);
-    const auto res = scene->nodes.insert(std::make_pair(node.name, scene_node));
+    const auto res =
+      scene->nodes_.insert(std::make_pair(node.name, scene_node));
     if (unlikely(not res.second)) {
       Log(Warn, "Scene contains duplicate node name ({}).", node.name);
     }
 
-    std::visit(fg::visitor{ [&](fg::math::fmat4x4 matrix) {
-                             for (size_t i = 0; i < matrix.rows(); ++i) {
-                               for (size_t j = 0; i < matrix.columns(); ++j) {
-                                 scene_node->local_transform[i][j] =
-                                   matrix[i][j];
-                               }
-                             }
-                           },
-                            [&](fg::TRS transform) {
-                              Vec3f  tl{ transform.translation[0],
-                                        transform.translation[1],
-                                        transform.translation[2] };
-                              Quat4f rot{ transform.rotation[3],
-                                          transform.rotation[0],
-                                          transform.rotation[1],
-                                          transform.rotation[2] };
-                              Vec3f  sc{ transform.scale[0],
-                                        transform.scale[1],
-                                        transform.scale[2] };
+    std::visit(
+      fg::visitor{ [&](fg::math::fmat4x4 matrix) {
+                    for (size_t i = 0; i < matrix.rows(); ++i) {
+                      for (size_t j = 0; i < matrix.columns(); ++j) {
+                        scene_node->local_transform[i][j] = matrix[i][j];
+                      }
+                    }
+                  },
+                   [&](fg::TRS transform) {
+                     Vector3f tl{ transform.translation[0],
+                                  transform.translation[1],
+                                  transform.translation[2] };
+                     Quat4f   rot{ transform.rotation[3],
+                                 transform.rotation[0],
+                                 transform.rotation[1],
+                                 transform.rotation[2] };
+                     Vector3f sc{ transform.scale[0],
+                                  transform.scale[1],
+                                  transform.scale[2] };
 
-                              Mat4f tm{ glm::translate(Mat4f(1.f), tl) };
-                              Mat4f rm{ glm::toMat4(rot) };
-                              Mat4f sm{ glm::scale(Mat4f(1.f), sc) };
+                     Matrix4f tm{ glm::translate(Matrix4f{ 1.f }, tl) };
+                     Matrix4f rm{ glm::toMat4(rot) };
+                     Matrix4f sm{ glm::scale(Matrix4f{ 1.f }, sc) };
 
-                              scene_node->local_transform = tm * rm * sm;
-                            } },
-               node.transform);
+                     scene_node->local_transform = tm * rm * sm;
+                   } },
+      node.transform);
   }
 
   // run loop again to setup transform hierarchy
@@ -475,15 +330,15 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
   // find the top nodes, with no parents
   for (auto& node : nodes) {
     if (node->parent.lock() == nullptr) {
-      scene->top_nodes.push_back(node);
-      node->refreshTransform(Mat4f{ 1.f });
+      scene->top_nodes_.push_back(node);
+      node->refreshTransform(Matrix4f{ 1.f });
     }
   }
   Log(Trace,
       "Loaded {} meshes, {} materials and {} nodes",
-      scene->meshes.size(),
-      scene->materials.size(),
-      scene->nodes.size());
+      scene->meshes_.size(),
+      scene->vk_resources_->materials.size(),
+      scene->nodes_.size());
   return scene;
 }
 
@@ -496,7 +351,7 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 //   Log(core::Trace"Loading OBJ: {}", file_path.c_str());
 //   // TODO: use rapidobj instead and remove tinyobjloader submodule
 //   tinyobj::attrib_t                attrib;
-//   std::vector<tinyobj::shape_t>    shapes;
+//   std::vector<tinyobj::shape_t>    shapes
 //   std::vector<tinyobj::material_t> materials;
 //   std::string                      warn, err;
 //
@@ -551,8 +406,10 @@ Scene::loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path)
 //   return loaded_shapes;
 // }
 
-std::optional<std::shared_ptr<Scene>>
-Scene::load(const vk::VulkanEngine& engine, const SceneInfo& scene_info)
+EL_VARIANT
+std::optional<std::shared_ptr<Scene<Float, Spectrum>>>
+Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
+                             const SceneInfo&        scene_info)
 {
   const char* env_p = std::getenv("ELDR_DIR");
   if (env_p == nullptr) {
@@ -572,4 +429,6 @@ Scene::load(const vk::VulkanEngine& engine, const SceneInfo& scene_info)
   return scene;
 }
 
-} // namespace eldr
+template class Scene<float, core::Color<float, 3>>;
+template class Scene<float, core::Spectrum<float, 4>>;
+} // namespace eldr::render

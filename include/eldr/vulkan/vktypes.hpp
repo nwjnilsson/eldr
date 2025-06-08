@@ -1,6 +1,5 @@
 #pragma once
-#include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
+#include <eldr/math/matrix.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 
 // Misc Vulkan types
@@ -13,8 +12,8 @@ struct GpuResourceAllocation {
 };
 
 struct GpuDrawPushConstants {
-  using Mat4f = CoreAliases<Float>::Mat4f;
-  Mat4f           world_matrix;
+  using Matrix4f = CoreAliases<float>::Matrix4f;
+  Matrix4f        world_matrix;
   VkDeviceAddress vertex_buffer;
 };
 

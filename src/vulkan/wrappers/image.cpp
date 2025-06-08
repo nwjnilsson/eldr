@@ -6,6 +6,7 @@
 #include <eldr/vulkan/wrappers/image.hpp>
 
 namespace eldr::vk::wr {
+using Bitmap = core::Bitmap;
 
 namespace {
 uint32_t calculateMipLevels(const Bitmap& bitmap)
@@ -24,7 +25,7 @@ ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
   // Pixel format should be RGBA at this point
   Assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
   switch (bitmap.componentFormat()) {
-    case StructType::UInt8:
+    case core::StructType::UInt8:
       if (bitmap.srgbGamma())
         format = VK_FORMAT_R8G8B8A8_SRGB;
       else
@@ -183,6 +184,11 @@ Image::Image(const Device& device, const Bitmap& bitmap)
 {
 }
 
+Image Image::createErrorImage(const Device& device)
+{
+  return Image{ device, Bitmap::createCheckerboard() };
+}
+
 Image Image::createSwapchainImage(const Device&    device,
                                   VkImage          vkimage,
                                   std::string_view name,
@@ -204,6 +210,6 @@ Image Image::createSwapchainImage(const Device&    device,
   return image;
 }
 
-VkImage Image::vk() const { return d_->image_; }
+VkImage Image::vk() const { return d_ ? d_->image_ : VK_NULL_HANDLE; }
 
 } // namespace eldr::vk::wr

@@ -49,6 +49,7 @@ AllocatedBuffer::AllocatedBuffer(const Device&            device,
                                  VmaMemoryUsage           mem_usage)
   : name_(name), size_bytes_(size_bytes)
 {
+  Assert(size_bytes > 0);
   const VkBufferCreateInfo buffer_ci{
     .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
     .pNext                 = {},

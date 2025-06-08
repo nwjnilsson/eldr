@@ -3,7 +3,6 @@
  */
 #pragma once
 #include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
 #include <eldr/core/struct.hpp>
 
 #include <filesystem>
@@ -11,10 +10,11 @@
 #include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::core {
 
 class Bitmap {
-  ELDR_IMPORT_CORE_TYPES();
+  using Float = float;
+  EL_IMPORT_CORE_TYPES();
 
 public:
   enum class PixelFormat {
@@ -46,7 +46,8 @@ public:
   Bitmap(std::string_view                name,
          PixelFormat                     px_format,
          StructType                      component_format,
-         Vec2u                           size,
+         uint32_t                        width,
+         uint32_t                        height,
          size_t                          channel_count,
          const std::vector<std::string>& channel_names = {},
          byte_t*                         data          = nullptr);
@@ -85,20 +86,20 @@ public:
     return std::span{ data_.get(), bufferSize() };
   }
 
-  /// Return the bitmap dimensions in pixels
-  const Vec2u& size() const { return size_; }
-
   /// Return the bitmap's width in pixels
-  uint32_t width() const { return size_.x; }
+  uint32_t width() const { return width_; }
 
   /// Return the bitmap's height in pixels
-  uint32_t height() const { return size_.y; }
+  uint32_t height() const { return height_; }
 
   size_t channelCount() const { return struct_->fieldCount(); }
-  size_t pixelCount() const { return static_cast<size_t>(size_.x * size_.y); }
+  size_t pixelCount() const { return static_cast<size_t>(width_ * height_); }
   size_t bytesPerPixel() const;
   size_t bufferSize() const;
   bool   srgbGamma() const { return srgb_gamma_; }
+
+  void setName(std::string_view name) { name_ = name; }
+
   // Convert RGB to RGBA, adding an opaque alpha channel.
   // This is useful for creating Vulkan images, which require RGBA.
   void              rgbToRgba();
@@ -158,10 +159,17 @@ protected:
   // void write_pfm(Stream* stream) const;
 
 private:
+  static constexpr size_t default_width  = 512;
+  static constexpr size_t default_height = 512;
+  static constexpr auto   default_pixel_format{ Bitmap::PixelFormat::RGBA };
+  static constexpr auto   default_component_format{ StructType::UInt8 };
+  static constexpr size_t default_channel_count{ 4 };
+
   std::string               name_{ "undefined" };
   PixelFormat               pixel_format_;
   StructType                component_format_;
-  Vec2u                     size_{};
+  uint32_t                  width_;
+  uint32_t                  height_;
   std::unique_ptr<Struct>   struct_{};
   bool                      srgb_gamma_{ false };
   bool                      premultiplied_alpha_{ false };
@@ -173,8 +181,10 @@ extern std::ostream& operator<<(std::ostream&              os,
                                 const Bitmap::PixelFormat& value);
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Bitmap::FileFormat& value);
-} // namespace eldr
+} // namespace eldr::core
 template <>
-struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::core::Bitmap::PixelFormat>
+  : fmt::ostream_formatter {};
 template <>
-struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::core::Bitmap::FileFormat> : fmt::ostream_formatter {
+};

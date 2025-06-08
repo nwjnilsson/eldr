@@ -16,19 +16,18 @@ extern "C" {
 #include <memory>
 #include <string>
 
-using namespace eldr::core;
-
-namespace eldr {
+namespace eldr::core {
 
 Bitmap::Bitmap(std::string_view                name,
                PixelFormat                     px_format,
                StructType                      component_format,
-               Vec2u                           size,
+               uint32_t                        width,
+               uint32_t                        height,
                size_t                          channel_count,
                const std::vector<std::string>& channel_names,
                byte_t*                         data)
   : name_(name), pixel_format_(px_format), component_format_(component_format),
-    size_(size), data_(data), owns_data_(false)
+    width_(width), height_(height), data_(data), owns_data_(false)
 
 {
   if (component_format_ == StructType::UInt8)
@@ -48,7 +47,8 @@ Bitmap::Bitmap(std::string_view                name,
 
 Bitmap::Bitmap(const Bitmap& bitmap)
   : name_(bitmap.name_), pixel_format_(bitmap.pixel_format_),
-    component_format_(bitmap.component_format_), size_(bitmap.size_),
+    component_format_(bitmap.component_format_), width_(bitmap.width_),
+    height_(bitmap.height_),
     struct_(std::make_unique<Struct>(*bitmap.struct_.get())),
     srgb_gamma_(bitmap.srgb_gamma_),
     premultiplied_alpha_(bitmap.premultiplied_alpha_), owns_data_(true)
@@ -58,18 +58,12 @@ Bitmap::Bitmap(const Bitmap& bitmap)
   memcpy(data(), bitmap.data(), size);
 }
 
-Bitmap::Bitmap(Bitmap&& other) noexcept
-  : name_(std::move(other.name_)), pixel_format_(other.pixel_format_),
-    component_format_(other.component_format_), size_(other.size_),
-    struct_(std::move(other.struct_)), srgb_gamma_(other.srgb_gamma_),
-    premultiplied_alpha_(other.premultiplied_alpha_),
-    data_(std::move(other.data_)), owns_data_(other.owns_data_)
-{
-}
+Bitmap::Bitmap(Bitmap&&) noexcept = default;
 
 Bitmap::Bitmap(Stream* stream, FileFormat format) { read(stream, format); }
 
 Bitmap::Bitmap(const std::filesystem::path& path, FileFormat format)
+  : name_(path.filename())
 {
   auto fs = std::make_unique<FileStream>(path);
   read(fs.get(), format);
@@ -383,7 +377,8 @@ void Bitmap::readJpeg(Stream* stream)
   jpeg_read_header(&cinfo, TRUE);
   jpeg_start_decompress(&cinfo);
 
-  size_                = Vec2u(cinfo.output_width, cinfo.output_height);
+  width_               = cinfo.output_width;
+  height_              = cinfo.output_height;
   component_format_    = StructType::UInt8;
   srgb_gamma_          = true;
   premultiplied_alpha_ = false;
@@ -408,8 +403,8 @@ void Bitmap::readJpeg(Stream* stream)
   Log(Debug,
       "Loading JPEG file \"{}\" ({}x{}, {}, {}) ..",
       fs ? fs->path().string() : "<stream>",
-      size_.x,
-      size_.y,
+      width_,
+      height_,
       pixel_format_,
       component_format_);
 
@@ -419,9 +414,9 @@ void Bitmap::readJpeg(Stream* stream)
   data_      = std::make_unique<byte_t[]>(bufferSize());
   owns_data_ = true;
 
-  auto scanlines = std::make_unique<byte_t*[]>(size_.y);
+  auto scanlines = std::make_unique<byte_t*[]>(height_);
 
-  for (size_t i = 0; i < size_.y; ++i)
+  for (size_t i = 0; i < height_; ++i)
     scanlines[i] = data() + row_stride * i;
 
   // Process scanline by scanline
@@ -430,7 +425,7 @@ void Bitmap::readJpeg(Stream* stream)
     counter += jpeg_read_scanlines(
       &cinfo,
       reinterpret_cast<unsigned char**>(scanlines.get()) + counter,
-      (JDIMENSION) (size_.y - cinfo.output_scanline));
+      (JDIMENSION) (height_ - cinfo.output_scanline));
 
   // Release the libjpeg data structures
   jpeg_finish_decompress(&cinfo);
@@ -600,7 +595,8 @@ void Bitmap::readPng(Stream* stream)
                &interlace_type,
                &compression_type,
                &filter_type);
-  size_ = Vec2u(width, height);
+  width_  = static_cast<uint32_t>(width);
+  height_ = static_cast<uint32_t>(height);
 
   switch (color_type) {
     case PNG_COLOR_TYPE_GRAY:
@@ -649,8 +645,8 @@ void Bitmap::readPng(Stream* stream)
   Log(Trace,
       "Loading PNG file \"{}\" ({}x{}, {}, {}) ..",
       fs ? fs->path().string() : "<stream>",
-      size_.x,
-      size_.y,
+      width_,
+      height_,
       pixel_format_,
       component_format_);
 
@@ -658,11 +654,11 @@ void Bitmap::readPng(Stream* stream)
   data_      = std::make_unique<byte_t[]>(size);
   owns_data_ = true;
 
-  rows             = new png_bytep[size_.y];
+  rows             = new png_bytep[height_];
   size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-  assert(row_bytes == size / size_.y);
+  assert(row_bytes == size / height_);
 
-  for (size_t i = 0; i < size_.y; i++)
+  for (size_t i = 0; i < height_; i++)
     rows[i] = reinterpret_cast<png_byte*>(data()) + i * row_bytes;
 
   png_read_image(png_ptr, rows);
@@ -687,16 +683,14 @@ void Bitmap::rgbToRgba()
 
     // TODO: This may need to be optimized for high resolution textures.
     // A 1024x1024 texture was converted in about a millisecond on my laptop.
-    const uint32_t rgb_channels = 3;
-    for (uint32_t i = 0; i < size_.y; ++i) {
-      uint32_t row_i = i * size_.x;
-      for (uint32_t j = 0; j < size_.x; ++j) {
-        uint32_t index        = row_i + j;
-        uint32_t rgb_index    = rgb_channels * index;
-        uint32_t rgba_index   = rgb_index + index;
-        p_tmp[rgba_index]     = p_data[rgb_index];
-        p_tmp[rgba_index + 1] = p_data[rgb_index + 1];
-        p_tmp[rgba_index + 2] = p_data[rgb_index + 2];
+    const uint32_t rgb_channel_count = 3;
+    for (uint32_t i = 0; i < height_; ++i) {
+      uint32_t row_i = i * width_;
+      for (uint32_t j = 0; j < width_; ++j) {
+        uint32_t index      = row_i + j;
+        uint32_t rgb_index  = rgb_channel_count * index;
+        uint32_t rgba_index = rgb_index + index;
+        std::memcpy(p_tmp + rgba_index, p_data + rgb_index, rgb_channel_count);
         p_tmp[rgba_index + 3] = byte_t{ 0xff };
       }
     }
@@ -711,17 +705,12 @@ void Bitmap::rgbToRgba()
 
 Bitmap Bitmap::createCheckerboard()
 {
-  constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
-  constexpr auto   component_format{ StructType::UInt8 };
-  constexpr Vec2f  size{ 512, 512 };
-  constexpr size_t channel_count{ 4 };
   constexpr size_t color_count{ 2 };
   // 8x8 checkerboard pattern of squares.
-  constexpr uint32_t square_dimension{ 64 };
+  constexpr uint32_t square_dimension{ 16 * 16 };
   // pink, purple
-  constexpr std::array<std::array<uint8_t, channel_count>, color_count> colors{
-    { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } }
-  };
+  constexpr std::array<std::array<uint8_t, default_channel_count>, color_count>
+    colors{ { { 0xFF, 0x69, 0xB4, 0xFF }, { 0x94, 0x00, 0xD3, 0xFF } } };
 
   const auto getColor = [](uint32_t x, uint32_t y) -> uint32_t {
     return ((x / square_dimension) + (y / square_dimension)) % color_count;
@@ -730,17 +719,18 @@ Bitmap Bitmap::createCheckerboard()
   // Performance could be improved by copying complete rows after one or two
   // rows are created with the loops.
   Bitmap checkerboard{
-    "Checkerboard", pixel_format, component_format, size, channel_count
+    "Error image", default_pixel_format, default_component_format,
+    default_width, default_height,       default_channel_count
   };
 
   for (uint32_t i{ 0 }; i < checkerboard.height(); ++i) {
     for (uint32_t j{ 0 }; j < checkerboard.width(); ++j) {
       const uint32_t color_idx{ getColor(i, j) };
       std::memcpy(checkerboard.data() +
-                    i * checkerboard.width() * channel_count +
-                    j * channel_count,
+                    i * checkerboard.width() * default_channel_count +
+                    j * default_channel_count,
                   &colors[color_idx],
-                  channel_count);
+                  default_channel_count);
     }
   }
   return checkerboard;
@@ -748,16 +738,11 @@ Bitmap Bitmap::createCheckerboard()
 
 Bitmap Bitmap::createDefaultWhite()
 {
-  constexpr auto   pixel_format{ Bitmap::PixelFormat::RGBA };
-  constexpr auto   component_format{ StructType::UInt8 };
-  constexpr Vec2f  size{ 512, 512 };
-  constexpr size_t channel_count{ 4 };
-
   // Performance could be improved by copying complete rows after one or two
   // rows are created with the loops.
-  Bitmap default_white{
-    "Default white", pixel_format, component_format, size, channel_count
-  };
+  Bitmap default_white{ "Default white",          default_pixel_format,
+                        default_component_format, default_width,
+                        default_height,           default_channel_count };
   std::vector<uint8_t> solid_white(default_white.bufferSize(), 0xFF);
   std::memcpy(
     default_white.data(), solid_white.data(), default_white.bufferSize());
@@ -830,4 +815,4 @@ std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
   }
   return os;
 }
-}; // namespace eldr
+}; // namespace eldr::core

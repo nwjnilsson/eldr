@@ -2,6 +2,7 @@
  * Struct class adapted from Mitsuba3
  */
 #pragma once
+#include <eldr/core/flags.hpp>
 #include <eldr/core/fwd.hpp>
 
 #include <fmt/ostream.h>
@@ -9,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::core {
 
 enum class StructType {
   // Invalid/unspecified
@@ -81,10 +82,10 @@ enum class StructProperty : FlagRep {
    */
   Alpha = 0x40
 };
-} // namespace eldr
-ELDR_DECLARE_FLAG_SPEC(eldr, StructProperty)
+} // namespace eldr::core
+EL_DECLARE_FLAG_SPEC(eldr::core, StructProperty)
 
-namespace eldr {
+namespace eldr::core {
 class Struct {
 public:
   /// Field specifier with size and offset
@@ -270,6 +271,7 @@ protected:
 
 extern std::ostream& operator<<(std::ostream& os, const StructType& type);
 
-} // namespace eldr
+} // namespace eldr::core
 
-template <> struct fmt::formatter<eldr::StructType> : fmt::ostream_formatter {};
+template <>
+struct fmt::formatter<eldr::core::StructType> : fmt::ostream_formatter {};

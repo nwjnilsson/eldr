@@ -1,6 +1,7 @@
 src = [
+  'endpoint.cpp',
+  'mesh.cpp',
   'scene.cpp',
-  'mesh.cpp'
   ]
 lib_render = static_library(
   'lib-render',

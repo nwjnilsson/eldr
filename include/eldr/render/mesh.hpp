@@ -1,13 +1,11 @@
 #pragma once
 #include <eldr/core/fwd.hpp>
-#include <eldr/core/math.hpp>
 #include <eldr/render/shape.hpp>
 
 #include <memory>
-#include <string>
 #include <vector>
 
-namespace eldr {
+namespace eldr::render {
 
 // TODO: decide how to deal with materials. I think an enumeration like this
 // could be of use for the Vulkan side of things (selecting pipeline etc) but
@@ -22,15 +20,15 @@ struct GeoSurface {
   std::shared_ptr<Material> material;
 };
 
-class Mesh final : public Shape {
-  ELDR_IMPORT_CORE_TYPES()
+EL_VARIANT class Mesh final : public Shape<Float, Spectrum> {
+  EL_IMPORT_CORE_TYPES()
 
 public:
   Mesh(std::string_view          name,
        std::vector<Point3f>&&    positions,
        std::vector<Point2f>&&    texcoords,
        std::vector<Color4f>&&    colors,
-       std::vector<Vec3f>&&      normals,
+       std::vector<Normal3f>&&   normals,
        std::vector<GeoSurface>&& surfaces);
   ~Mesh() override = default;
 
@@ -53,7 +51,7 @@ public:
   }
 
   /// @brief Get a vector of vtx normals from this mesh
-  [[nodiscard]] const std::vector<Vec3f>& vtxNormals() const
+  [[nodiscard]] const std::vector<Normal3f>& vtxNormals() const
   {
     return vtx_normals_;
   }
@@ -68,7 +66,7 @@ protected:
   std::vector<Point3f>    vtx_positions_;
   std::vector<Point2f>    vtx_texcoords_;
   std::vector<Color4f>    vtx_colors_;
-  std::vector<Vec3f>      vtx_normals_;
+  std::vector<Normal3f>   vtx_normals_;
   std::vector<GeoSurface> surfaces_;
 
   // std::optional<vk::wr::GpuBuffer>
@@ -81,4 +79,4 @@ protected:
 // template <>
 // std::optional<std::vector<std::shared_ptr<Mesh>>>
 // Mesh::loadObj<Mesh>(vk::VulkanEngine*, std::filesystem::path);
-} // namespace eldr
+} // namespace eldr::render

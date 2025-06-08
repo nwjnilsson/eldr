@@ -2,6 +2,7 @@
 #include <eldr/core/formatter.hpp>
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/thread.hpp>
+#include <eldr/eldr.hpp>
 
 #include <fmt/format.h>
 
@@ -159,7 +160,7 @@ static void Log(LogLevel                    level,
 /// <tt>Assert(cond)</tt> or <tt>Assert(cond, explanation)</tt>
 #  define Assert(...)                                                          \
     EL_EXPAND(                                                                 \
-      EL_EXPAND(EL_CAT(EL_ASSERT, EL_VA_SIZE(__VA_ARGS__)))(__VA_ARGS__))
+      EL_EXPAND(EL_CONCAT(EL_ASSERT, EL_VA_SIZE(__VA_ARGS__)))(__VA_ARGS__))
 #else
 #  define Assert(...) ((void) 0)
 #endif // !defined(NDEBUG)

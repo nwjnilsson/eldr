@@ -55,7 +55,6 @@ Buffer<T>::Buffer(const Device&            device,
                     mem_usage),
     size_(elem_count)
 {
-  Assert(size() > 0);
 }
 
 template <typename T>
