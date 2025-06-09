@@ -21,6 +21,7 @@ enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;
+class RenderableScene;
 EL_VARIANT class Scene;
 // class Sensor;
 // class PhaseFunction;
@@ -122,12 +123,12 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
 #define EL_IMPORT_RENDER_BASIC_TYPES()                                         \
   EL_IMPORT_CORE_TYPES()                                                       \
   using RenderAliases = eldr::RenderAliases<Float, Spectrum>;                  \
-  using Ray3f         = typename RenderAliases::Ray3f;                         \
-  // using Wavelength          = typename RenderAliases::Wavelength; \
-   // using UnpolarizedSpectrum = typename RenderAliases::UnpolarizedSpectrum; \
-   // using StokesVector4f      = typename RenderAliases::StokesVector4f; \
-   // using MuellerMatrix4f     = typename RenderAliases::MuellerMatrix4f; \
-  /// using RayDifferential3f   = typename RenderAliases::RayDifferential3f;
+  using Ray3f         = typename RenderAliases::Ray3f;
+  // using Wavelength          = typename RenderAliases::Wavelength;
+  // using UnpolarizedSpectrum = typename RenderAliases::UnpolarizedSpectrum;
+  // using StokesVector4f      = typename RenderAliases::StokesVector4f;
+  // using MuellerMatrix4f     = typename RenderAliases::MuellerMatrix4f;
+// using RayDifferential3f   = typename RenderAliases::RayDifferential3f;
 
 #define EL_IMPORT_TYPES(...)                                                   \
   EL_IMPORT_RENDER_BASIC_TYPES()                                               \

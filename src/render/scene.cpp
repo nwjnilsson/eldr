@@ -1,4 +1,5 @@
 #include <eldr/core/core.hpp>
+#include <eldr/math/vector.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp> // SceneData
@@ -10,6 +11,19 @@
 #include <eldr/vulkan/sceneresources.hpp>
 
 #include <eldr/misc/fastgltf.hpp>
+
+// Specialize vector types for use with fastgltf. Just simple Vector<float, s>
+#define EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(Name, Size)                     \
+  template <>                                                                  \
+  struct ElementTraits<Name<float, Size>>                                      \
+    : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
+namespace fastgltf {
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Point, 2)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Point, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Vector, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Normal, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Color, 4)
+} // namespace fastgltf
 
 // TODO: use rapidobj
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -55,7 +69,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Matrix4f& top_matrix,
       .index_count = s.count,
       .first_index = s.start_index,
       .material    = s.material.get(),
-      .transform   = node_matrix,
+      //.transform   = node_matrix,
     };
     ctx.opaque_surfaces.push_back(obj);
   }
@@ -66,7 +80,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Matrix4f& top_matrix,
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
-EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx)
+EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
 {
   ctx.opaque_surfaces.clear();
   const Matrix4f top_matrix{ 1.f };
@@ -429,6 +443,5 @@ Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
   return scene;
 }
 
-template class Scene<float, core::Color<float, 3>>;
-template class Scene<float, core::Spectrum<float, 4>>;
+EL_INSTANTIATE_CLASS(Scene)
 } // namespace eldr::render

@@ -1,31 +1,27 @@
 #pragma once
-#include <eldr/math/arraybase.hpp>
-#include <eldr/math/glm.hpp>
+#include <eldr/math/arraystatic.hpp>
 // #include <concepts>
 
 namespace eldr::em {
-template <typename T, size_t Size, typename... Args>
-concept GlmVecConstructible =
-  std::constructible_from<glm::vec<Size, T>, Args...>;
 
-template <typename Value_, size_t Size_, typename Derived_>
-struct StaticArray : glm::vec<Size_, Value_> {
-  using Base = glm::vec<Size_, Value_>;
+template <typename _Val, size_t _Size, typename _Derived>
+struct StaticArray
+  : StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>> {
+  using Base = StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>>;
   EL_ARRAY_IMPORT(StaticArray, Base)
 
-  static constexpr size_t Size = Size_;
-  using Derived                = Derived_;
-  using Value                  = Value_;
-  using Scalar =
-    Value; // I won't use vector of vector with glm, Value is same as scalar
+  using typename Base::Derived;
+  using typename Base::Scalar;
+  using typename Base::Value;
 
-  // using typename Base::Derived;
-  // using typename Base::Scalar;
-  // using typename Base::Value;
+  using Base::derived;
+  using Base::Size;
 
-  // using Base::derived;
-  // using Base::entry;
-  // using Base::Size;
+  EL_INLINE Value&       entry(size_t i) { return data[i]; }
+  EL_INLINE const Value& entry(size_t i) const { return data[i]; }
+
+private:
+  Value data[Size];
 };
 
 } // namespace eldr::em
@@ -35,14 +31,14 @@ struct StaticArray : glm::vec<Size_, Value_> {
 //
 // #include <eldr/math/glm.hpp>
 //
-// template <typename T, size_t Size, typename... Args>
+// template <typename T, size_t size, typename... Args>
 // concept GlmVecConstructible =
-//   std::constructible_from<glm::vec<Size, T>, Args...>;
+//   std::constructible_from<glm::vec<size, T>, Args...>;
 //
 // namespace eldr::em {
-// template <typename Value_, size_t Size_, typename Derived_>
-// struct StaticArray : StaticArrayT<Value_, Size_, Derived_> {
-//   using Base = StaticArrayT<Value_, Size_, Derived_>;
+// template <typename _Val, size_t _Size, typename _Derived>
+// struct StaticArray : StaticArrayT<_Val, _Size, _Derived> {
+//   using Base = StaticArrayT<_Val, _Size, _Derived>;
 //   EL_ARRAY_IMPORT(StaticArray, Base)
 //
 //   using typename Base::Derived;
@@ -51,13 +47,13 @@ struct StaticArray : glm::vec<Size_, Value_> {
 //
 //   using Base::derived;
 //   using Base::entry;
-//   using Base::Size;
+//   using Base::size;
 //
-//   template <typename Value2, typename D2, typename D = Derived_>
-//     requires(D::Size != D2::Size or D::Depth != D2::Depth)
+//   template <typename Value2, typename D2, typename D = _Derived>
+//     requires(D::size != D2::size or D::Depth != D2::Depth)
 //   StaticArray(const ArrayBaseT<Value2, D2>& v)
 //   {
-//     if constexpr (D::Size == D2::Size and D2::BroadcastOuter) {
+//     if constexpr (D::size == D2::size and D2::BroadcastOuter) {
 //       static_assert(std::is_constructible_v<Value, value_t<D2>>);
 //       for (size_t i = 0; i < derived().size(); ++i)
 //         derived().entry(i) = static_cast<Value>(v.derived().entry(i));
@@ -74,21 +70,21 @@ struct StaticArray : glm::vec<Size_, Value_> {
 //   StaticArray(T v)
 //   {
 //     Scalar value = static_cast<Scalar>(v);
-//     for (size_t i = 0; i < Size_; ++i)
+//     for (size_t i = 0; i < _Size; ++i)
 //       data[i] = value;
 //   }
 //
-//   template <typename T = Value_>
+//   template <typename T = _Val>
 //     requires(not std::is_same_v<T, Scalar>)
 //   StaticArray(const Value& v)
 //   {
-//     for (size_t i = 0; i < Size_; ++i)
+//     for (size_t i = 0; i < _Size; ++i)
 //       data[i] = v;
 //   }
 //
 //   /// Construct from component values
 //   template <typename... Ts>
-//     requires GlmVecConstructible<Value, Size, Ts...>
+//     requires GlmVecConstructible<Value, size, Ts...>
 //   EL_INLINE StaticArray(Ts&&... ts) : data{ move_cast_t<Ts, Value>(ts)... }
 //   {
 //   }
@@ -109,6 +105,6 @@ struct StaticArray : glm::vec<Size_, Value_> {
 //   // bool operator==(const StaticArray other) { return data == other.data; }
 //
 // private:
-//   glm::vec<Size_, Value_> data;
+//   glm::vec<_Size, _Val> data;
 // };
 // } // namespace eldr::em

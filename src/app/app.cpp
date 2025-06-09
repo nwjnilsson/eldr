@@ -1,7 +1,4 @@
 #include <eldr/app/app.hpp>
-#include <eldr/app/keyboardmouseinput.hpp>
-#include <eldr/app/window.hpp>
-#include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
 
@@ -11,10 +8,6 @@
 
 using namespace eldr::core;
 namespace eldr::app {
-
-// -----------------------------------------------------------------------------
-// fwd
-// -----------------------------------------------------------------------------
 
 App::App()
   : window_(width, height),

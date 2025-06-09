@@ -1,6 +1,7 @@
 #pragma once
 #include <eldr/math/arraygeneric.hpp>
 
+// TODO: move back to core
 namespace eldr::em {
 template <typename Value_, size_t Size_>
 struct Vector : StaticArray<Value_, Size_, Vector<Value_, Size_>> {

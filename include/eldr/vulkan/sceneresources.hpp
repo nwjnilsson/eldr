@@ -15,6 +15,10 @@ struct Asset;
 
 namespace eldr::vk {
 
+// If draw commands are queued up with resources from this struct, the data here
+// must not be destroyed until the device is idle or not using the resources
+// anymore. Responsibility should be placed on engine or delay destruction of
+// scene resources some other way.
 struct SceneResources {
   struct DefaultResources {
     const wr::Sampler*     sampler;

@@ -9,9 +9,6 @@ lib_app = static_library('lib-app',
   include_directories : [eldr_headers],
   dependencies : [
     glfw_dep,
-    vulkan_dep,
-    vma_dep,
     imgui_dep,
-    cxxopts_dep
     ],
   link_with : [lib_engine, lib_render])

@@ -53,13 +53,15 @@ template <typename T>
 using is_vector_det = std::enable_if_t<T::Derived::IsVector>;
 template <typename T>
 using is_quaternion_det = std::enable_if_t<T::Derived::IsQuaternion>;
+template <typename T> using is_special_det = std::enable_if_t<T::IsSpecial>;
 
 template <typename T>
 using is_static_array_det =
-  std::enable_if_t<T::IsEldr and T::Derived::Size != Dynamic>;
+  std::enable_if_t<T::IsArr and T::Derived::Size != Dynamic>;
 template <typename T>
 using is_dynamic_array_det =
   std::enable_if_t<T::IsEldr and T::Derived::Size == Dynamic>;
+
 } // namespace detail
 
 template <typename T>
@@ -71,6 +73,9 @@ constexpr bool is_static_array_v =
 
 template <typename T>
 constexpr bool is_matrix_v = is_detected_v<detail::is_matrix_det, T>;
+
+template <typename T>
+constexpr bool is_special_v = is_detected_v<detail::is_special_det, T>;
 
 template <typename T>
 constexpr bool is_vector_v = is_detected_v<detail::is_vector_det, T>;

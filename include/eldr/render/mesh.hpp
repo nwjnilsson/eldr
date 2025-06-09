@@ -62,7 +62,7 @@ public:
     return surfaces_;
   }
 
-protected:
+private:
   std::vector<Point3f>    vtx_positions_;
   std::vector<Point2f>    vtx_texcoords_;
   std::vector<Color4f>    vtx_colors_;

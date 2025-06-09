@@ -317,7 +317,7 @@ VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
   // for (const auto& es : loaded_scenes_) {
   for (const auto& en : scene->nodes_) {
     if (const auto& mesh_node{
-          dynamic_cast<const render::MeshNode<Float, Spectrum>*>(en) }) {
+          dynamic_cast<const render::MeshNode<Float, Spectrum>*>(en.second.get()) }) {
       const auto&  mesh{ mesh_node->mesh };
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
@@ -358,6 +358,9 @@ VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
       VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
   };
 }
+// TODO: refactor away specialization
+template void VulkanEngine::updateBuffers<float, Color<float, 3>>(
+  const render::Scene<float, Color<float, 3>>* s);
 
 void VulkanEngine::setupRenderGraph()
 {
@@ -403,6 +406,7 @@ void VulkanEngine::recreateSwapchain()
 
 void VulkanEngine::updateScene(uint32_t current_image)
 {
+
   static StopWatch stop_watch;
   float            time{ stop_watch.seconds<float>(false) };
 
@@ -420,6 +424,9 @@ void VulkanEngine::updateScene(uint32_t current_image)
     0.1f,
     10.0f) };
   proj(1, 1) *= -1;
+
+  /// TODO: the model matrix lives inside RenderObject. Remove GpuModelData and
+  /// write directly to the RenderObject or something like that.
   const GpuModelData model_data[]{ { .model_mat = model } };
   const GpuSceneData scene_data[]{ {
     .view               = view,
@@ -578,10 +585,10 @@ VulkanEngine::drawFrame(const render::Scene<Float, Spectrum>* scene)
   static size_t last_scene_node_count{ 0 };
   if (scene->meshes_.size() != last_scene_node_count) {
     updateBuffers(scene);
-    last_scene_node_count = scene->meshes.size();
+    last_scene_node_count = scene->meshes_.size();
   }
 
-  updateScene(frame_index_, scene); // move
+  updateScene(frame_index_); // move
   scene->draw(main_draw_context_);
 
   // Current frame
@@ -644,6 +651,9 @@ VulkanEngine::drawFrame(const render::Scene<Float, Spectrum>* scene)
 
   frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
+// TODO: refactor away specialization
+template void VulkanEngine::drawFrame<float, core::Color<float, 3ul>>(
+  const render::Scene<float, core::Color<float, 3ul>>*);
 
 std::string VulkanEngine::deviceName() const { return d_->device.name(); }
 

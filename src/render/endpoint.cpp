@@ -1,4 +1,6 @@
+#include <eldr/core/spectrum.hpp>
 #include <eldr/eldr.hpp>
+#include <eldr/math/transform.hpp>
 #include <eldr/render/endpoint.hpp>
 
 namespace eldr::render {

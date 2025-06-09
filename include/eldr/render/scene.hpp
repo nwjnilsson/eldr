@@ -56,7 +56,9 @@ EL_VARIANT struct MeshNode final : public SceneNode {
   void draw(const Matrix4f& top_matrix, DrawContext& ctx) const override;
 };
 
-EL_VARIANT class Scene {
+class RenderableScene {};
+
+EL_VARIANT class Scene : public RenderableScene {
   EL_IMPORT_TYPES(Shape, Mesh)
 public:
   struct SceneInfo {
@@ -74,7 +76,7 @@ public:
   static std::optional<std::shared_ptr<Scene>>
   load(const vk::VulkanEngine& engine, const SceneInfo&);
 
-  void draw(DrawContext& ctx);
+  void draw(DrawContext& ctx) const;
 
   std::unordered_map<std::string, std::shared_ptr<Mesh>>  meshes_;
   std::unordered_map<std::string, std::shared_ptr<Shape>> shapes_;
