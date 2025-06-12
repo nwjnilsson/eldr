@@ -7,9 +7,9 @@
 
 #include <fstream>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 inline std::ios::openmode iosFlag(FileStream::EMode mode)
 {
   switch (mode) {
@@ -23,7 +23,7 @@ inline std::ios::openmode iosFlag(FileStream::EMode mode)
       Throw("Internal error");
   }
 }
-} // namespace detail
+NAMESPACE_END(detail)
 
 FileStream::FileStream(const fs::path& p, EMode mode)
   : Stream(), mode_(mode), path_(p),
@@ -177,4 +177,4 @@ std::string FileStream::toString() const
 
   return oss.str();
 }
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

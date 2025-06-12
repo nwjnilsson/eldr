@@ -6,14 +6,14 @@
 #include <functional>
 
 // fwd declarations
-namespace eldr {
+NAMESPACE_BEGIN(eldr)
 class EldrApp;
-} // namespace eldr
-namespace fastgltf {
+NAMESPACE_END(eldr)
+NAMESPACE_BEGIN(fastgltf)
 struct Asset;
 }
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine {
   EL_IMPORT_CORE_TYPES_PREFIX(float, )
   friend EldrApp; // TODO: I did this to be able to invalidate swapchain from
@@ -79,7 +79,7 @@ private:
   // std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
 };
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)
 template <> struct std::hash<eldr::vk::GpuVertex> {
   using Float = float;
   EL_IMPORT_CORE_TYPES()

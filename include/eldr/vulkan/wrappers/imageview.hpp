@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 struct ImageViewCreateInfo {
   VkImage            image;
@@ -34,4 +34,4 @@ private:
   class ImageViewImpl;
   std::unique_ptr<ImageViewImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

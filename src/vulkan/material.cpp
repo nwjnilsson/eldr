@@ -5,7 +5,7 @@
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-namespace eldr {
+NAMESPACE_BEGIN(eldr)
 MaterialInstance GltfMetallicRoughness::writeMaterial(
   const vk::wr::Device&    device,
   MaterialPass             pass,
@@ -38,4 +38,4 @@ MaterialInstance GltfMetallicRoughness::writeMaterial(
 
   return mat_data;
 }
-} // namespace eldr
+NAMESPACE_END(eldr)

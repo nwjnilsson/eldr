@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 void PipelineBuilder::reset()
 {
   input_assembly_ = {};
@@ -288,4 +288,4 @@ wr::Pipeline PipelineBuilder::build(const wr::Device&           device,
 
   return wr::Pipeline{ device, name, pipeline_layout_ci, pipeline_ci };
 }
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

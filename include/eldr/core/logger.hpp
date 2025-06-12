@@ -8,7 +8,7 @@
 
 #include <memory>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 enum LogLevel : int {
   Trace,    /// Verbose logging
@@ -85,7 +85,7 @@ private:
   std::shared_ptr<LoggerImpl> impl_;
 };
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 
 [[nodiscard]] std::string className(const char* function_sig);
 
@@ -114,8 +114,8 @@ static void Log(LogLevel                    level,
                 fmt::format(fmt, std::forward<Args>(args)...));
   }
 }
-} // namespace detail
-} // namespace eldr::core
+NAMESPACE_END(detail)
+NAMESPACE_END(eldr::core)
 
 #if defined(__GNUC__) || defined(__clang__)
 #  define EL_FUNCTION static_cast<const char*>(__PRETTY_FUNCTION__)

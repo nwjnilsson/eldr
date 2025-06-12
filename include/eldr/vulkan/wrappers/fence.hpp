@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Fence {
 public:
@@ -20,4 +20,4 @@ private:
   class FenceImpl;
   std::unique_ptr<FenceImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

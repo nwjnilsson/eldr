@@ -10,7 +10,7 @@
 
 using namespace eldr::core;
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 RenderStage& RenderStage::writesTo(const RenderResource* resource)
 {
   if (unlikely(writes_.contains(resource))) {
@@ -675,4 +675,4 @@ void RenderGraph::render(const wr::CommandBuffer& cb, wr::Image& target)
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

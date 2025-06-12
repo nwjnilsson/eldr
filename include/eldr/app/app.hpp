@@ -10,11 +10,11 @@
 // -----------------------------------------------------------------------------
 // fwd
 // -----------------------------------------------------------------------------
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine;
 }
 // -----------------------------------------------------------------------------
-namespace eldr::app {
+NAMESPACE_BEGIN(eldr::app)
 class App {
   const std::filesystem::path model_path = "assets/models/Suzanne.gltf";
 
@@ -70,4 +70,4 @@ private:
   core::StopWatch stop_watch_{};
 };
 
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

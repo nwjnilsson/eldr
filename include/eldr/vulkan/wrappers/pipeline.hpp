@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 /// @brief VkPipeline wrapper class. Pipeline manages both VkPipeline and
 /// VkPipelineLayout.
 ///
@@ -35,4 +35,4 @@ protected:
 
 // Support for compute pipelines can be added if needed
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

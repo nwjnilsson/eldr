@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // DescriptorSetLayoutImpl
 //------------------------------------------------------------------------------
@@ -56,4 +56,4 @@ DescriptorSetLayout::DescriptorSetLayout(
 }
 
 VkDescriptorSetLayout DescriptorSetLayout::vk() const { return d_->layout_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

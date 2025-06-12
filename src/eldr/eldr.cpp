@@ -8,14 +8,14 @@
 
 using namespace eldr::core;
 
-namespace {
+NAMESPACE_BEGIN()
 void help(std::string_view help)
 {
   std::cout << util::infoBuild(1) << "\n";
   std::cout << util::infoCopyright() << "\n";
   std::cout << help << "\n";
 }
-} // namespace
+NAMESPACE_END()
 
 int main(int argc, char* argv[])
 {

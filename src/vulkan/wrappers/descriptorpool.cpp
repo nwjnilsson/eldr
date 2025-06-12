@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // DescriptorPoolImpl
@@ -60,4 +60,4 @@ void DescriptorPool::reset(VkDescriptorPoolResetFlags flags)
 {
   vkResetDescriptorPool(d_->device_.logical(), d_->pool_, flags);
 }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

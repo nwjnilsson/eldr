@@ -5,7 +5,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class AllocatedBuffer {
 public:
   AllocatedBuffer();
@@ -40,4 +40,4 @@ protected:
   std::unique_ptr<BufferImpl> d_;
 };
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

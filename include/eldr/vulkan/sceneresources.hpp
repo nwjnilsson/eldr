@@ -5,15 +5,15 @@
 
 #include <vector>
 
-namespace fastgltf {
+NAMESPACE_BEGIN(fastgltf)
 struct Sampler;
 struct Image;
 struct Material;
 struct Texture;
 struct Asset;
-} // namespace fastgltf
+NAMESPACE_END(fastgltf)
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 // If draw commands are queued up with resources from this struct, the data here
 // must not be destroyed until the device is idle or not using the resources
@@ -40,4 +40,4 @@ struct SceneResources {
   std::vector<std::shared_ptr<Material>>                   materials;
   vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

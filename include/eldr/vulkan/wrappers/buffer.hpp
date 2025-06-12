@@ -3,7 +3,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 // Should probably support uploading to a specific section of the buffer, and
 // not just overwriting from the beginning of the mapped data
@@ -78,4 +78,4 @@ template <typename T> void Buffer<T>::uploadData(std::span<const T> src)
   size_ = src.size();
 }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

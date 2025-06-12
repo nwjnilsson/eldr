@@ -3,7 +3,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 using namespace eldr::core;
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // CommandPoolImpl
 //------------------------------------------------------------------------------
@@ -79,4 +79,4 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
 }
 
 VkCommandPool CommandPool::vk() const { return d_->pool_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

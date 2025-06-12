@@ -2,8 +2,8 @@
 
 #include <eldr/core/fwd.hpp>
 
-namespace eldr {
-namespace render {
+NAMESPACE_BEGIN(eldr)
+NAMESPACE_BEGIN(render)
 // struct BSDFContext;
 // class BSDF;
 // class OptixDenoiser;
@@ -43,7 +43,7 @@ EL_VARIANT class Shape;
 // struct MediumInteraction;
 // struct SurfaceInteraction;
 // struct PreliminaryIntersection;
-} // namespace render
+NAMESPACE_END(render)
 
 template <typename Float_, typename Spectrum_> struct RenderAliases {
   using Float    = Float_;
@@ -62,7 +62,7 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   // using StokesVector4f  = StokesVector<UnpolarizedSpectrum>;
   // using MuellerMatrix4f = MuellerMatrix<UnpolarizedSpectrum>;
 
-  using Ray3f = core::Ray<em::Point<Float, 3>, Spectrum>;
+  using Ray3f = core::Ray<core::Point<Float, 3>, Spectrum>;
   // using RayDifferential3f = RayDifferential<core::Point<3, Float> /*,
   // Spectrum*/>;
 
@@ -112,7 +112,7 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   //  using VolumeGrid = render::VolumeGrid<FloatU , SpectrumU>;
 };
 
-} // namespace eldr
+NAMESPACE_END(eldr)
 
 #define EL_IMPORT_BASE(Name, ...)                                              \
   using Base = Name<Float, Spectrum>;                                          \
@@ -124,10 +124,10 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   EL_IMPORT_CORE_TYPES()                                                       \
   using RenderAliases = eldr::RenderAliases<Float, Spectrum>;                  \
   using Ray3f         = typename RenderAliases::Ray3f;
-  // using Wavelength          = typename RenderAliases::Wavelength;
-  // using UnpolarizedSpectrum = typename RenderAliases::UnpolarizedSpectrum;
-  // using StokesVector4f      = typename RenderAliases::StokesVector4f;
-  // using MuellerMatrix4f     = typename RenderAliases::MuellerMatrix4f;
+// using Wavelength          = typename RenderAliases::Wavelength;
+// using UnpolarizedSpectrum = typename RenderAliases::UnpolarizedSpectrum;
+// using StokesVector4f      = typename RenderAliases::StokesVector4f;
+// using MuellerMatrix4f     = typename RenderAliases::MuellerMatrix4f;
 // using RayDifferential3f   = typename RenderAliases::RayDifferential3f;
 
 #define EL_IMPORT_TYPES(...)                                                   \

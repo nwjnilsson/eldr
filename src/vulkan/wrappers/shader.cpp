@@ -4,12 +4,12 @@
 
 #include <fstream>
 #include <vector>
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // Shader helper
 //------------------------------------------------------------------------------
-namespace {
+NAMESPACE_BEGIN()
 std::vector<char> loadShader(std::string_view filename)
 {
   // TODO: maybe allow more flexibility in loading shaders and don't hardcode
@@ -30,7 +30,7 @@ std::vector<char> loadShader(std::string_view filename)
   file.close();
   return buffer;
 }
-} // namespace
+NAMESPACE_END()
 //------------------------------------------------------------------------------
 // ShaderImpl
 //------------------------------------------------------------------------------
@@ -87,4 +87,4 @@ Shader::Shader(const Device&         device,
 
 VkShaderModule Shader::module() const { return d_->shader_module_; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

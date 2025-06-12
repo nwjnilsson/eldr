@@ -4,13 +4,10 @@
 #include <eldr/core/hash.hpp>
 #include <eldr/core/logger.hpp>
 #include <eldr/core/struct.hpp>
-#include <eldr/math/glm.hpp>
 
 #include <sstream>
 
-#include <cmath>
-
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 Struct::Struct(bool pack, ByteOrder byte_order)
   : pack_(pack), byte_order_(byte_order)
 {
@@ -31,7 +28,7 @@ size_t Struct::size() const
   size_t      size = last.offset + last.size;
   if (!pack_) {
     size_t align = alignment();
-    size += glm::abs((align - size) % align);
+    size += (align - size) % align;
   }
   return size;
 }
@@ -95,7 +92,7 @@ Struct& Struct::append(const std::string&  name,
       Throw("Struct::append(): invalid field type!");
   }
   if (!pack_)
-    f.offset += glm::abs((f.size - f.offset) % f.size);
+    f.offset += (f.size - f.offset) % f.size;
   fields_.push_back(f);
   return *this;
 }
@@ -270,4 +267,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

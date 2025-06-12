@@ -3,7 +3,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class DescriptorPool {
 public:
   DescriptorPool();
@@ -23,4 +23,4 @@ private:
   class DescriptorPoolImpl;
   std::unique_ptr<DescriptorPoolImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

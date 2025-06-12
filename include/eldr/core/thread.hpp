@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 /// Mock thread class for now until I have time to implement it
 class Thread {
 public:
@@ -33,4 +33,4 @@ private:
   std::string             name_;
   std::unique_ptr<Logger> logger_;
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

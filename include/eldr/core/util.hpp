@@ -1,8 +1,9 @@
 #pragma once
+#include <eldr/eldr.hpp>
 #include <filesystem>
 #include <string>
 
-namespace eldr::core::util {
+NAMESPACE_BEGIN(eldr::core::util)
 
 int terminalWidth();
 
@@ -11,4 +12,4 @@ std::string infoCopyright();
 std::string infoBuild(int thread_count);
 
 std::filesystem::path eldrRootDir();
-} // namespace eldr::core::util
+NAMESPACE_END(eldr::core::util)

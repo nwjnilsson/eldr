@@ -5,7 +5,7 @@
 #include <thread>
 #include <unordered_map>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 static std::shared_ptr<Thread>                  main_thread{ nullptr };
 static thread_local std::shared_ptr<Thread>     self{ nullptr };
@@ -62,4 +62,4 @@ Thread* Thread::thread()
   return self_val;
 }
 
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

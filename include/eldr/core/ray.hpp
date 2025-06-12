@@ -1,8 +1,7 @@
 #pragma once
-#include <eldr/core/arrayconstants.hpp>
 #include <eldr/core/vector.hpp>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 template <typename Point_ /*, Spectrum_*/> struct Ray {
 
@@ -67,4 +66,4 @@ template <typename Point_ /*, Spectrum_*/> struct Ray {
     return result;
   }
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

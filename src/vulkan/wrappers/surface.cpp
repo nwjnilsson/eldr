@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <eldr/app/window.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // SurfaceImpl
@@ -45,4 +45,4 @@ Surface::Surface(const Instance& instance, const app::Window& window)
 }
 
 VkSurfaceKHR Surface::vk() const { return d_->surface_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

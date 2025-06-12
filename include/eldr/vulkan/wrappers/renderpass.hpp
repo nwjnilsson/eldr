@@ -3,7 +3,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class RenderPass {
 
@@ -21,4 +21,4 @@ private:
   class RenderPassImpl;
   std::unique_ptr<RenderPassImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

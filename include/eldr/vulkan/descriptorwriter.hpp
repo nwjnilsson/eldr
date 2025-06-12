@@ -5,7 +5,7 @@
 
 #include <deque>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 class DescriptorWriter {
 public:
   void reset();
@@ -99,4 +99,4 @@ DescriptorWriter& DescriptorWriter::writeStorageBuffer(
   return writeBuffer<T>(
     binding, buffer, offset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 }
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

@@ -2,23 +2,26 @@
  * Hash functions adapted from Mitsuba3
  */
 #pragma once
+#include <eldr/eldr.hpp>
 
 #include <functional>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 inline size_t hashCombine(size_t hash1, size_t hash2)
 {
   return hash2 ^ (hash1 + 0x9e3779b9 + (hash2 << 6) + (hash2 >> 2));
 }
 
-template <typename T, std::enable_if_t<!std::is_enum_v<T>, int> = 0>
+template <typename T>
+  requires(not std::is_enum_v<T>)
 size_t hash(const T& t)
 {
   return std::hash<T>()(t);
 }
 
-template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+template <typename T>
+  requires std::is_enum_v<T>
 size_t hash(const T& t)
 {
   return hash(typename std::underlying_type<T>::type(t));
@@ -69,4 +72,4 @@ template <typename T1, typename T2> struct comparator<std::pair<T1, T2>> {
   }
 };
 
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

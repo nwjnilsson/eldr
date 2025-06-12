@@ -24,8 +24,7 @@
 // =============================================================================
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/vktools/format.hpp>
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 constexpr uint32_t max_frames_in_flight{ 2 };
 constexpr uint32_t required_vk_api_version{ VK_API_VERSION_1_3 };
-
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

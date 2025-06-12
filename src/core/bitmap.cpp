@@ -16,7 +16,7 @@ extern "C" {
 #include <memory>
 #include <string>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 Bitmap::Bitmap(std::string_view                name,
                PixelFormat                     px_format,

@@ -3,7 +3,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class DescriptorSetLayout {
 public:
@@ -22,4 +22,4 @@ private:
   class DescriptorSetLayoutImpl;
   std::unique_ptr<DescriptorSetLayoutImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

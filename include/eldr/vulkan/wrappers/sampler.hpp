@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Sampler {
 
@@ -23,4 +23,4 @@ private:
   class SamplerImpl;
   std::unique_ptr<SamplerImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

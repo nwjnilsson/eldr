@@ -2,7 +2,7 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/hash.hpp>
 
-namespace eldr {
+NAMESPACE_BEGIN(eldr)
 template <typename T> struct is_flag_type : std::false_type {};
 template <typename T> constexpr bool is_flag_type_v = is_flag_type<T>::value;
 
@@ -105,7 +105,7 @@ constexpr bool operator!(Flags<T> f)
 // This assumes we're in the global namespace
 #define EL_DECLARE_FLAG_SPEC(ns, name)                                         \
   template <> struct eldr::is_flag_type<ns::name> : std::true_type {};         \
-  namespace ns {                                                               \
+  NAMESPACE_BEGIN(ns)                                                               \
   using name##Flags = Flags<name>;                                             \
   }
-} // namespace eldr
+NAMESPACE_END(eldr)

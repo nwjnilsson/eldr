@@ -1,8 +1,8 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
-namespace eldr::vk::wr {
-namespace {
+NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN()
 VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
 {
   const VkImageViewCreateInfo image_view_ci{
@@ -28,7 +28,7 @@ VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
   return image_view_ci;
 }
 
-} // namespace
+NAMESPACE_END()
 //------------------------------------------------------------------------------
 // ImageViewImpl
 //------------------------------------------------------------------------------
@@ -86,4 +86,4 @@ ImageView::ImageView(const Device&      device,
 }
 
 VkImageView ImageView::vk() const { return d_->image_view_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

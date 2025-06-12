@@ -1,5 +1,4 @@
 #include <eldr/core/core.hpp>
-#include <eldr/math/vector.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp> // SceneData
@@ -10,20 +9,20 @@
 
 #include <eldr/vulkan/sceneresources.hpp>
 
-#include <eldr/misc/fastgltf.hpp>
+#include <eldr/ext/fastgltf.hpp>
 
 // Specialize vector types for use with fastgltf. Just simple Vector<float, s>
 #define EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(Name, Size)                     \
   template <>                                                                  \
   struct ElementTraits<Name<float, Size>>                                      \
     : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
-namespace fastgltf {
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Point, 2)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Point, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Vector, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::em::Normal, 3)
+NAMESPACE_BEGIN(fastgltf)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Point, 2)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Point, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Vector, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Normal, 3)
 EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Color, 4)
-} // namespace fastgltf
+NAMESPACE_END(fastgltf)
 
 // TODO: use rapidobj
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -31,19 +30,20 @@ EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Color, 4)
 
 using namespace eldr::core;
 
-namespace eldr::render {
+NAMESPACE_BEGIN(eldr::render)
 //------------------------------------------------------------------------------
 // Scene node
 //------------------------------------------------------------------------------
-void SceneNode::refreshTransform(const Matrix4f& parent_matrix)
+void SceneNode::refreshTransform(const Transform4f& parent_transform)
 {
-  world_transform = parent_matrix * local_transform;
+  world_transform = parent_transform * local_transform;
   for (auto c : children) {
     c->refreshTransform(world_transform);
   }
 }
 
-void SceneNode::draw(const Matrix4f& top_matrix, DrawContext& ctx) const
+void SceneNode::draw(const RenderObject::Matrix4f& top_matrix,
+                     DrawContext&                  ctx) const
 {
   for (auto& c : children)
     c->draw(top_matrix, ctx);
@@ -59,10 +59,10 @@ void SceneNode::map(std::function<void(SceneNode*)> func)
 //------------------------------------------------------------------------------
 // Mesh node
 //------------------------------------------------------------------------------
-EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Matrix4f& top_matrix,
-                                                DrawContext&    ctx) const
+EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
+                                                DrawContext&       ctx) const
 {
-  const Matrix4f node_matrix{ top_matrix * world_transform };
+  const Transform4f node_transform{ top_matrix * world_transform };
 
   for (const auto& s : mesh->surfaces()) {
     const RenderObject obj{
@@ -83,7 +83,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Matrix4f& top_matrix,
 EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
 {
   ctx.opaque_surfaces.clear();
-  const Matrix4f top_matrix{ 1.f };
+  const Transform4f top_matrix{ 1.f };
   for (auto& n : top_nodes_) {
     n->draw(top_matrix, ctx);
   }
@@ -238,7 +238,6 @@ Scene<Float, Spectrum>::loadGltf(const vk::VulkanEngine& engine,
             texcoords[initial_vtx + index] = { p.x, p.y };
           });
       }
-
       // load vertex colors
       auto attr_colors{ p.findAttribute("COLOR_0") };
       if (attr_colors != p.attributes.end()) {
@@ -321,9 +320,9 @@ Scene<Float, Spectrum>::loadGltf(const vk::VulkanEngine& engine,
                                   transform.scale[1],
                                   transform.scale[2] };
 
-                     Matrix4f tm{ glm::translate(Matrix4f{ 1.f }, tl) };
-                     Matrix4f rm{ glm::toMat4(rot) };
-                     Matrix4f sm{ glm::scale(Matrix4f{ 1.f }, sc) };
+                     Transform4f tm{ glm::translate(Matrix4f{ 1.f }, tl) };
+                     Transform4f rm{ glm::toMat4(rot) };
+                     Transform4f sm{ glm::scale(Matrix4f{ 1.f }, sc) };
 
                      scene_node->local_transform = tm * rm * sm;
                    } },
@@ -345,7 +344,7 @@ Scene<Float, Spectrum>::loadGltf(const vk::VulkanEngine& engine,
   for (auto& node : nodes) {
     if (node->parent.lock() == nullptr) {
       scene->top_nodes_.push_back(node);
-      node->refreshTransform(Matrix4f{ 1.f });
+      node->refreshTransform(Transform4f{ 1.f });
     }
   }
   Log(Trace,
@@ -442,6 +441,5 @@ Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
 
   return scene;
 }
-
 EL_INSTANTIATE_CLASS(Scene)
-} // namespace eldr::render
+NAMESPACE_END(eldr::render)

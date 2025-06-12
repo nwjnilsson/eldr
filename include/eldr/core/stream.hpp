@@ -14,19 +14,20 @@
 
 #pragma once
 
-#include <eldr/core/arrayutils.hpp>
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/platform.hpp>
+
+#include <eldr/core/arrayutils.hpp>
 
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
-namespace eldr::core {
-namespace detail {
+NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(detail)
 template <typename T, typename SFINAE = void> struct serialization_helper;
-} // namespace detail
+NAMESPACE_END(detail)
 class Stream {
 
 public:
@@ -201,7 +202,7 @@ private:
   EByteOrder              byte_order_;
 };
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Stream::EByteOrder& value);
 
@@ -211,13 +212,15 @@ extern std::ostream& operator<<(std::ostream&             os,
  * in other headers by providing the appropriate template specializations.
  */
 
-template <typename T, std::enable_if_t<sizeof(T) == 1, int> = 0>
+template <typename T>
+  requires(sizeof(T) == 1)
 T swap(const T& v)
 {
   return v;
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 2, int> = 0>
+template <typename T>
+  requires(sizeof(T) == 2)
 T swap(const T& v)
 {
 #if !defined(_WIN32)
@@ -227,7 +230,8 @@ T swap(const T& v)
 #endif
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 4, int> = 0>
+template <typename T>
+  requires(sizeof(T) == 4)
 T swap(const T& v)
 {
 #if !defined(_WIN32)
@@ -237,7 +241,8 @@ T swap(const T& v)
 #endif
 }
 
-template <typename T, std::enable_if_t<sizeof(T) == 8, int> = 0>
+template <typename T>
+  requires(sizeof(T) == 8)
 T swap(const T& v)
 {
 #if !defined(_WIN32)
@@ -426,5 +431,5 @@ template <typename T> struct serialization_helper<std::set<T>> {
   }
 };
 
-} // namespace detail
-} // namespace eldr::core
+NAMESPACE_END(detail)
+NAMESPACE_END(eldr::core)

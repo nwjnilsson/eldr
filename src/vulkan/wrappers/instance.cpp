@@ -6,11 +6,11 @@
 
 using namespace eldr::core;
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // Instance helpers
 //------------------------------------------------------------------------------
-namespace {
+NAMESPACE_BEGIN()
 bool isExtensionAvailable(const std::string& extension)
 {
   uint32_t                           extensions_count;
@@ -53,7 +53,7 @@ bool isLayerSupported(const std::string& layer)
   }
   return false;
 }
-} // namespace
+NAMESPACE_END()
 
 //------------------------------------------------------------------------------
 // InstanceImpl
@@ -186,4 +186,4 @@ Instance::Instance(const VkApplicationInfo&   app_info,
 }
 
 VkInstance Instance::vk() const { return d_->instance_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

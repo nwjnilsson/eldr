@@ -15,7 +15,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 class RenderGraph;
 class PhysicalStage;
@@ -408,4 +408,4 @@ template <typename T> [[nodiscard]] const T* RenderGraphObject::as() const
 
 // EL_DECLARE_ENUM_OPERATORS(TextureFlags)
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

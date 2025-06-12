@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // SemaphoreImpl
 //------------------------------------------------------------------------------
@@ -49,4 +49,4 @@ Semaphore::Semaphore(const Device& device, VkSemaphoreCreateFlags flags)
 VkSemaphore        Semaphore::vk() const { return d_->semaphore_; }
 const VkSemaphore* Semaphore::vkp() const { return &d_->semaphore_; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

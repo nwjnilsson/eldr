@@ -1,9 +1,11 @@
 #pragma once
 #include <eldr/core/bitmap.hpp>
+#include <eldr/core/config.hpp>
 #include <eldr/core/flags.hpp>
 #include <eldr/core/fwd.hpp>
 #include <eldr/core/hash.hpp>
 #include <eldr/core/logger.hpp>
 #include <eldr/core/spectrum.hpp>
 #include <eldr/core/stopwatch.hpp>
+#include <eldr/core/vector.hpp>
 #include <eldr/eldr.hpp>

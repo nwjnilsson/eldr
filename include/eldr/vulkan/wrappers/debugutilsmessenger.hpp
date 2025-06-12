@@ -2,7 +2,7 @@
 #include <eldr/vulkan/fwd.hpp>
 
 #include <memory>
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class DebugUtilsMessenger {
 public:
   DebugUtilsMessenger();
@@ -15,4 +15,4 @@ private:
   class DebugUtilsMessengerImpl;
   std::unique_ptr<DebugUtilsMessengerImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

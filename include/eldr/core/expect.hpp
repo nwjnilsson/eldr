@@ -3,7 +3,7 @@
 
 /// Currently not in use anywhere. TODO: improve or delete
 
-namespace eldr {
+NAMESPACE_BEGIN(eldr)
 
 // Useful for creating class invariants. Consider the lambda expression below.
 // If x is a function parameter that needs to be less than y, take some action
@@ -39,4 +39,4 @@ constexpr void expect(C cond, ErrorCode code)
   // or ignore, i.e no code is generated
 }
 
-} // namespace eldr
+NAMESPACE_END(eldr)

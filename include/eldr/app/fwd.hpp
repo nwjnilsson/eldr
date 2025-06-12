@@ -1,6 +1,6 @@
 #pragma once
-
-namespace eldr::app {
+#include <eldr/eldr.hpp>
+NAMESPACE_BEGIN(eldr::app)
 class Window;
 class KeyboardMouseInput;
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

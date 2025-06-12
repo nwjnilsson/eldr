@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class CommandPool {
 public:
   CommandPool();
@@ -25,4 +25,4 @@ private:
 
   std::vector<CommandBuffer> command_buffers_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

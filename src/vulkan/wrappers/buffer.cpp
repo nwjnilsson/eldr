@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // BufferImpl
 //------------------------------------------------------------------------------
@@ -119,4 +119,4 @@ void AllocatedBuffer::uploadData(std::span<const byte_t> src)
   }
   size_bytes_ = src.size_bytes();
 }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

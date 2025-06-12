@@ -1,11 +1,13 @@
 #pragma once
+#include <eldr/app/fwd.hpp>
+
 #include <functional>
 #include <string>
 #include <vector>
 
 struct GLFWwindow;
 
-namespace eldr::app {
+NAMESPACE_BEGIN(eldr::app)
 class App;
 class Window {
 
@@ -75,4 +77,4 @@ private:
   ScrollFunc      scroll_func_;
 };
 
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

@@ -7,15 +7,15 @@
 #include <eldr/core/util.hpp>
 #include <eldr/vulkan/engine.hpp>
 
-#include <eldr/misc/fastgltf.hpp>
+#include <eldr/ext/fastgltf.hpp>
 
 namespace fg = fastgltf;
 namespace fs = std::filesystem;
 using namespace eldr::core;
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
-namespace {
+NAMESPACE_BEGIN()
 VkFilter extractFilter(fastgltf::Filter filter)
 {
   switch (filter) {
@@ -108,7 +108,7 @@ std::optional<wr::Image> loadImage(const wr::Device& device,
   }
 }
 
-} // namespace
+NAMESPACE_END()
 
 SceneResources::SceneResources(const wr::Device&       device,
                                fg::Asset&              gltf,
@@ -243,4 +243,4 @@ SceneResources::SceneResources(const wr::Device&       device,
 
 SceneResources::~SceneResources() = default;
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

@@ -1,9 +1,9 @@
 #pragma once
-#include <eldr/math/matrix.hpp>
+#include <eldr/math/glm.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 
 // Misc Vulkan types
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 struct GpuResourceAllocation {
   const wr::Device&     device_;
   VmaAllocation         allocation_{ VK_NULL_HANDLE };
@@ -12,9 +12,9 @@ struct GpuResourceAllocation {
 };
 
 struct GpuDrawPushConstants {
-  using Matrix4f = CoreAliases<float>::Matrix4f;
-  Matrix4f        world_matrix;
+  using Transform4f = core::Aliases<float>::Transform4f;
+  Transform4f     world_transform;
   VkDeviceAddress vertex_buffer;
 };
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

@@ -1,12 +1,12 @@
 #pragma once
-namespace eldr {
+#include <eldr/eldr.hpp>
+NAMESPACE_BEGIN(eldr)
 // Material
 struct GltfMetallicRoughness;
 struct MaterialInstance;
 struct Material;
-} // namespace eldr
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(vk)
 class VulkanEngine;
 struct SceneResources;
 struct GpuVertex;
@@ -26,7 +26,7 @@ enum class TextureUsage;
 class DescriptorWriter;
 class DescriptorAllocator;
 
-namespace wr {
+NAMESPACE_BEGIN(wr)
 class DebugUtilsMessenger;
 class Instance;
 class Surface;
@@ -50,5 +50,6 @@ class CommandBuffer;
 class Semaphore;
 class Fence;
 class Shader;
-} // namespace wr
-} // namespace eldr::vk
+NAMESPACE_END(wr)
+NAMESPACE_END(vk)
+NAMESPACE_END(eldr)

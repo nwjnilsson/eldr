@@ -3,7 +3,7 @@
 #include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // FramebufferImpl
 //------------------------------------------------------------------------------
@@ -54,4 +54,4 @@ Framebuffer::Framebuffer(const Device&                   device,
 }
 
 VkFramebuffer Framebuffer::vk() const { return d_->framebuffer_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

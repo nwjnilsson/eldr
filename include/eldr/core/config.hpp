@@ -3,7 +3,7 @@
 #include <eldr/core/fwd.hpp>
 
 /// List of enabled Eldr variants
-#define EL_VARIANTS "scalar_rgb\n"
+#define EL_VARIANTS "scalar_rgb, scalar_spectral\n"
 
 /// Default variant to be used by the "eldr" executable
 #define EL_DEFAULT_VARIANT "scalar_rgb"
@@ -27,13 +27,13 @@
       return func<float, Spectrum<float, 4>>(__VA_ARGS__);                     \
     else                                                                       \
       Throw("Unsupported variant: \"%s\". Must be one of scalar_rgb, "         \
-            "scalar_spectral, cuda_ad_rgb, llvm_ad_rgb, llvm_ad_spectral!",    \
+            "scalar_spectral!",                                                \
             variant);                                                          \
   }()
 
-namespace eldr {
-namespace detail {
-/// Convert a <Float, Spectrum> type pair into one of the strings in EL_VARIANT
+NAMESPACE_BEGIN(eldr)
+NAMESPACE_BEGIN(detail)
+/// Convert a <Float, Spectrum> type pair into one of the strings in EL_VARIANTS
 template <typename Float_, typename Spectrum_>
 constexpr const char* get_variant()
 {
@@ -46,5 +46,5 @@ constexpr const char* get_variant()
   else
     return "";
 }
-} // namespace detail
-} // namespace eldr
+NAMESPACE_END(detail)
+NAMESPACE_END(eldr)

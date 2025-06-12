@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class Swapchain {
 public:
   Swapchain();
@@ -50,4 +50,4 @@ private:
   std::vector<Semaphore> image_available_sem_;
   std::vector<Semaphore> render_finished_sem_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

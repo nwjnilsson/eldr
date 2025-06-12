@@ -1,5 +1,4 @@
 #include <eldr/core/bitmap.hpp>
-#include <eldr/math/vector.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
@@ -12,14 +11,14 @@
 
 using namespace eldr::core;
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 struct ImGuiOverlay::FrameData {
   wr::Buffer<uint32_t>   index_buffer;
   wr::Buffer<ImDrawVert> vertex_buffer;
 };
 
 struct PushConstantBlock {
-  using Vector = CoreAliases<float>::Vector2f;
+  using Vector = core::Aliases<float>::Vector2f;
   Vector scale;
   Vector translate;
 } push_const_block_;
@@ -307,4 +306,4 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
   });
   frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

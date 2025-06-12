@@ -1,61 +1,34 @@
 #pragma once
-#include <eldr/math/arraygeneric.hpp>
-
-namespace eldr::core {
-
-template <typename _Val, size_t _Size, typename _Derived>
-struct Spectrum
-  : em::StaticArray<_Val,
-                    _Size,
-                    Spectrum<_Val, _Size, Spectrum<_Val, _Size, _Derived>>> {
-  using Base = em::StaticArray<_Val, _Size, Spectrum<_Val, _Size, _Derived>>;
-  EL_ARRAY_IMPORT(Spectrum, Base)
-  using ArrayType = Spectrum;
-  using typename Base::Scalar;
+#include <eldr/arrays/arraygeneric.hpp>
+#include <eldr/eldr.hpp>
+NAMESPACE_BEGIN(eldr::core)
+/// Spectrum base type
+template <typename _Val, size_t _Size> struct Spectrum : glm::vec<_Size, _Val> {
+  using Base = glm::vec<_Size, _Val>;
+  template <typename... Ts> Spectrum(Ts&&... ts) : Base(std::forward<Ts>(ts)...)
+  {
+  }
 };
 
-template <typename _Val, size_t _Size, typename _Derived>
-struct CoefficientSpectrum
-  : Spectrum<_Val, _Size, CoefficientSpectrum<_Val, _Size, _Derived>> {
-  using Base =
-    Spectrum<_Val, _Size, CoefficientSpectrum<_Val, _Size, _Derived>>;
+/// RGB style color, used for Y, YA, RGB, RGBA
+template <typename _Val, size_t _Channels>
+  requires(_Channels <= 4)
+struct Color : Spectrum<_Val, _Channels> {
+  using Base = Spectrum<_Val, _Channels>;
+  EL_ARRAY_IMPORT(Color, Base)
+};
+
+/// SPD represented by a number of coefficients
+template <typename _Val, size_t _Size>
+struct CoefficientSpectrum : Spectrum<_Val, _Size> {
+  using Base = Spectrum<_Val, _Size>;
   EL_ARRAY_IMPORT(CoefficientSpectrum, Base)
-  using typename Base::Scalar;
-  using ArrayType = CoefficientSpectrum;
 };
 
-template <typename _Val>
-struct RgbaSpectrum : CoefficientSpectrum<_Val, 4, RgbaSpectrum<_Val>> {
-  using Base = CoefficientSpectrum<_Val, 4, RgbaSpectrum<_Val>>;
-  EL_ARRAY_IMPORT(RgbaSpectrum, Base)
-
-  using typename Base::Scalar;
-  using ArrayType = RgbaSpectrum;
-
-  decltype(auto) r() const { return Base::x(); }
-  decltype(auto) r() { return Base::x(); }
-
-  decltype(auto) g() const { return Base::y(); }
-  decltype(auto) g() { return Base::y(); }
-
-  decltype(auto) b() const { return Base::z(); }
-  decltype(auto) b() { return Base::z(); }
-
-  decltype(auto) a() const { return Base::w(); }
-  decltype(auto) a() { return Base::w(); }
-};
-
-template <typename _Val, size_t sample_count_>
-struct SampledSpectrum
-  : CoefficientSpectrum<_Val,
-                        sample_count_,
-                        SampledSpectrum<_Val, sample_count_>> {
-  using Base = CoefficientSpectrum<_Val,
-                                   sample_count_,
-                                   SampledSpectrum<_Val, sample_count_>>;
+/// SPD represented by a number of evenly distributed samples
+template <typename _Val, size_t _Samples>
+struct SampledSpectrum : CoefficientSpectrum<_Val, _Samples> {
+  using Base = CoefficientSpectrum<_Val, _Samples>;
   EL_ARRAY_IMPORT(SampledSpectrum, Base)
-
-  using ArrayType = SampledSpectrum;
-  using typename Base::Scalar;
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

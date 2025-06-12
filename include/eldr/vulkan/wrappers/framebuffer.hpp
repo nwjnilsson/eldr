@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Framebuffer {
 public:
@@ -23,4 +23,4 @@ private:
   std::unique_ptr<FramebufferImpl> d_;
 };
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

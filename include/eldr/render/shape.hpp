@@ -4,7 +4,7 @@
 #include <eldr/vulkan/fwd.hpp>
 
 #include <string>
-namespace eldr::render {
+NAMESPACE_BEGIN(eldr::render)
 
 enum class ShapeType : uint8_t { Mesh, Disk, Rectangle, Sphere, Other };
 
@@ -35,4 +35,4 @@ protected:
   //  Medium exterior_medium_;
   ShapeType shape_type_{ ShapeType::Other };
 };
-} // namespace eldr::render
+NAMESPACE_END(eldr::render)

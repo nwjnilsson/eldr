@@ -4,7 +4,7 @@
 
 #include <span>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class CommandBuffer {
 public:
@@ -193,4 +193,4 @@ private:
   std::unique_ptr<CommandBufferImpl>  d_;
   mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

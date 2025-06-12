@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 struct Logger::LoggerImpl {
   LogLevel                           error_level{ LogLevel::Error };
   std::unique_ptr<Formatter>         formatter;
@@ -108,7 +108,7 @@ void Logger::createContext()
   Thread::thread()->setLogger(std::move(logger));
 }
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 
 /// Extract the class name from a function signature
 std::string className(const char* function_sig)
@@ -168,6 +168,6 @@ void Throw(const std::string& class_,
   throw std::runtime_error(zerowidth_space + text);
 }
 
-} // namespace detail
+NAMESPACE_END(detail)
 
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

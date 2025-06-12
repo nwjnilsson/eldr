@@ -26,11 +26,11 @@
 #include <eldr/vulkan/wrappers/surface.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
-#include <eldr/math/math.hpp>
+#include <eldr/math/glm.hpp>
 
 #include <imgui.h>
 
-#include <eldr/misc/fastgltf.hpp>
+#include <eldr/ext/fastgltf.hpp>
 
 #include <memory>
 #include <string>
@@ -38,10 +38,11 @@
 using namespace eldr::core;
 using namespace eldr::vk::wr;
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
 // Engine types
 // -----------------------------------------------------------------------------
+
 struct GpuVertex {
   EL_IMPORT_CORE_TYPES_PREFIX(float, )
   Point3f  pos;
@@ -49,8 +50,7 @@ struct GpuVertex {
   Normal3f normal;
   float    uv_y;
   Color4f  color;
-
-  bool operator==(const GpuVertex&) const = default;
+  bool     operator==(GpuVertex const&) const = default;
 };
 struct GpuSceneData {
   EL_IMPORT_CORE_TYPES_PREFIX(float, )
@@ -62,7 +62,7 @@ struct GpuSceneData {
   Vector4f    sunlight_color;
 };
 struct GpuModelData {
-  CoreAliases<float>::Transform4f model_mat;
+  core::Aliases<float>::Transform4f model_mat;
 };
 struct FrameData {
   DescriptorAllocator  descriptors;
@@ -317,7 +317,8 @@ VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
   // for (const auto& es : loaded_scenes_) {
   for (const auto& en : scene->nodes_) {
     if (const auto& mesh_node{
-          dynamic_cast<const render::MeshNode<Float, Spectrum>*>(en.second.get()) }) {
+          dynamic_cast<const render::MeshNode<Float, Spectrum>*>(
+            en.second.get()) }) {
       const auto&  mesh{ mesh_node->mesh };
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
@@ -410,20 +411,20 @@ void VulkanEngine::updateScene(uint32_t current_image)
   static StopWatch stop_watch;
   float            time{ stop_watch.seconds<float>(false) };
 
-  Transform4f model{ Transform4f::rotate(Vector3f{ 0.0f, 0.0f, 1.0f },
-                                         time * em::radians<float>(20.0f)) };
+  Transform4f model{ glm::rotate(Matrix4f{ 1.0 },
+                                 time * glm::radians<float>(20.0f),
+                                 Vector3f{ 0.0f, 0.0f, 1.0f }) };
 
-  Transform4f view{ Transform4f::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
-                                        Point3f{ 0.0f, 0.0f, 0.0f },
-                                        Vector3f{ 0.0f, 0.0f, 1.0f }) };
-
+  Transform4f view{ glm::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
+                                Point3f{ 0.0f, 0.0f, 0.0f },
+                                Vector3f{ 0.0f, 0.0f, 1.0f }) };
   Transform4f proj{ glm::perspective(
     glm::radians(45.0f),
     d_->swapchain.extent().width /
       static_cast<float>(d_->swapchain.extent().height),
     0.1f,
     10.0f) };
-  proj(1, 1) *= -1;
+  proj[1][1] *= -1;
 
   /// TODO: the model matrix lives inside RenderObject. Remove GpuModelData and
   /// write directly to the RenderObject or something like that.
@@ -485,8 +486,8 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     cb.bindPipeline(*draw.material->data.pipeline);
 
     GpuDrawPushConstants push_constants{
-      .world_matrix  = Matrix4f{ 1.0f },
-      .vertex_buffer = d_->vertex_buffer.getDeviceAddress(),
+      .world_transform = Transform4f{ 1.0f },
+      .vertex_buffer   = d_->vertex_buffer.getDeviceAddress(),
     };
     cb.pushConstant(draw.material->data.pipeline->layout(),
                     push_constants,
@@ -730,16 +731,17 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     pipeline_builder.build(device, "GltfMetallicRoughness transparent");
 }
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)
 
-/// Cursed, but it's temporary
 size_t std::hash<eldr::vk::GpuVertex>::operator()(
   eldr::vk::GpuVertex const& vertex) const
 {
-  size_t value{ hash<Point3f::Base::Base>()(Point3f::Base(vertex.pos)) };
+  using vec3 = glm::vec<3, float>;
+  using vec4 = glm::vec<4, float>;
+  size_t value{ hash<vec3>()(vertex.pos) };
   value = hashCombine(value, hash<float>()(vertex.uv_x));
-  value = hashCombine(value, hash<Normal3f::Base::Base>()(vertex.normal));
+  value = hashCombine(value, hash<vec3>()(vertex.normal));
   value = hashCombine(value, hash<float>()(vertex.uv_y));
-  value = hashCombine(value, hash<Color4f::Base::Base>()(vertex.color));
+  value = hashCombine(value, hash<vec4>()(vertex.color));
   return value;
 };

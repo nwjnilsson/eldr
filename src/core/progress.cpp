@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 ProgressReporter::ProgressReporter(std::string_view label, void* payload)
   : label_(label), line_(util::terminalWidth() + 1, ' '),
     bar_start_(label.length() + 3), payload_(payload)
@@ -79,4 +79,4 @@ void ProgressReporter::update(float progress)
   Thread::thread()->logger()->logProgress(line_);
   last_update_ = elapsed;
 }
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

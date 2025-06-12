@@ -1,5 +1,4 @@
 #pragma once
-
 // Reduce namespace pollution from windows.h
 #if defined(_WIN32)
 #  if !defined(WIN32_LEAN_AND_MEAN)

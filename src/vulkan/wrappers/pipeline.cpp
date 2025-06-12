@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // PipelineImpl
@@ -95,4 +95,4 @@ Pipeline::Pipeline(const Device&                     device,
 
 VkPipeline       Pipeline::vk() const { return d_->pipeline_; }
 VkPipelineLayout Pipeline::layout() const { return d_->pipeline_layout_; }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

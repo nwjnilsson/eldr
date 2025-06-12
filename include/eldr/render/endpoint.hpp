@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/render/fwd.hpp>
 #include <string>
-namespace eldr::render {
+NAMESPACE_BEGIN(eldr::render)
 EL_VARIANT class Endpoint {
   EL_IMPORT_TYPES(Medium, Shape);
 
@@ -17,4 +17,4 @@ private:
   Shape*      shape_{ nullptr };
   std::string id_;
 };
-} // namespace eldr::render
+NAMESPACE_END(eldr::render)

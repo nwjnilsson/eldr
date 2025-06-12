@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/fence.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // FenceImpl
@@ -65,4 +65,4 @@ VkResult Fence::status() const
 {
   return vkGetFenceStatus(d_->device_.logical(), d_->fence_);
 }
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

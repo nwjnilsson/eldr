@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Instance {
 public:
@@ -22,4 +22,4 @@ private:
 
 //[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);
 //[[nodiscard]] static bool isLayerSupported(const std::string& layer);
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

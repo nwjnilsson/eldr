@@ -2,7 +2,7 @@
 #include <eldr/render/fwd.hpp>
 
 #include <vector>
-namespace eldr::app {
+NAMESPACE_BEGIN(eldr::app)
 class SceneManager {
 public:
   SceneManager();
@@ -11,4 +11,4 @@ public:
 private:
   std::vector<render::RenderableScene> scenes_;
 };
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

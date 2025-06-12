@@ -10,7 +10,7 @@
 #include <imgui.h>
 
 class GLFWwindow;
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 class ImGuiOverlay {
   using Float = float;
@@ -48,4 +48,4 @@ private:
   wr::Pipeline            imgui_pipeline_;
 };
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

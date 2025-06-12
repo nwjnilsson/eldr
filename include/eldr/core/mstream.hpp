@@ -5,7 +5,7 @@
 
 #include <eldr/core/stream.hpp>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 
 /** \brief Simple memory buffer-based stream with automatic memory management.
  * It always has read & write capabilities.
@@ -132,4 +132,4 @@ private:
   /// Whether the stream has been closed.
   bool is_closed_;
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

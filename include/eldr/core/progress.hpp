@@ -1,6 +1,6 @@
 #pragma once
 #include <eldr/core/stopwatch.hpp>
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 class ProgressReporter {
 public:
   ProgressReporter(std::string_view label, void* payload = nullptr);
@@ -21,4 +21,4 @@ protected:
   float       last_progress_{ -1.f };
   void*       payload_;
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

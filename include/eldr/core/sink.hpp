@@ -5,7 +5,7 @@
 #include <fstream>
 #include <mutex>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 struct ThreadingPolicy {};
 
 struct SingleThreaded : ThreadingPolicy {
@@ -256,4 +256,4 @@ FileStreamSink<TPolicy>::openFile(const std::filesystem::path& file_path)
   }
   return ofstream_.get();
 }
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

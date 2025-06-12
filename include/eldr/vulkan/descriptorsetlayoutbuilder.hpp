@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 class DescriptorSetLayoutBuilder {
 public:
   void                        reset() { bindings_.clear(); }
@@ -32,4 +32,4 @@ private:
 private:
   std::vector<VkDescriptorSetLayoutBinding> bindings_;
 };
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

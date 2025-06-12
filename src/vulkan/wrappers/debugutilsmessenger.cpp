@@ -5,12 +5,12 @@
 
 using namespace eldr::core;
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------
 // Debug report callback
 //------------------------------------------------------------------------------
-namespace {
+NAMESPACE_BEGIN()
 VKAPI_ATTR VkBool32 VKAPI_CALL
 vkDebugReportCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                       VkDebugUtilsMessageTypeFlagsEXT        messageType,
@@ -55,7 +55,7 @@ vkDebugReportCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
   }
   return VK_FALSE;
 }
-} // namespace
+NAMESPACE_END()
 //------------------------------------------------------------------------------
 // DebugUtilsMessengerImpl
 //------------------------------------------------------------------------------
@@ -119,5 +119,5 @@ DebugUtilsMessenger::DebugUtilsMessenger(const Instance& instance)
   d_ = std::make_unique<DebugUtilsMessengerImpl>(instance, debug_report_ci);
 }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)
 #endif

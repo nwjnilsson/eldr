@@ -1,7 +1,9 @@
 #pragma once
+#include <eldr/eldr.hpp>
+
 #include <memory>
 
-namespace eldr::app {
+NAMESPACE_BEGIN(eldr::app)
 class KeyboardMouseInput {
 public:
   KeyboardMouseInput();
@@ -75,4 +77,4 @@ private:
   struct KeyboardMouseInputData;
   std::unique_ptr<KeyboardMouseInputData> d_;
 };
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

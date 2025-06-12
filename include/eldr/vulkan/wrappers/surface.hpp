@@ -2,7 +2,7 @@
 #include <eldr/app/fwd.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Surface {
 public:
@@ -18,4 +18,4 @@ private:
   class SurfaceImpl;
   std::unique_ptr<SurfaceImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

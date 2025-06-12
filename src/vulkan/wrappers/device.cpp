@@ -8,8 +8,8 @@
 #include <mutex>
 #include <set>
 
-namespace eldr::vk::wr {
-namespace {
+NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN()
 // -----------------------------------------------------------------------------
 // Helper functions
 // -----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ selectPhysicalDevice(VkInstance                      instance,
   }
   Throw("Failed to find a suitable physical device.");
 }
-} // namespace
+NAMESPACE_END()
 // -----------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -404,4 +404,4 @@ VkPhysicalDevice Device::physical() const { return d_->physical_device_; }
 VkDevice         Device::logical() const { return d_->device_; }
 VmaAllocator     Device::allocator() const { return d_->allocator_; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 
 class Semaphore {
 public:
@@ -17,4 +17,4 @@ private:
   class SemaphoreImpl;
   std::unique_ptr<SemaphoreImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

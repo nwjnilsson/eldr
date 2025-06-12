@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // SamplerImpl
 //------------------------------------------------------------------------------
@@ -72,4 +72,4 @@ Sampler::Sampler(const Device&       device,
 
 VkSampler Sampler::vk() const { return d_->sampler_; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

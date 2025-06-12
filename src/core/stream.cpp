@@ -5,8 +5,8 @@
 
 #include <sstream>
 
-namespace eldr::core {
-namespace detail {
+NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(detail)
 static Stream::EByteOrder byteOrder()
 {
   union {
@@ -21,7 +21,7 @@ static Stream::EByteOrder byteOrder()
   else
     return Stream::EBigEndian;
 }
-} // namespace detail
+NAMESPACE_END(detail)
 
 const Stream::EByteOrder Stream::host_byte_order_ = detail::byteOrder();
 
@@ -130,4 +130,4 @@ std::string Stream::readToken()
 }
 
 void Stream::skip(size_t amount) { seek(tell() + amount); }
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

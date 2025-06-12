@@ -5,10 +5,10 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 using Bitmap = core::Bitmap;
 
-namespace {
+NAMESPACE_BEGIN()
 uint32_t calculateMipLevels(const Bitmap& bitmap)
 {
   return static_cast<uint32_t>(
@@ -50,7 +50,7 @@ ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
   };
   return texture_info;
 }
-} // namespace
+NAMESPACE_END()
 //------------------------------------------------------------------------------
 // GpuImageImpl
 //------------------------------------------------------------------------------
@@ -212,4 +212,4 @@ Image Image::createSwapchainImage(const Device&    device,
 
 VkImage Image::vk() const { return d_ ? d_->image_ : VK_NULL_HANDLE; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

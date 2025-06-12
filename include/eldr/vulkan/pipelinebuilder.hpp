@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 /// @brief Builder class for wr::Pipeline, which combines the pipeline layout
 /// and pipeline into the same object
@@ -75,4 +75,4 @@ private:
   VkPipelineRenderingCreateInfo                render_info_;
   VkFormat color_attachment_format_{ VK_FORMAT_UNDEFINED };
 };
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 void DescriptorWriter::reset()
 {
@@ -90,4 +90,4 @@ void DescriptorWriter::updateSet(const wr::Device& device, VkDescriptorSet set)
                          0,
                          nullptr);
 }
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

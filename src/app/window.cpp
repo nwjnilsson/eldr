@@ -4,13 +4,13 @@
 
 #include <GLFW/glfw3.h>
 
-namespace eldr::app {
-namespace {
+NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN()
 static void glfwErrorCallback(const int error, const char* description)
 {
   Log(core::Error, "GLFW Error {}: {}", error, description);
 }
-} // namespace
+NAMESPACE_END()
 
 Window::Window(const int width, const int height)
   : width_(width), height_(height)
@@ -139,4 +139,4 @@ void Window::waitForFocus() const
   }
 }
 
-} // namespace eldr::app
+NAMESPACE_END(eldr::app)

@@ -1,9 +1,8 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/core/spectrum.hpp>
+#include <eldr/core/core.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/vulkan/engine.hpp>
 
-namespace eldr::render {
+NAMESPACE_BEGIN(eldr::render)
 
 EL_VARIANT Mesh<Float, Spectrum>::Mesh(std::string_view          name,
                                        std::vector<Point3f>&&    positions,
@@ -19,4 +18,4 @@ EL_VARIANT Mesh<Float, Spectrum>::Mesh(std::string_view          name,
 }
 
 EL_INSTANTIATE_CLASS(Mesh)
-} // namespace eldr::render
+NAMESPACE_END(eldr::render)

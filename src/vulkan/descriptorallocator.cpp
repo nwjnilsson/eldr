@@ -5,7 +5,7 @@
 
 using namespace eldr::core;
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 
 DescriptorAllocator::DescriptorAllocator(uint32_t max_sets,
                                          std::span<const PoolSizeRatio> ratios)
@@ -106,4 +106,4 @@ VkDescriptorSet DescriptorAllocator::allocate(
   return ds;
 }
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

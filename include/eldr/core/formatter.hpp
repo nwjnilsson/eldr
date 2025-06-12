@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace eldr::core {
+NAMESPACE_BEGIN(eldr::core)
 class Formatter {
   friend Logger;
 
@@ -62,4 +62,4 @@ protected:
 
   ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassOrFunc };
 };
-} // namespace eldr::core
+NAMESPACE_END(eldr::core)

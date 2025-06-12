@@ -1,12 +1,8 @@
 #pragma once
-#include <vulkan/vulkan_core.h>
-
-#include <fmt/core.h>
-
-namespace eldr::vk::tools {
+NAMESPACE_BEGIN(eldr::vk::tools)
 template <typename T> const char* toCharString(const T& arg);
 template <typename T> std::string toString(const T& arg);
-} // namespace eldr::vk::tools
+NAMESPACE_END(eldr::vk::tools)
 
 #define EL_IMPL_VK_FMT(type, str_func)                                         \
   template <> struct fmt::formatter<type> {                                    \

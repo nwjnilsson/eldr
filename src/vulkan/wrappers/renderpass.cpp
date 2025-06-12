@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <vulkan/vulkan_core.h>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // RenderPassImpl
 //------------------------------------------------------------------------------
@@ -55,4 +55,4 @@ RenderPass::RenderPass(const Device&                      device,
 
 VkRenderPass RenderPass::vk() const { return d_->render_pass_; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

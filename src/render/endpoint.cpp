@@ -1,9 +1,8 @@
-#include <eldr/core/spectrum.hpp>
+#include <eldr/core/core.hpp>
 #include <eldr/eldr.hpp>
-#include <eldr/math/transform.hpp>
 #include <eldr/render/endpoint.hpp>
 
-namespace eldr::render {
+NAMESPACE_BEGIN(eldr::render)
 EL_VARIANT Endpoint<Float, Spectrum>::Endpoint() = default;
 EL_INSTANTIATE_CLASS(Endpoint)
-} // namespace eldr::render
+NAMESPACE_END(eldr::render)

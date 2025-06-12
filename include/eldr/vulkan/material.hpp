@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/math/vector.hpp>
 #include <eldr/vulkan/descriptorwriter.hpp>
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
@@ -7,7 +6,7 @@
 
 enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 
-namespace eldr {
+NAMESPACE_BEGIN(eldr)
 struct MaterialInstance {
   vk::wr::Pipeline* pipeline;
   VkDescriptorSet   descriptor_set;
@@ -51,4 +50,4 @@ private:
   vk::DescriptorWriter writer;
 };
 
-} // namespace eldr
+NAMESPACE_END(eldr)

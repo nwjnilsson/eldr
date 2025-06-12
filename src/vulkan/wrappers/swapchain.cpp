@@ -7,11 +7,11 @@
 
 #include <GLFW/glfw3.h>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
-namespace {
+NAMESPACE_BEGIN()
 VkSurfaceFormatKHR selectSwapSurfaceFormat(
   const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
@@ -56,7 +56,7 @@ VkExtent2D selectSwapExtent(VkExtent2D                      requested_extent,
     return extent;
   }
 }
-} // namespace
+NAMESPACE_END()
 
 //------------------------------------------------------------------------------
 // SwapchainImpl
@@ -247,4 +247,4 @@ VkSwapchainKHR* Swapchain::vkp() const { return &d_->swapchain_; }
 const Image& Swapchain::image(size_t index) const { return images_[index]; }
 Image&       Swapchain::image(size_t index) { return images_[index]; }
 
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

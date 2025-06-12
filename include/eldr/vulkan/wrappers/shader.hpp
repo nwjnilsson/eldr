@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace eldr::vk::wr {
+NAMESPACE_BEGIN(eldr::vk::wr)
 class Shader {
 public:
   Shader();
@@ -32,4 +32,4 @@ private:
   class ShaderImpl;
   std::unique_ptr<ShaderImpl> d_;
 };
-} // namespace eldr::vk::wr
+NAMESPACE_END(eldr::vk::wr)

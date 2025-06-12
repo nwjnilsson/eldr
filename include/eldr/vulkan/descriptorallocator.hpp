@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 struct PoolSizeRatio {
   VkDescriptorType type;
   float            ratio;
@@ -33,4 +33,4 @@ private:
   std::vector<wr::DescriptorPool> ready_pools_;
   uint32_t                        sets_per_pool_;
 };
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)

@@ -1,6 +1,6 @@
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 
-namespace eldr::vk {
+NAMESPACE_BEGIN(eldr::vk)
 DescriptorSetLayoutBuilder&
 DescriptorSetLayoutBuilder::add(uint32_t binding, VkDescriptorType type,
                                 VkShaderStageFlags stage_flags)
@@ -62,4 +62,4 @@ DescriptorSetLayoutBuilder::build(const wr::Device&                device,
   return wr::DescriptorSetLayout{ device, bindings_, create_flags };
 }
 
-} // namespace eldr::vk
+NAMESPACE_END(eldr::vk)
