@@ -11,7 +11,11 @@
 #define EL_STRINGIFY(x) #x
 #define EL_TOSTRING(x) EL_STRINGIFY(x)
 
+#define NAMESPACE_BEGIN(Name) namespace Name {
+#define NAMESPACE_END(Name) }
+
+#include <cstddef>
+#include <cstdint>
 #include <eldr/buildinfo.hpp>
 // #include <eldr/gitinfo.hpp>
-#include <eldr/core/config.hpp>
 #include <eldr/core/platform.hpp>
