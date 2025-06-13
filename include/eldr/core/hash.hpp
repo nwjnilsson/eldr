@@ -6,7 +6,7 @@
 
 #include <functional>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 inline size_t hashCombine(size_t hash1, size_t hash2)
 {
@@ -72,4 +72,4 @@ template <typename T1, typename T2> struct comparator<std::pair<T1, T2>> {
   }
 };
 
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

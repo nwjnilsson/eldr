@@ -13,6 +13,7 @@
 #include <eldr/vulkan/material.hpp>
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
+#include <eldr/vulkan/resourcemanager.hpp>
 #include <eldr/vulkan/sceneresources.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/vulkan.hpp>
@@ -736,12 +737,10 @@ NAMESPACE_END(eldr::vk)
 size_t std::hash<eldr::vk::GpuVertex>::operator()(
   eldr::vk::GpuVertex const& vertex) const
 {
-  using vec3 = glm::vec<3, float>;
-  using vec4 = glm::vec<4, float>;
-  size_t value{ hash<vec3>()(vertex.pos) };
-  value = hashCombine(value, hash<float>()(vertex.uv_x));
-  value = hashCombine(value, hash<vec3>()(vertex.normal));
-  value = hashCombine(value, hash<float>()(vertex.uv_y));
-  value = hashCombine(value, hash<vec4>()(vertex.color));
+  size_t value{ hash<Point3f>()(vertex.pos) };
+  value = eldr::hashCombine(value, hash<float>()(vertex.uv_x));
+  value = eldr::hashCombine(value, hash<Normal3f>()(vertex.normal));
+  value = eldr::hashCombine(value, hash<float>()(vertex.uv_y));
+  value = eldr::hashCombine(value, hash<Vector4f>()(vertex.color));
   return value;
 };

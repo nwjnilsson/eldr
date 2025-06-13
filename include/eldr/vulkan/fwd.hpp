@@ -28,6 +28,8 @@ class DescriptorAllocator;
 
 NAMESPACE_BEGIN(wr)
 class DebugUtilsMessenger;
+template <typename T> class VkObject;
+template <typename T> class VkDeviceObject;
 class Instance;
 class Surface;
 class Device;

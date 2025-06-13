@@ -110,13 +110,30 @@ std::optional<wr::Image> loadImage(const wr::Device& device,
 
 NAMESPACE_END()
 
-SceneResources::SceneResources(const wr::Device&       device,
-                               fg::Asset&              gltf,
-                               const DefaultResources& default_data)
+SceneResources::SceneResources(const wr::Device&  device,
+                               DefaultResources&& default_data)
+  : device(device), default_data(std::move(default_data))
+{
+}
+
+SceneResources::~SceneResources() = default;
+
+void SceneResources::load(fastgltf::Asset& gltf)
 {
   //----------------------------------------------------------------------------
   // Load samplers
   //----------------------------------------------------------------------------
+  // idea: for each sampler:
+  //   pointers.push_back(resource_manager->addSampler(sampler))
+  // pointers[samplerIndex] is the sampler to use
+  // resource manager adds the sampler if it doesn't already exist
+  // should probably return a shared pointer, and that shared pointer should be
+  // stored in the material (?). Materials can share samplers and images. One
+  // material buffer per scene? Index into buffer using material. Material
+  // constants should probably be unique. resourcemanager should have:
+  //  - shared pointers to materials
+  //  - shared pointers to samplers, images
+  //  - shared pointers to material buffers
   for (const fg::Sampler& sampler : gltf.samplers) {
     VkFilter            min_filter{ extractFilter(
       sampler.minFilter.value_or(fg::Filter::Nearest)) };
@@ -153,6 +170,7 @@ SceneResources::SceneResources(const wr::Device&       device,
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
   };
+  // TODO, resize according to gltf and the materials that already exist
   material_descriptors =
     vk::DescriptorAllocator{ static_cast<uint32_t>(gltf.materials.size()),
                              sizes };
@@ -240,7 +258,5 @@ SceneResources::SceneResources(const wr::Device&       device,
   }
   material_buffer.uploadData(scene_material_constants);
 }
-
-SceneResources::~SceneResources() = default;
 
 NAMESPACE_END(eldr::vk)

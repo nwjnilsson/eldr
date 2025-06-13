@@ -21,7 +21,7 @@ enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;
-class RenderableScene;
+class SceneBase;
 EL_VARIANT class Scene;
 // class Sensor;
 // class PhaseFunction;

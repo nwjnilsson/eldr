@@ -6,6 +6,7 @@
 #include <vector>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
+
 struct SwapchainSupportDetails {
   VkSurfaceCapabilitiesKHR        capabilities;
   std::vector<VkSurfaceFormatKHR> formats;

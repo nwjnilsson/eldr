@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/vulkan/fwd.hpp>
 //------------------------------------------------------------------------------
 // vk_mem_alloc.h gives rise to a lot of warnings about unused
 // parameters/variables and missing field initializers, hence the suppression
@@ -23,7 +22,13 @@
 #endif
 // =============================================================================
 #include <eldr/core/logger.hpp>
+
 #include <eldr/vulkan/vktools/format.hpp>
+
+#include <eldr/vulkan/fwd.hpp>
+
+#include <eldr/vulkan/wrappers/vkobject.hpp>
+
 NAMESPACE_BEGIN(eldr::vk)
 constexpr uint32_t max_frames_in_flight{ 2 };
 constexpr uint32_t required_vk_api_version{ VK_API_VERSION_1_3 };

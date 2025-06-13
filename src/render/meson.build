@@ -11,7 +11,6 @@ lib_render = static_library(
     glfw_dep,
     vulkan_dep,
     vma_dep,
-    fastgltf_dep,
     ],
   link_with : [lib_core])
   

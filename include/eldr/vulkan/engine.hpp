@@ -15,7 +15,7 @@ struct Asset;
 
 NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine {
-  EL_IMPORT_CORE_TYPES_PREFIX(float, )
+  EL_IMPORT_CORE_TYPES_SCALAR()
   friend EldrApp; // TODO: I did this to be able to invalidate swapchain from
                   // EldrApp. This is probably not ideal and there should be a
                   // better way to do this
@@ -26,11 +26,6 @@ public:
   ~VulkanEngine();
 
   void updateImGui(std::function<void()> const& lambda);
-
-  // void uploadMesh(std::span<const Point3f> positions,
-  //                 std::span<const Point2f> texcoords,
-  //                 std::span<const Color4f> colors,
-  //                 std::span<const Vec3f>   normals);
 
   // drawFrame should perhaps take a vector of Shapes as argument once all
   // meshes/shapes are registered in the engine

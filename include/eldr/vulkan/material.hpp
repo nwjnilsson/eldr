@@ -19,8 +19,7 @@ struct Material {
 
 struct GltfMetallicRoughness {
   // TODO: import vulkan types with some namespace aliasing
-  using Float = float;
-  EL_IMPORT_CORE_TYPES()
+  EL_IMPORT_CORE_TYPES_SCALAR()
   vk::wr::Pipeline            opaque_pipeline;
   vk::wr::Pipeline            transparent_pipeline;
   vk::wr::DescriptorSetLayout material_layout;

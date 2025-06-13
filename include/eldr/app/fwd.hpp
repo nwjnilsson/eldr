@@ -3,4 +3,5 @@
 NAMESPACE_BEGIN(eldr::app)
 class Window;
 class KeyboardMouseInput;
+class SceneManager;
 NAMESPACE_END(eldr::app)

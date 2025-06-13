@@ -30,30 +30,30 @@ public:
        std::vector<Color4f>&&    colors,
        std::vector<Normal3f>&&   normals,
        std::vector<GeoSurface>&& surfaces);
-  ~Mesh() override = default;
+  ~Mesh() = default;
 
   /// Accessors
   [[nodiscard]] const std::vector<Point3f>& vtxPositions() const
   {
-    return vtx_positions_;
+    return positions_;
   }
 
   /// @brief Get a vector of vtx texture coordinates for this mest
   [[nodiscard]] const std::vector<Point2f>& vtxTexCoords() const
   {
-    return vtx_texcoords_;
+    return texcoords_;
   }
 
   /// @brief Get a vector of vtx colors from this mesh
   [[nodiscard]] const std::vector<Color4f>& vtxColors() const
   {
-    return vtx_colors_;
+    return colors_;
   }
 
   /// @brief Get a vector of vtx normals from this mesh
   [[nodiscard]] const std::vector<Normal3f>& vtxNormals() const
   {
-    return vtx_normals_;
+    return normals_;
   }
 
   /// @brief Get a vector surface info from this mesh
@@ -63,10 +63,10 @@ public:
   }
 
 private:
-  std::vector<Point3f>    vtx_positions_;
-  std::vector<Point2f>    vtx_texcoords_;
-  std::vector<Color4f>    vtx_colors_;
-  std::vector<Normal3f>   vtx_normals_;
+  std::vector<Point3f>    positions_;
+  std::vector<Point2f>    texcoords_;
+  std::vector<Color4f>    colors_;
+  std::vector<Normal3f>   normals_;
   std::vector<GeoSurface> surfaces_;
 
   // std::optional<vk::wr::GpuBuffer>

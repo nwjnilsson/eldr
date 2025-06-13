@@ -1,0 +1,9 @@
+When loading multiple gltfs into a scene, additional vulkan scene resources need
+to be appended, i.e descriptor allocators need to be resized and new buffers are
+needed. Also need to deal with gltf sampler indices appropriately, as the indices
+refer to samplers within the gltf itself, but they will be offset by the samplers
+already loaded, and if an idendical sampler is already loaded, that should be used
+instead.
+
+Make all wrapper objects into vkdeviceobjects. Get rid of some namespaces,
+"eldr" is pretty much enough.

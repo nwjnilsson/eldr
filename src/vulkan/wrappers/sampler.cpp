@@ -1,50 +1,22 @@
+#include <eldr/core/hash.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-//------------------------------------------------------------------------------
-// SamplerImpl
-//------------------------------------------------------------------------------
-class Sampler::SamplerImpl {
-public:
-  SamplerImpl(const Device& device, const VkSamplerCreateInfo& ci);
-  ~SamplerImpl();
-  const Device& device_;
-  VkSampler     sampler_{ VK_NULL_HANDLE };
-};
+Sampler::Sampler()                              = default;
+Sampler::Sampler(Sampler&&) noexcept            = default;
+Sampler& Sampler::operator=(Sampler&&) noexcept = default;
 
-Sampler::SamplerImpl::SamplerImpl(const Device&              device,
-                                  const VkSamplerCreateInfo& ci)
-  : device_(device)
-{
-  if (const VkResult result{
-        vkCreateSampler(device.logical(), &ci, nullptr, &sampler_) };
-      result != VK_SUCCESS) {
-    Throw("Failed to create sampler! ({})", result);
-  }
-}
-
-Sampler::SamplerImpl::~SamplerImpl()
-{
-  vkDestroySampler(device_.logical(), sampler_, nullptr);
-}
-
-//------------------------------------------------------------------------------
-// Sampler
-//------------------------------------------------------------------------------
-Sampler::Sampler()                     = default;
-Sampler::Sampler(Sampler&&) noexcept   = default;
-Sampler::~Sampler()                    = default;
-Sampler& Sampler::operator=(Sampler&&) = default;
-
-Sampler::Sampler(const Device&       device,
+Sampler::Sampler(std::string_view    name,
+                 const Device*       device,
                  VkFilter            mag_filter,
                  VkFilter            min_filter,
                  VkSamplerMipmapMode mipmap_mode,
                  uint32_t            mip_levels)
+  : Base(name, device)
 {
-  VkPhysicalDeviceProperties props{};
-  vkGetPhysicalDeviceProperties(device.physical(), &props);
+  VkPhysicalDeviceProperties props;
+  vkGetPhysicalDeviceProperties(device->physical(), &props);
 
   const VkSamplerCreateInfo sampler_info{
     .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -67,9 +39,29 @@ Sampler::Sampler(const Device&       device,
     .unnormalizedCoordinates = VK_FALSE,
   };
 
-  d_ = std::make_unique<SamplerImpl>(device, sampler_info);
+  if (const VkResult result{
+        vkCreateSampler(device->logical(), &sampler_info, nullptr, vkp()) };
+      result != VK_SUCCESS) {
+    Throw("Failed to create sampler! ({})", result);
+  }
 }
 
-VkSampler Sampler::vk() const { return d_->sampler_; }
+Sampler::~Sampler() { vkDestroySampler(device_->logical(), vk(), nullptr); };
+
+size_t hash(Sampler const& s)
+{
+  size_t value{ eldr::hash<std::string>(s.name()) };
+  value = hashCombine(value, eldr::hash<VkDevice>(s.device_->logical()));
+  value = hashCombine(value, eldr::hash<VkFilter>(s.min_filter_));
+  value = hashCombine(value, eldr::hash<VkFilter>(s.mag_filter_));
+  value = hashCombine(value, eldr::hash<VkSamplerMipmapMode>(s.mipmap_mode_));
+  value = hashCombine(value, eldr::hash<uint32_t>(s.mip_levels_));
+  return value;
+};
 
 NAMESPACE_END(eldr::vk::wr)
+size_t std::hash<eldr::vk::wr::Sampler>::operator()(
+  eldr::vk::wr::Sampler const& sampler) const
+{
+  return eldr::vk::wr::hash(sampler);
+};

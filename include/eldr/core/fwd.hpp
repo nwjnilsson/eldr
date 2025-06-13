@@ -34,7 +34,6 @@ template <typename Value, size_t Channels>
 struct Color;
 template <typename Point, typename Spectrum> struct Ray;
 
-// TODO: experiment with glm SIMD types and compare performance
 template <typename Float_> struct Aliases {
   using Float = Float_;
 
@@ -90,7 +89,7 @@ template <typename Float_> struct Aliases {
   using Matrix3d = glm::mat<3, 3, Float64>;
   using Matrix4d = glm::mat<4, 4, Float64>;
 
-  using Quat4f = glm::qua<Float>; // TODO: wrap
+  using Quat4f = glm::qua<Float>;
   using Quat4d = glm::qua<Float64>;
 
   using Color1f = Color<Float, 1>;
@@ -164,3 +163,5 @@ NAMESPACE_END(eldr::core)
 #define EL_USING_MEMBERS(...) EL_MAP(__EL_USING_MEMBERS_MACRO__, __VA_ARGS__)
 
 #define EL_IMPORT_CORE_TYPES() EL_IMPORT_CORE_TYPES_PREFIX(Float, )
+
+#define EL_IMPORT_CORE_TYPES_SCALAR() EL_IMPORT_CORE_TYPES_PREFIX(float, )

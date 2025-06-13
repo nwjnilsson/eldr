@@ -3,11 +3,13 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class Sampler {
+class Sampler : public VkDeviceObject<VkSampler> {
+  using Base = VkDeviceObject<VkSampler>;
 
 public:
   Sampler();
-  Sampler(const Device&,
+  Sampler(std::string_view name,
+          Device const*,
           VkFilter            mag_filter,
           VkFilter            min_filter,
           VkSamplerMipmapMode mipmap_mode,
@@ -15,12 +17,20 @@ public:
   Sampler(Sampler&&) noexcept;
   ~Sampler();
 
-  Sampler& operator=(Sampler&&);
+  Sampler& operator=(Sampler&&) noexcept;
 
-  [[nodiscard]] VkSampler vk() const;
+  friend size_t hash(Sampler const&);
 
 private:
-  class SamplerImpl;
-  std::unique_ptr<SamplerImpl> d_;
+  VkFilter            mag_filter_;
+  VkFilter            min_filter_;
+  VkSamplerMipmapMode mipmap_mode_;
+  uint32_t            mip_levels_;
 };
+bool operator==(Sampler const&, Sampler const&);
+
 NAMESPACE_END(eldr::vk::wr)
+
+template <> struct std::hash<eldr::vk::wr::Sampler> {
+  size_t operator()(eldr::vk::wr::Sampler const& sampler) const;
+};

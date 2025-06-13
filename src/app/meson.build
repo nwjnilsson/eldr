@@ -10,5 +10,6 @@ lib_app = static_library('lib-app',
   dependencies : [
     glfw_dep,
     imgui_dep,
+    fastgltf_dep,
     ],
   link_with : [lib_engine, lib_render])

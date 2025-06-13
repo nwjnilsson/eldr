@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/app/fwd.hpp>
 #include <eldr/math/math.hpp>
 #include <eldr/render/fwd.hpp>
 #include <eldr/render/mesh.hpp>
@@ -56,26 +57,16 @@ EL_VARIANT struct MeshNode final : public SceneNode {
   void draw(const Transform4f& top_matrix, DrawContext& ctx) const override;
 };
 
-class RenderableScene {};
+class SceneBase {
 
-EL_VARIANT class Scene : public RenderableScene {
+  std::string name_;
+};
+
+EL_VARIANT class Scene : public SceneBase {
   EL_IMPORT_TYPES(Shape, Mesh)
+  friend app::SceneManager;
+
 public:
-  struct SceneInfo {
-    const std::filesystem::path model_path;
-  };
-
-  [[nodiscard]] static std::optional<std::shared_ptr<Scene>>
-  loadGltf(const vk::VulkanEngine& engine, std::filesystem::path file_path);
-
-  [[nodiscard]]
-  static std::optional<std::shared_ptr<Scene>>
-  loadObj(std::filesystem::path file_path);
-
-  [[nodiscard]]
-  static std::optional<std::shared_ptr<Scene>>
-  load(const vk::VulkanEngine& engine, const SceneInfo&);
-
   void draw(DrawContext& ctx) const;
 
   std::unordered_map<std::string, std::shared_ptr<Mesh>>  meshes_;
@@ -84,11 +75,6 @@ public:
   std::unordered_map<std::string, std::shared_ptr<SceneNode>> nodes_;
   std::vector<std::shared_ptr<SceneNode>>                     top_nodes_;
 
-  // TODO: keep or move everything vulkan related to engine? loading a scene can
-  // "register" the scene in the engine, and in the scene's desctructor, one
-  // would unregister the scene. Materials could be added in the same way, thus
-  // decoupling vulkan stuff from material struct
-  std::unique_ptr<vk::SceneResources> vk_resources_;
 
   // std::vector<Emitter> emitters_;
   // std::vector<SceneNode> scene_;

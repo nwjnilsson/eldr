@@ -27,10 +27,10 @@ struct SceneResources {
     GltfMetallicRoughness* metal_rough_material;
   };
 
-  SceneResources(const wr::Device& device,
-                 fastgltf::Asset&,
-                 const DefaultResources&);
+  SceneResources(const wr::Device& device, DefaultResources&&);
   ~SceneResources();
+
+  void load(fastgltf::Asset&);
 
   DescriptorAllocator      material_descriptors;
   std::vector<wr::Sampler> samplers;
@@ -39,5 +39,9 @@ struct SceneResources {
   // std::unordered_map<std::string, std::shared_ptr<Material>> materials_;
   std::vector<std::shared_ptr<Material>>                   materials;
   vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
+
+private:
+  const wr::Device& device;
+  DefaultResources  default_data;
 };
 NAMESPACE_END(eldr::vk)

@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/core/fwd.hpp>
 #include <eldr/math/glm.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 
