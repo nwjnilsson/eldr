@@ -26,7 +26,7 @@ src = [
   'material.cpp',
   'pipelinebuilder.cpp',
   'rendergraph.cpp',
-  'sceneresources.cpp',
+  'resourcemanager.cpp',
   ]
 
 

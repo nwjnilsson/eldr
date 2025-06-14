@@ -1,9 +1,8 @@
 #pragma once
-#include <eldr/vulkan/descriptorallocator.hpp>
 #include <eldr/vulkan/fwd.hpp>
-#include <eldr/vulkan/material.hpp>
 
 #include <filesystem>
+#include <optional>
 
 NAMESPACE_BEGIN(fastgltf)
 struct Sampler;
