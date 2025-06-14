@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 class Bitmap {
   using Float = float;
@@ -181,10 +181,8 @@ extern std::ostream& operator<<(std::ostream&              os,
                                 const Bitmap::PixelFormat& value);
 extern std::ostream& operator<<(std::ostream&             os,
                                 const Bitmap::FileFormat& value);
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)
 template <>
-struct fmt::formatter<eldr::core::Bitmap::PixelFormat>
-  : fmt::ostream_formatter {};
+struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
 template <>
-struct fmt::formatter<eldr::core::Bitmap::FileFormat> : fmt::ostream_formatter {
-};
+struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};

@@ -8,7 +8,7 @@ Sampler::Sampler(Sampler&&) noexcept            = default;
 Sampler& Sampler::operator=(Sampler&&) noexcept = default;
 
 Sampler::Sampler(std::string_view    name,
-                 const Device*       device,
+                 const Device&       device,
                  VkFilter            mag_filter,
                  VkFilter            min_filter,
                  VkSamplerMipmapMode mipmap_mode,
@@ -48,20 +48,27 @@ Sampler::Sampler(std::string_view    name,
 
 Sampler::~Sampler() { vkDestroySampler(device_->logical(), vk(), nullptr); };
 
-size_t hash(Sampler const& s)
-{
-  size_t value{ eldr::hash<std::string>(s.name()) };
-  value = hashCombine(value, eldr::hash<VkDevice>(s.device_->logical()));
-  value = hashCombine(value, eldr::hash<VkFilter>(s.min_filter_));
-  value = hashCombine(value, eldr::hash<VkFilter>(s.mag_filter_));
-  value = hashCombine(value, eldr::hash<VkSamplerMipmapMode>(s.mipmap_mode_));
-  value = hashCombine(value, eldr::hash<uint32_t>(s.mip_levels_));
-  return value;
-};
+// size_t hash(Sampler const& s)
+// {
+//   size_t value{ eldr::hash<std::string>(s.name()) };
+//   value = hashCombine(value, eldr::hash<VkDevice>(s.device_->logical()));
+//   value = hashCombine(value, eldr::hash<VkFilter>(s.min_filter_));
+//   value = hashCombine(value, eldr::hash<VkFilter>(s.mag_filter_));
+//   value = hashCombine(value,
+//   eldr::hash<VkSamplerMipmapMode>(s.mipmap_mode_)); value =
+//   hashCombine(value, eldr::hash<uint32_t>(s.mip_levels_)); return value;
+// };
+
+// bool Sampler::operator==(Sampler const& o)
+// {
+//   return name() == o.name() and mag_filter_ == o.mag_filter_ and
+//          min_filter_ == o.min_filter_ and mipmap_mode_ == o.mipmap_mode_ and
+//          mip_levels_ == o.mip_levels_;
+// }
 
 NAMESPACE_END(eldr::vk::wr)
-size_t std::hash<eldr::vk::wr::Sampler>::operator()(
-  eldr::vk::wr::Sampler const& sampler) const
-{
-  return eldr::vk::wr::hash(sampler);
-};
+// size_t std::hash<eldr::vk::wr::Sampler>::operator()(
+//   eldr::vk::wr::Sampler const& sampler) const
+// {
+//   return eldr::vk::wr::hash(sampler);
+// };

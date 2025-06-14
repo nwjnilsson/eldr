@@ -25,7 +25,7 @@ constexpr void expect(C cond, ErrorCode code)
 {
   if constexpr (action == ErrorAction::Log)
     if (!cond())
-      Log(core::Error,
+      Log(Error,
           "expect() failure: {} ->",
           static_cast<int>(code),
           error_code_name[static_cast<int>(code)]);

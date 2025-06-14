@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 
 // TODO: decide how to deal with materials. I think an enumeration like this
 // could be of use for the Vulkan side of things (selecting pipeline etc) but
@@ -79,4 +79,4 @@ private:
 // template <>
 // std::optional<std::vector<std::shared_ptr<Mesh>>>
 // Mesh::loadObj<Mesh>(vk::VulkanEngine*, std::filesystem::path);
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

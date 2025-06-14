@@ -36,8 +36,9 @@
 #include <memory>
 #include <string>
 
-using namespace eldr::core;
 using namespace eldr::vk::wr;
+namespace fg = fastgltf;
+namespace fs = std::filesystem;
 
 NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
@@ -63,7 +64,7 @@ struct GpuSceneData {
   Vector4f    sunlight_color;
 };
 struct GpuModelData {
-  core::Aliases<float>::Transform4f model_mat;
+  CoreAliases<float>::Transform4f model_mat;
 };
 struct FrameData {
   DescriptorAllocator  descriptors;
@@ -111,24 +112,19 @@ struct VulkanEngine::EngineData {
                                // rearranged
   std::vector<FrameData> frames_in_flight;
 
+  ResourceManager manager;
   // The data below is experimental, default data
-  DescriptorSetLayout scene_data_descriptor_layout;
-  DescriptorSetLayout model_data_descriptor_layout;
-  // DescriptorSetLayout   viking_model_descriptor_layout;
+  // TODO: move to resourcemanager?
+  DescriptorSetLayout   scene_data_descriptor_layout;
+  DescriptorSetLayout   model_data_descriptor_layout;
   GltfMetallicRoughness metal_rough_material;
-  MaterialInstance      default_material_data;
-
-  Image white_texture;
-  Image error_texture;
-
-  Image   viking_texture;
-  Sampler default_sampler_linear;
+  // MaterialInstance      default_material_data;
 };
 
 // -----------------------------------------------------------------------------
 // Engine
 // -----------------------------------------------------------------------------
-VulkanEngine::VulkanEngine(const app::Window& window)
+VulkanEngine::VulkanEngine(const Window& window)
   : window_(window), d_(std::make_unique<EngineData>()),
     s_(std::make_unique<Settings>())
 {
@@ -177,8 +173,9 @@ VulkanEngine::VulkanEngine(const app::Window& window)
   // ---------------------------------------------------------------------------
   // Create swapchain
   // ---------------------------------------------------------------------------
-  d_->swapchain = Swapchain(
-    d_->device, d_->surface, VkExtent2D{ window_.width(), window_.height() });
+  d_->swapchain = Swapchain{ d_->device,
+                             d_->surface,
+                             VkExtent2D{ window_.width(), window_.height() } };
   // ---------------------------------------------------------------------------
   // Load textures and shaders
   // ---------------------------------------------------------------------------
@@ -200,8 +197,9 @@ VulkanEngine::VulkanEngine(const app::Window& window)
   // ---------------------------------------------------------------------------
   // Init default data
   // ---------------------------------------------------------------------------
-  initDefaultData();
-  buildMaterialPipelines(d_->metal_rough_material);
+  GltfMetallicRoughness default_material;
+  buildMaterialPipelines(default_material);
+  d_->manager = ResourceManager{ d_->device, std::move(default_material) };
 
   //  ---------------------------------------------------------------------------
   //  Create render graph
@@ -290,25 +288,7 @@ void VulkanEngine::initDescriptors()
   // d_->viking_model_descriptor_layout = layout_builder.build(d_->device, 0);
 }
 
-void VulkanEngine::initDefaultData()
-{
-  const Device& device{ d_->device };
-  // Create default white texture
-  d_->white_texture = Image{ device, Bitmap::createDefaultWhite() };
-
-  // Create default checkerboard error texture
-  d_->error_texture = Image{ device, Bitmap::createCheckerboard() };
-
-  // Create default linear sampler
-  d_->default_sampler_linear = Sampler{ device,
-                                        VK_FILTER_LINEAR,
-                                        VK_FILTER_LINEAR,
-                                        VK_SAMPLER_MIPMAP_MODE_LINEAR,
-                                        d_->white_texture.mipLevels() };
-}
-
-EL_VARIANT void
-VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
+EL_VARIANT void VulkanEngine::updateBuffers(const Scene<Float, Spectrum>* scene)
 {
   std::vector<GpuVertex>                  vertices;
   std::vector<uint32_t>                   indices;
@@ -318,8 +298,7 @@ VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
   // for (const auto& es : loaded_scenes_) {
   for (const auto& en : scene->nodes_) {
     if (const auto& mesh_node{
-          dynamic_cast<const render::MeshNode<Float, Spectrum>*>(
-            en.second.get()) }) {
+          dynamic_cast<const MeshNode<Float, Spectrum>*>(en.second.get()) }) {
       const auto&  mesh{ mesh_node->mesh };
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
@@ -362,7 +341,7 @@ VulkanEngine::updateBuffers(const render::Scene<Float, Spectrum>* scene)
 }
 // TODO: refactor away specialization
 template void VulkanEngine::updateBuffers<float, Color<float, 3>>(
-  const render::Scene<float, Color<float, 3>>* s);
+  const Scene<float, Color<float, 3>>* s);
 
 void VulkanEngine::setupRenderGraph()
 {
@@ -473,7 +452,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     .updateSet(device, model_descriptor);
 
   for (size_t i{ 0 }; i < surface_count; ++i) {
-    const render::RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
+    const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
     // cb.bindDescriptorSets(descriptors_[frame_index_].descriptorSets(),
     //                       physical.pipelineLayout());
     // VkDescriptorSet viking_descriptor{ frame.descriptors.allocate(
@@ -572,8 +551,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 //   recreateSwapchain();
 // }
 
-EL_VARIANT void
-VulkanEngine::drawFrame(const render::Scene<Float, Spectrum>* scene)
+EL_VARIANT void VulkanEngine::drawFrame(const Scene<Float, Spectrum>* scene)
 {
   auto&       swapchain{ d_->swapchain };
   const auto& device{ d_->device };
@@ -654,21 +632,149 @@ VulkanEngine::drawFrame(const render::Scene<Float, Spectrum>* scene)
   frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
 // TODO: refactor away specialization
-template void VulkanEngine::drawFrame<float, core::Color<float, 3ul>>(
-  const render::Scene<float, core::Color<float, 3ul>>*);
+template void VulkanEngine::drawFrame<float, Color<float, 3ul>>(
+  const Scene<float, Color<float, 3ul>>*);
 
 std::string VulkanEngine::deviceName() const { return d_->device.name(); }
 
 std::unique_ptr<SceneResources>
-VulkanEngine::createSceneResources(fastgltf::Asset& gltf) const
+VulkanEngine::createResources(fg::Asset& gltf) const
 {
-  const SceneResources::DefaultResources default_data{
-    .sampler              = &d_->default_sampler_linear,
-    .white_image          = &d_->white_texture,
-    .error_image          = &d_->error_texture,
-    .metal_rough_material = &d_->metal_rough_material
+  //----------------------------------------------------------------------------
+  // Load samplers
+  //----------------------------------------------------------------------------
+  // idea: for each sampler:
+  //   pointers.push_back(resource_manager->addSampler(sampler))
+  // pointers[samplerIndex] is the sampler to use
+  // resource manager adds the sampler if it doesn't already exist
+  // should probably return a shared pointer, and that shared pointer should be
+  // stored in the material (?). Materials can share samplers and images. One
+  // material buffer per scene? Index into buffer using material. Material
+  // constants should probably be unique. resourcemanager should have:
+  //  - shared pointers to materials
+  //  - shared pointers to samplers, images
+  //  - shared pointers to material buffers
+  std::vector<std::shared_ptr<Sampler>> samplers;
+  for (fg::Sampler const& sampler : gltf.samplers) {
+    samplers.push_back(d_->manager.addSampler(sampler));
+  }
+
+  //----------------------------------------------------------------------------
+  // Load textures
+  //----------------------------------------------------------------------------
+  std::vector<std::shared_ptr<wr::Image>> images;
+  std::vector<size_t>                     image_indices;
+  images.reserve(gltf.images.size() + 1);
+  images.push_back(d_->manager.errorImage());
+  for (fg::Image& image : gltf.images) {
+    auto img = d_->manager.loadImage(
+      gltf, image, util::eldrRootDir() / "assets/textures");
+    if (img.has_value()) {
+      images.push_back(std::move(img.value()));
+      image_indices.push_back(image_indices.size() + 1);
+    }
+    else {
+      image_indices.push_back(0);
+    }
+  }
+
+  //----------------------------------------------------------------------------
+  // Load materials
+  //----------------------------------------------------------------------------
+  // Just an estimate of what will be needed
+  const std::vector<vk::PoolSizeRatio> sizes{
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
   };
-  return std::make_unique<SceneResources>(d_->device, gltf, default_data);
+  // TODO, resize according to gltf and the materials that already exist
+  material_descriptors =
+    vk::DescriptorAllocator{ static_cast<uint32_t>(gltf.materials.size()),
+                             sizes };
+
+  material_buffer = {
+    device,
+    "Material buffer",
+    gltf.materials.size(),
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    // VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+  };
+
+  int                                                   data_index{ 0 };
+  std::vector<GltfMetallicRoughness::MaterialConstants> gltf_material_constants;
+
+  std::vector<std::shared_ptr<Material>> materials;
+  for (const fg::Material& mat : gltf.materials) {
+    materials.push_back(d_->manager.addMaterial(mat));
+    // TODO: somehow add materials
+    GltfMetallicRoughness::MaterialConstants constants;
+    constants.color_factors.x = mat.pbrData.baseColorFactor[0];
+    constants.color_factors.y = mat.pbrData.baseColorFactor[1];
+    constants.color_factors.z = mat.pbrData.baseColorFactor[2];
+    constants.color_factors.w = mat.pbrData.baseColorFactor[3];
+
+    constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
+    constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
+
+    // write material parameters to buffer
+    gltf_material_constants.push_back(constants);
+
+    MaterialPass pass_type = MaterialPass::MainColor;
+    if (mat.alphaMode == fg::AlphaMode::Blend) {
+      pass_type = MaterialPass::Transparent;
+    }
+
+    GltfMetallicRoughness::Resources material_resources{
+      // default the material textures
+      .color_texture       = d_->manager.errorImage(),
+      .color_sampler       = d_->manager.defaultSampler(),
+      .metal_rough_texture = d_->manager.errorImage(),
+      .metal_rough_sampler = d_->manager.defaultSampler(),
+
+      // set the uniform buffer for the material data
+      .data_buffer = &material_buffer,
+      .data_index  = static_cast<size_t>(data_index),
+    };
+    // -------------------------------------------------------------------------
+    // Color textures
+    // -------------------------------------------------------------------------
+    if (mat.pbrData.baseColorTexture.has_value()) {
+      size_t color_img =
+        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
+          .imageIndex.value();
+      size_t sampler =
+        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
+          .samplerIndex.value();
+
+      material_resources.color_texture = images[image_indices[color_img]];
+      material_resources.color_sampler = samplers[sampler];
+    }
+    // -------------------------------------------------------------------------
+    // Metallic roughness
+    // -------------------------------------------------------------------------
+    if (mat.pbrData.metallicRoughnessTexture.has_value()) {
+      size_t img =
+        gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
+          .imageIndex.value();
+      size_t sampler =
+        gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
+          .samplerIndex.value();
+      material_resources.metal_rough_texture = &images[image_indices[img]];
+      material_resources.metal_rough_sampler = &samplers[sampler];
+    }
+    // build material
+    auto material = std::make_shared<Material>();
+    this->materials.push_back(material);
+    // const auto res = materials.insert(std::make_pair(mat.name, material));
+    //  if (unlikely(not res.second)) {
+    //    Log(Warn, "Scene contains duplicate material name ({}).", mat.name);
+    //  }
+    material->data = default_data.metal_rough_material->writeMaterial(
+      device, pass_type, material_resources, material_descriptors);
+
+    data_index++;
+  }
+  material_buffer.uploaddata(gltf_material_constants);
 }
 
 void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)

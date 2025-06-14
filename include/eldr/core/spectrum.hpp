@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/arrays/arraygeneric.hpp>
 #include <eldr/eldr.hpp>
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 /// Spectrum base type
 template <typename _Val, size_t _Size> struct Spectrum : glm::vec<_Size, _Val> {
   using Base = glm::vec<_Size, _Val>;
@@ -33,4 +33,4 @@ struct Color : Spectrum<_Val, _Channels> {
   EL_ARRAY_IMPORT(Color, Base)
 };
 
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

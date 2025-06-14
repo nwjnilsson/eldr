@@ -62,8 +62,8 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   // using StokesVector4f  = StokesVector<UnpolarizedSpectrum>;
   // using MuellerMatrix4f = MuellerMatrix<UnpolarizedSpectrum>;
 
-  using Ray3f = core::Ray<core::Point<Float, 3>, Spectrum>;
-  // using RayDifferential3f = RayDifferential<core::Point<3, Float> /*,
+  using Ray3f = Ray<Point<Float, 3>, Spectrum>;
+  // using RayDifferential3f = RayDifferential<Point<3, Float> /*,
   // Spectrum*/>;
 
   // using PositionSample3f   = PositionSample<Float /*, Spectrum*/>;

@@ -11,9 +11,9 @@
 #include <optional>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 struct RenderObject {
-  using Matrix4f = core::Aliases<float>::Matrix4f;
+  using Matrix4f = CoreAliases<float>::Matrix4f;
   uint32_t index_count;
   uint32_t first_index;
   // vk::BufferResource* index_buffer;
@@ -27,12 +27,12 @@ struct DrawContext {
 };
 
 struct Renderable {
-  using Transform4f = core::Aliases<float>::Transform4f;
+  using Transform4f = CoreAliases<float>::Transform4f;
   virtual void draw(const Transform4f& top_matrix, DrawContext& ctx) const = 0;
 };
 
 struct SceneNode : public Renderable {
-  using Transform4f = core::Aliases<float>::Transform4f;
+  using Transform4f = CoreAliases<float>::Transform4f;
 
   virtual ~SceneNode() = default;
   // parent pointer must be a weak pointer to avoid circular dependencies
@@ -52,7 +52,7 @@ struct SceneNode : public Renderable {
 
 EL_VARIANT struct MeshNode final : public SceneNode {
   // inline MeshNode(std::shared_ptr<Mesh> s) : mesh(s) {};
-  using Transform4f = core::Aliases<float>::Transform4f;
+  using Transform4f = CoreAliases<float>::Transform4f;
   std::shared_ptr<Mesh<Float, Spectrum>> mesh;
   void draw(const Transform4f& top_matrix, DrawContext& ctx) const override;
 };
@@ -64,7 +64,7 @@ class SceneBase {
 
 EL_VARIANT class Scene : public SceneBase {
   EL_IMPORT_TYPES(Shape, Mesh)
-  friend app::SceneManager;
+  friend SceneManager;
 
 public:
   void draw(DrawContext& ctx) const;
@@ -75,9 +75,8 @@ public:
   std::unordered_map<std::string, std::shared_ptr<SceneNode>> nodes_;
   std::vector<std::shared_ptr<SceneNode>>                     top_nodes_;
 
-
   // std::vector<Emitter> emitters_;
   // std::vector<SceneNode> scene_;
   //  std::vector<Sensor> sensors_;
 };
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

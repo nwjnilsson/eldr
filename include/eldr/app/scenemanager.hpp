@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 
 class SceneManager {
   EL_IMPORT_CORE_TYPES_SCALAR()
@@ -40,4 +40,4 @@ private:
   std::unordered_map<std::string, render::SceneBase> scenes_;
   std::unique_ptr<vk::SceneResources>                vk_resources_;
 };
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

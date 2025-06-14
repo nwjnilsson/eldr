@@ -1,7 +1,6 @@
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
-using namespace eldr::core;
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------

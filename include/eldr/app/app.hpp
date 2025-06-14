@@ -14,7 +14,7 @@ NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine;
 }
 // -----------------------------------------------------------------------------
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 class App {
   const std::filesystem::path model_path = "assets/models/Suzanne.gltf";
 
@@ -67,7 +67,7 @@ private:
   std::unique_ptr<vk::VulkanEngine> vk_engine_;
 
   float           frame_time_{};
-  core::StopWatch stop_watch_{};
+  StopWatch stop_watch_{};
 };
 
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

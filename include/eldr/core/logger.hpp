@@ -8,7 +8,7 @@
 
 #include <memory>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 enum LogLevel : int {
   Trace,    /// Verbose logging
@@ -104,7 +104,7 @@ static void Log(LogLevel                    level,
                 fmt::format_string<Args...> fmt,
                 Args&&... args)
 {
-  Logger* logger{ eldr::core::Thread::thread()->logger() };
+  Logger* logger{ eldr::Thread::thread()->logger() };
   if (logger && level >= logger->logLevel()) {
     logger->log(level,
                 class_,
@@ -115,7 +115,7 @@ static void Log(LogLevel                    level,
   }
 }
 NAMESPACE_END(detail)
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)
 
 #if defined(__GNUC__) || defined(__clang__)
 #  define EL_FUNCTION static_cast<const char*>(__PRETTY_FUNCTION__)
@@ -127,17 +127,17 @@ NAMESPACE_END(eldr::core)
 #  define EL_FUNCTION static_cast<const char*>(__func__)
 #endif
 
-#define EL_CLASS eldr::core::detail::className(EL_FUNCTION)
+#define EL_CLASS eldr::detail::className(EL_FUNCTION)
 
 #define Log(level, ...)                                                        \
   do {                                                                         \
-    eldr::core::detail::Log(                                                   \
+    eldr::detail::Log(                                                   \
       level, EL_CLASS, __func__, __FILE__, __LINE__, ##__VA_ARGS__);           \
   } while (0)
 
 #define Throw(...)                                                             \
   do {                                                                         \
-    eldr::core::detail::Throw(                                                 \
+    eldr::detail::Throw(                                                 \
       EL_CLASS, __func__, __FILE__, __LINE__, fmt::format(__VA_ARGS__));       \
   } while (0)
 

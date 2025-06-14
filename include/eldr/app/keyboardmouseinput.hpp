@@ -3,7 +3,7 @@
 
 #include <memory>
 
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 class KeyboardMouseInput {
 public:
   KeyboardMouseInput();
@@ -77,4 +77,4 @@ private:
   struct KeyboardMouseInputData;
   std::unique_ptr<KeyboardMouseInputData> d_;
 };
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

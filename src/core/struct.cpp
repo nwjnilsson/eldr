@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 Struct::Struct(bool pack, ByteOrder byte_order)
   : pack_(pack), byte_order_(byte_order)
 {
@@ -267,4 +267,4 @@ size_t hash(const Struct& s)
   return hashCombine(hashCombine(hash(s.fields_), hash(s.pack_)),
                      hash(s.byte_order_));
 }
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

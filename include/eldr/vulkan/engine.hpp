@@ -22,18 +22,18 @@ class VulkanEngine {
 
 public:
   VulkanEngine() = delete;
-  VulkanEngine(const app::Window& window);
+  VulkanEngine(const Window& window);
   ~VulkanEngine();
 
   void updateImGui(std::function<void()> const& lambda);
 
   // drawFrame should perhaps take a vector of Shapes as argument once all
   // meshes/shapes are registered in the engine
-  EL_VARIANT void drawFrame(const render::Scene<Float, Spectrum>* scene);
+  EL_VARIANT void drawFrame(const Scene<Float, Spectrum>* scene);
 
   [[nodiscard]] std::string deviceName() const;
   [[nodiscard]] std::unique_ptr<SceneResources>
-  createSceneResources(fastgltf::Asset&) const;
+  createResources(fastgltf::Asset&) const;
 
   void buildMaterialPipelines(GltfMetallicRoughness& material);
 
@@ -49,27 +49,23 @@ private:
   void            createCommandBuffers();
   void            setupRenderGraph();
   void            recreateSwapchain();
-  EL_VARIANT void updateBuffers(const render::Scene<Float, Spectrum>*);
+  EL_VARIANT void updateBuffers(const Scene<Float, Spectrum>*);
   void            updateScene(uint32_t current_image);
   void            drawGeometry(const wr::CommandBuffer& cb);
 
 private:
-  const app::Window& window_;
+  const Window& window_;
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
   uint32_t frame_index_{ 0 };
 
-  render::DrawContext main_draw_context_;
+  DrawContext main_draw_context_;
 
-  // Hide vulkan implementation details to avoid pulling in every single vulkan
-  // related type when including engine.hpp
   struct EngineData;
   std::unique_ptr<EngineData> d_;
   struct Settings;
   std::unique_ptr<Settings> s_;
-
-  // std::unordered_map<std::string, std::shared_ptr<Scene>> loaded_scenes_;
 
   // std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
 };

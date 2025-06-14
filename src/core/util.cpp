@@ -11,7 +11,7 @@
 #  include <unistd.h>
 #endif
 
-NAMESPACE_BEGIN(eldr::core::util)
+NAMESPACE_BEGIN(eldr::util)
 
 std::string infoBuild(int thread_count)
 {
@@ -68,4 +68,4 @@ std::filesystem::path eldrRootDir()
   return std::filesystem::path(root);
 }
 
-NAMESPACE_END(eldr::core::util)
+NAMESPACE_END(eldr::util)

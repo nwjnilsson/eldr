@@ -4,8 +4,6 @@
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 
-using namespace eldr::core;
-
 NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // Instance helpers

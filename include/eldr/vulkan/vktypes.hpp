@@ -13,7 +13,7 @@ struct GpuResourceAllocation {
 };
 
 struct GpuDrawPushConstants {
-  using Transform4f = core::Aliases<float>::Transform4f;
+  using Transform4f = CoreAliases<float>::Transform4f;
   Transform4f     world_transform;
   VkDeviceAddress vertex_buffer;
 };

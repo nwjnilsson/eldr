@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 MemoryStream::MemoryStream(size_t capacity)
   : Stream(), capacity_(0), size_(0), pos_(0), owns_buffer_(true),
@@ -116,4 +116,4 @@ std::string MemoryStream::toString() const
   return oss.str();
 }
 
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

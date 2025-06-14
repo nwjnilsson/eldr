@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 NAMESPACE_BEGIN(detail)
 static Stream::EByteOrder byteOrder()
 {
@@ -130,4 +130,4 @@ std::string Stream::readToken()
 }
 
 void Stream::skip(size_t amount) { seek(tell() + amount); }
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

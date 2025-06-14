@@ -16,7 +16,7 @@ extern "C" {
 #include <memory>
 #include <string>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 Bitmap::Bitmap(std::string_view                name,
                PixelFormat                     px_format,
@@ -815,4 +815,4 @@ std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
   }
   return os;
 }
-}; // namespace eldr::core
+NAMESPACE_END(eldr)

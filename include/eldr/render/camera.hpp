@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/render/sensor.hpp>
 
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 class Camera : public ProjectiveCamera {
 };
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

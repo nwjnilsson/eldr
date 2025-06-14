@@ -6,8 +6,7 @@
 
 #include <imgui.h>
 
-using namespace eldr::core;
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 
 App::App()
   : window_(width, height),
@@ -149,4 +148,4 @@ void App::updateImGui()
     }
   });
 }
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

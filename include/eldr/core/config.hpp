@@ -10,13 +10,13 @@
 
 /// Explicitly instantiate all variants of a "struct" template
 #define EL_INSTANTIATE_STRUCT(Name)                                            \
-  template struct Name<float, core::Color<float, 3>>;                          \
-  template struct Name<float, core::Spectrum<float, 4>>;
+  template struct Name<float, Color<float, 3>>;                          \
+  template struct Name<float, Spectrum<float, 4>>;
 
 /// Explicitly instantiate all variants of a "class" template
 #define EL_INSTANTIATE_CLASS(Name)                                             \
-  template class Name<float, core::Color<float, 3>>;                           \
-  template class Name<float, core::Spectrum<float, 4>>;
+  template class Name<float, Color<float, 3>>;                           \
+  template class Name<float, Spectrum<float, 4>>;
 
 /// Call the variant function "func" for a specific variant "variant"
 #define EL_INVOKE_VARIANT(variant, func, ...)                                  \
@@ -38,10 +38,10 @@ template <typename Float_, typename Spectrum_>
 constexpr const char* get_variant()
 {
   if constexpr (std::is_same_v<Float_, float> &&
-                std::is_same_v<Spectrum_, core::Color<float, 3>>)
+                std::is_same_v<Spectrum_, Color<float, 3>>)
     return "scalar_rgb";
   else if constexpr (std::is_same_v<Float_, float> &&
-                     std::is_same_v<Spectrum_, core::Spectrum<float, 4>>)
+                     std::is_same_v<Spectrum_, Spectrum<float, 4>>)
     return "scalar_spectral";
   else
     return "";

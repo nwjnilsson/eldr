@@ -7,7 +7,7 @@
 using FlagRep = uint32_t;
 using byte_t  = std::byte;
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 class StopWatch;
 class Bitmap;
 class Struct;
@@ -34,7 +34,7 @@ template <typename Value, size_t Channels>
 struct Color;
 template <typename Point, typename Spectrum> struct Ray;
 
-template <typename Float_> struct Aliases {
+template <typename Float_> struct CoreAliases {
   using Float = Float_;
 
   using Int8   = glm::int8_t;
@@ -105,54 +105,54 @@ template <typename Float_> struct Aliases {
   using Transform3d = Matrix3d;
   using Transform4d = Matrix4d;
 };
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)
 
 #define EL_IMPORT_CORE_TYPES_PREFIX(Float_, prefix)                            \
-  using prefix##Aliases     = eldr::core::Aliases<Float_>;                     \
-  using prefix##Vector2i    = typename prefix##Aliases::Vector2i;              \
-  using prefix##Vector3i    = typename prefix##Aliases::Vector3i;              \
-  using prefix##Vector4i    = typename prefix##Aliases::Vector4i;              \
-  using prefix##Vector2u    = typename prefix##Aliases::Vector2u;              \
-  using prefix##Vector3u    = typename prefix##Aliases::Vector3u;              \
-  using prefix##Vector4u    = typename prefix##Aliases::Vector4u;              \
-  using prefix##Vector2f    = typename prefix##Aliases::Vector2f;              \
-  using prefix##Vector3f    = typename prefix##Aliases::Vector3f;              \
-  using prefix##Vector4f    = typename prefix##Aliases::Vector4f;              \
-  using prefix##Vector2d    = typename prefix##Aliases::Vector2d;              \
-  using prefix##Vector3d    = typename prefix##Aliases::Vector3d;              \
-  using prefix##Vector4d    = typename prefix##Aliases::Vector4d;              \
-  using prefix##Normal3f    = typename prefix##Aliases::Normal3f;              \
-  using prefix##Normal3d    = typename prefix##Aliases::Normal3d;              \
-  using prefix##Point2i     = typename prefix##Aliases::Point2i;               \
-  using prefix##Point3i     = typename prefix##Aliases::Point3i;               \
-  using prefix##Point4i     = typename prefix##Aliases::Point4i;               \
-  using prefix##Point2u     = typename prefix##Aliases::Point2u;               \
-  using prefix##Point3u     = typename prefix##Aliases::Point3u;               \
-  using prefix##Point4u     = typename prefix##Aliases::Point4u;               \
-  using prefix##Point2f     = typename prefix##Aliases::Point2f;               \
-  using prefix##Point3f     = typename prefix##Aliases::Point3f;               \
-  using prefix##Point4f     = typename prefix##Aliases::Point4f;               \
-  using prefix##Point2d     = typename prefix##Aliases::Point2d;               \
-  using prefix##Point3d     = typename prefix##Aliases::Point3d;               \
-  using prefix##Point4d     = typename prefix##Aliases::Point4d;               \
-  using prefix##Matrix2f    = typename prefix##Aliases::Matrix2f;              \
-  using prefix##Matrix2d    = typename prefix##Aliases::Matrix2d;              \
-  using prefix##Matrix3f    = typename prefix##Aliases::Matrix3f;              \
-  using prefix##Matrix3d    = typename prefix##Aliases::Matrix3d;              \
-  using prefix##Matrix4f    = typename prefix##Aliases::Matrix4f;              \
-  using prefix##Matrix4d    = typename prefix##Aliases::Matrix4d;              \
-  using prefix##Quat4f      = typename prefix##Aliases::Quat4f;                \
-  using prefix##Quat4d      = typename prefix##Aliases::Quat4d;                \
-  using prefix##Color1f     = typename prefix##Aliases::Color1f;               \
-  using prefix##Color3f     = typename prefix##Aliases::Color3f;               \
-  using prefix##Color4f     = typename prefix##Aliases::Color4f;               \
-  using prefix##Color1d     = typename prefix##Aliases::Color1d;               \
-  using prefix##Color3d     = typename prefix##Aliases::Color3d;               \
-  using prefix##Color4d     = typename prefix##Aliases::Color4d;               \
-  using prefix##Transform3f = typename prefix##Aliases::Transform3f;           \
-  using prefix##Transform4f = typename prefix##Aliases::Transform4f;           \
-  using prefix##Transform3d = typename prefix##Aliases::Transform3d;           \
-  using prefix##Transform4d = typename prefix##Aliases::Transform4d;
+  using prefix##CoreAliases = eldr::CoreAliases<Float_>;                       \
+  using prefix##Vector2i    = typename prefix##CoreAliases::Vector2i;          \
+  using prefix##Vector3i    = typename prefix##CoreAliases::Vector3i;          \
+  using prefix##Vector4i    = typename prefix##CoreAliases::Vector4i;          \
+  using prefix##Vector2u    = typename prefix##CoreAliases::Vector2u;          \
+  using prefix##Vector3u    = typename prefix##CoreAliases::Vector3u;          \
+  using prefix##Vector4u    = typename prefix##CoreAliases::Vector4u;          \
+  using prefix##Vector2f    = typename prefix##CoreAliases::Vector2f;          \
+  using prefix##Vector3f    = typename prefix##CoreAliases::Vector3f;          \
+  using prefix##Vector4f    = typename prefix##CoreAliases::Vector4f;          \
+  using prefix##Vector2d    = typename prefix##CoreAliases::Vector2d;          \
+  using prefix##Vector3d    = typename prefix##CoreAliases::Vector3d;          \
+  using prefix##Vector4d    = typename prefix##CoreAliases::Vector4d;          \
+  using prefix##Normal3f    = typename prefix##CoreAliases::Normal3f;          \
+  using prefix##Normal3d    = typename prefix##CoreAliases::Normal3d;          \
+  using prefix##Point2i     = typename prefix##CoreAliases::Point2i;           \
+  using prefix##Point3i     = typename prefix##CoreAliases::Point3i;           \
+  using prefix##Point4i     = typename prefix##CoreAliases::Point4i;           \
+  using prefix##Point2u     = typename prefix##CoreAliases::Point2u;           \
+  using prefix##Point3u     = typename prefix##CoreAliases::Point3u;           \
+  using prefix##Point4u     = typename prefix##CoreAliases::Point4u;           \
+  using prefix##Point2f     = typename prefix##CoreAliases::Point2f;           \
+  using prefix##Point3f     = typename prefix##CoreAliases::Point3f;           \
+  using prefix##Point4f     = typename prefix##CoreAliases::Point4f;           \
+  using prefix##Point2d     = typename prefix##CoreAliases::Point2d;           \
+  using prefix##Point3d     = typename prefix##CoreAliases::Point3d;           \
+  using prefix##Point4d     = typename prefix##CoreAliases::Point4d;           \
+  using prefix##Matrix2f    = typename prefix##CoreAliases::Matrix2f;          \
+  using prefix##Matrix2d    = typename prefix##CoreAliases::Matrix2d;          \
+  using prefix##Matrix3f    = typename prefix##CoreAliases::Matrix3f;          \
+  using prefix##Matrix3d    = typename prefix##CoreAliases::Matrix3d;          \
+  using prefix##Matrix4f    = typename prefix##CoreAliases::Matrix4f;          \
+  using prefix##Matrix4d    = typename prefix##CoreAliases::Matrix4d;          \
+  using prefix##Quat4f      = typename prefix##CoreAliases::Quat4f;            \
+  using prefix##Quat4d      = typename prefix##CoreAliases::Quat4d;            \
+  using prefix##Color1f     = typename prefix##CoreAliases::Color1f;           \
+  using prefix##Color3f     = typename prefix##CoreAliases::Color3f;           \
+  using prefix##Color4f     = typename prefix##CoreAliases::Color4f;           \
+  using prefix##Color1d     = typename prefix##CoreAliases::Color1d;           \
+  using prefix##Color3d     = typename prefix##CoreAliases::Color3d;           \
+  using prefix##Color4d     = typename prefix##CoreAliases::Color4d;           \
+  using prefix##Transform3f = typename prefix##CoreAliases::Transform3f;       \
+  using prefix##Transform4f = typename prefix##CoreAliases::Transform4f;       \
+  using prefix##Transform3d = typename prefix##CoreAliases::Transform3d;       \
+  using prefix##Transform4d = typename prefix##CoreAliases::Transform4d;
 
 // Variadic macro to import a set of variables from the base class
 #define __EL_USING_TYPES_MACRO__(x) using typename Base::x;

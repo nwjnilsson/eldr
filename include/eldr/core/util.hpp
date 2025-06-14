@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-NAMESPACE_BEGIN(eldr::core::util)
+NAMESPACE_BEGIN(eldr::util)
 
 int terminalWidth();
 
@@ -12,4 +12,4 @@ std::string infoCopyright();
 std::string infoBuild(int thread_count);
 
 std::filesystem::path eldrRootDir();
-NAMESPACE_END(eldr::core::util)
+NAMESPACE_END(eldr::util)

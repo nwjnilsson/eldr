@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 struct Logger::LoggerImpl {
   LogLevel                           error_level{ LogLevel::Error };
   std::unique_ptr<Formatter>         formatter;
@@ -170,4 +170,4 @@ void Throw(const std::string& class_,
 
 NAMESPACE_END(detail)
 
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

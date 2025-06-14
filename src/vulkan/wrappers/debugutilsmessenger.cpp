@@ -3,8 +3,6 @@
 
 #ifdef ELDR_VULKAN_DEBUG_REPORT
 
-using namespace eldr::core;
-
 NAMESPACE_BEGIN(eldr::vk::wr)
 
 //------------------------------------------------------------------------------

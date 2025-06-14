@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 NAMESPACE_BEGIN(detail)
 inline std::ios::openmode iosFlag(FileStream::EMode mode)
@@ -177,4 +177,4 @@ std::string FileStream::toString() const
 
   return oss.str();
 }
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

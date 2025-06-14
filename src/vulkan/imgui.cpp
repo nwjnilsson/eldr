@@ -9,8 +9,6 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/shader.hpp>
 
-using namespace eldr::core;
-
 NAMESPACE_BEGIN(eldr::vk)
 struct ImGuiOverlay::FrameData {
   wr::Buffer<uint32_t>   index_buffer;

@@ -1,6 +1,6 @@
 
 #pragma once
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 template <typename Float> class Sensor : public Endpoint<Float> {
 public:
   ~Sensor();
@@ -24,4 +24,4 @@ private:
   float near_clip_;
   float far_clip_;
 };
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

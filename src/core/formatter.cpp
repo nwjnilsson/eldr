@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <iostream>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 std::string DefaultFormatter::format(const Thread*      thread,
                                      const std::string& class_,
@@ -114,4 +114,4 @@ std::string DefaultFormatter::format(const Thread*      thread,
   }
   return oss.str();
 }
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

@@ -7,7 +7,7 @@ NAMESPACE_BEGIN(eldr::vk::wr)
 class Surface {
 public:
   Surface();
-  Surface(const Instance&, const app::Window&);
+  Surface(const Instance&, const Window&);
   ~Surface();
 
   Surface& operator=(Surface&&);

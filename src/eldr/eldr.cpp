@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-using namespace eldr::core;
+using namespace eldr;
 
 NAMESPACE_BEGIN()
 void help(std::string_view help)
@@ -48,12 +48,12 @@ Running Eldr with the following settings:
 )";
 
   // Run Eldr main app
-  eldr::app::App main_app;
+  eldr::App main_app;
   try {
     main_app.run();
   }
   catch (const std::exception& e) {
-    Log(eldr::core::Critical, "{}", e.what());
+    Log(eldr::Critical, "{}", e.what());
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

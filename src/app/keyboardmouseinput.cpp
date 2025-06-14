@@ -6,7 +6,7 @@
 #include <array>
 #include <shared_mutex>
 
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 struct KeyboardMouseInput::KeyboardMouseInputData {
   std::array<double, 2>                    previous_cursor_pos{ 0, 0 };
   std::array<double, 2>                    current_cursor_pos{ 0, 0 };
@@ -136,4 +136,4 @@ std::array<double, 2> KeyboardMouseInput::calculateCursorPositionDelta()
   return cursor_pos_delta;
 }
 
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

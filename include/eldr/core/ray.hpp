@@ -1,14 +1,14 @@
 #pragma once
 #include <eldr/core/vector.hpp>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 template <typename Point_ /*, Spectrum_*/> struct Ray {
 
   using Point = Point_;
   using Float = arr::value_t<Point>;
   static constexpr size_t Size{ arr::size_v<Point_> };
-  using Vector = eldr::core::Vector<Float, Size>;
+  using Vector = eldr::Vector<Float, Size>;
 
   /// Ray origin
   Point o;
@@ -66,4 +66,4 @@ template <typename Point_ /*, Spectrum_*/> struct Ray {
     return result;
   }
 };
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

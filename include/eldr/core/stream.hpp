@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 NAMESPACE_BEGIN(detail)
 template <typename T, typename SFINAE = void> struct serialization_helper;
 NAMESPACE_END(detail)
@@ -432,4 +432,4 @@ template <typename T> struct serialization_helper<std::set<T>> {
 };
 
 NAMESPACE_END(detail)
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

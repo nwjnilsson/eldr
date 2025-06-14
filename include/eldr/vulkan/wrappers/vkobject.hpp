@@ -36,8 +36,8 @@ public:
   VkDeviceObject& operator=(VkDeviceObject&&) noexcept = default;
 
 protected:
-  VkDeviceObject(std::string_view name, const Device* device)
-    : VkObject(name), device_(device)
+  VkDeviceObject(std::string_view name, const Device& device)
+    : VkObject(name), device_(&device)
   {
   }
   const Device* device_{ nullptr };

@@ -5,7 +5,7 @@
 #include <chrono>
 #include <type_traits>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 class StopWatch {
 public:
   using clock = std::chrono::high_resolution_clock;
@@ -73,4 +73,4 @@ private:
   std::chrono::time_point<clock> init_;
   std::chrono::time_point<clock> latest_;
 };
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

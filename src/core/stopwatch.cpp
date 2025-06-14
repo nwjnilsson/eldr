@@ -2,6 +2,6 @@
 
 // Keeping this .cpp file for now in case I want to extend the stopwatch class.
 // Otherwise everything can be moved to the header.
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 StopWatch::StopWatch() : init_(clock::now()), latest_(init_) {}
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)

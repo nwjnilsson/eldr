@@ -9,7 +9,7 @@ class Sampler : public VkDeviceObject<VkSampler> {
 public:
   Sampler();
   Sampler(std::string_view name,
-          Device const*,
+          Device const&,
           VkFilter            mag_filter,
           VkFilter            min_filter,
           VkSamplerMipmapMode mipmap_mode,
@@ -19,15 +19,15 @@ public:
 
   Sampler& operator=(Sampler&&) noexcept;
 
-  friend size_t hash(Sampler const&);
+  // bool operator==(Sampler const& o);
 
-private:
-  VkFilter            mag_filter_;
-  VkFilter            min_filter_;
-  VkSamplerMipmapMode mipmap_mode_;
-  uint32_t            mip_levels_;
+  // friend size_t hash(Sampler const&);
+  // private:
+  //   VkFilter            mag_filter_;
+  //   VkFilter            min_filter_;
+  //   VkSamplerMipmapMode mipmap_mode_;
+  //   uint32_t            mip_levels_;
 };
-bool operator==(Sampler const&, Sampler const&);
 
 NAMESPACE_END(eldr::vk::wr)
 

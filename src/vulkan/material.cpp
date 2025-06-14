@@ -14,6 +14,7 @@ MaterialInstance GltfMetallicRoughness::writeMaterial(
 {
   MaterialInstance mat_data;
   mat_data.pass_type = pass;
+  mat_data.resources = resources;
   if (pass == MaterialPass::Transparent) {
     mat_data.pipeline = &transparent_pipeline;
   }

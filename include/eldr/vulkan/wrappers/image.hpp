@@ -19,7 +19,7 @@ struct ImageCreateInfo {
 
 class Image {
   using Float  = float;
-  using Bitmap = core::Bitmap;
+  using Bitmap = Bitmap;
   EL_IMPORT_CORE_TYPES();
 
 public:

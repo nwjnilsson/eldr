@@ -7,7 +7,7 @@
 
 struct GLFWwindow;
 
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 class App;
 class Window {
 
@@ -77,4 +77,4 @@ private:
   ScrollFunc      scroll_func_;
 };
 
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

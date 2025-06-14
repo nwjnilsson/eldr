@@ -4,7 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
-NAMESPACE_BEGIN(eldr::app)
+NAMESPACE_BEGIN(eldr)
 NAMESPACE_BEGIN()
 static void glfwErrorCallback(const int error, const char* description)
 {
@@ -139,4 +139,4 @@ void Window::waitForFocus() const
   }
 }
 
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

@@ -15,6 +15,8 @@ public:
   DescriptorAllocator() = default;
   DescriptorAllocator(uint32_t max_sets, std::span<const PoolSizeRatio> ratios);
 
+  void resize(uint32_t max_sets);
+
   void            resetPools();
   void            destroyPools();
   VkDescriptorSet allocate(const wr::Device&              device,

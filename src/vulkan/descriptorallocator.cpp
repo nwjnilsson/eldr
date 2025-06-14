@@ -3,8 +3,6 @@
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-using namespace eldr::core;
-
 NAMESPACE_BEGIN(eldr::vk)
 
 DescriptorAllocator::DescriptorAllocator(uint32_t max_sets,
@@ -12,6 +10,11 @@ DescriptorAllocator::DescriptorAllocator(uint32_t max_sets,
   : ratios_(ratios.begin(), ratios.end()),
     sets_per_pool_(std::min(max_sets, max_sets_limit))
 {
+}
+
+void DescriptorAllocator::resize(uint32_t max_sets)
+{
+  sets_per_pool_ = std::min(std::max(max_sets, sets_per_pool_), max_sets_limit);
 }
 
 wr::DescriptorPool DescriptorAllocator::getPool(const wr::Device& device)

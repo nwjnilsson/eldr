@@ -17,18 +17,16 @@
   struct ElementTraits<Name<float, Size>>                                      \
     : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
 NAMESPACE_BEGIN(fastgltf)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Point, 2)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Point, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Vector, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Normal, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::core::Color, 4)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 2)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Vector, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Normal, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Color, 4)
 NAMESPACE_END(fastgltf)
 
 // TODO: use rapidobj
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
-
-using namespace eldr::core;
 
 NAMESPACE_BEGIN(eldr::render)
 //------------------------------------------------------------------------------

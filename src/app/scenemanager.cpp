@@ -5,9 +5,7 @@
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
 
-NAMESPACE_BEGIN(eldr::app)
-
-using namespace eldr::core;
+NAMESPACE_BEGIN(eldr)
 
 EL_VARIANT
 std::optional<std::vector<render::Mesh<Float, Spectrum>>>
@@ -88,7 +86,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
   // Load vulkan resources (images, samplers, materials)
   //----------------------------------------------------------------------------
   auto scene                             = std::make_shared<Scene>();
-  scene_resources_[active_scene_->name_] = engine.createSceneResources(gltf);
+  scene_resources_[active_scene_->name_] = engine.createResources(gltf);
 
   //----------------------------------------------------------------------------
   // Load meshes
@@ -204,7 +202,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
   //----------------------------------------------------------------------------
   // Load nodes
   //----------------------------------------------------------------------------
-  std::vector<std::shared_ptr<render::SceneNode>> nodes;
+  std::vector<std::shared_ptr<SceneNode>> nodes;
   for (fg::Node& node : gltf.nodes) {
     std::shared_ptr<SceneNode> scene_node;
     if (node.meshIndex.has_value()) {
@@ -363,4 +361,4 @@ Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
 
   return scene;
 }
-NAMESPACE_END(eldr::app)
+NAMESPACE_END(eldr)

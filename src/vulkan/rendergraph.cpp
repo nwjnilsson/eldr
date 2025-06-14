@@ -8,8 +8,6 @@
 
 #include <deque>
 
-using namespace eldr::core;
-
 NAMESPACE_BEGIN(eldr::vk)
 RenderStage& RenderStage::writesTo(const RenderResource* resource)
 {

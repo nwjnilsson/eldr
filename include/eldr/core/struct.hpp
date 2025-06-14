@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 
 enum class StructType {
   // Invalid/unspecified
@@ -82,10 +82,10 @@ enum class StructProperty : FlagRep {
    */
   Alpha = 0x40
 };
-NAMESPACE_END(eldr::core)
-EL_DECLARE_FLAG_SPEC(eldr::core, StructProperty)
+NAMESPACE_END(eldr)
+EL_DECLARE_FLAG_SPEC(eldr, StructProperty)
 
-NAMESPACE_BEGIN(eldr::core)
+NAMESPACE_BEGIN(eldr)
 class Struct {
 public:
   /// Field specifier with size and offset
@@ -271,7 +271,6 @@ protected:
 
 extern std::ostream& operator<<(std::ostream& os, const StructType& type);
 
-NAMESPACE_END(eldr::core)
+NAMESPACE_END(eldr)
 
-template <>
-struct fmt::formatter<eldr::core::StructType> : fmt::ostream_formatter {};
+template <> struct fmt::formatter<eldr::StructType> : fmt::ostream_formatter {};
