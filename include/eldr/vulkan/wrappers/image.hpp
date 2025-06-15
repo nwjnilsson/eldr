@@ -17,10 +17,9 @@ struct ImageCreateInfo {
   VkImageLayout         final_layout{ VK_IMAGE_LAYOUT_UNDEFINED };
 };
 
-class Image {
-  using Float  = float;
-  using Bitmap = Bitmap;
-  EL_IMPORT_CORE_TYPES();
+class Image : public VkAllocatedObject<VkImage> {
+  EL_IMPORT_CORE_TYPES_SCALAR();
+  using Base = VkAllocatedObject<VkImage>;
 
 public:
   Image();
@@ -32,11 +31,9 @@ public:
 
   Image& operator=(Image&&);
 
-  [[nodiscard]] VkImage            vk() const;
-  [[nodiscard]] const std::string& name() const;
-  [[nodiscard]] VkExtent2D         size() const { return size_; }
-  [[nodiscard]] VkFormat           format() const { return format_; }
-  [[nodiscard]] uint32_t           mipLevels() const { return mip_levels_; }
+  [[nodiscard]] VkExtent2D size() const { return size_; }
+  [[nodiscard]] VkFormat   format() const { return format_; }
+  [[nodiscard]] uint32_t   mipLevels() const { return mip_levels_; }
 
   /// @brief Returns the layout of this image
   [[nodiscard]] VkImageLayout layout() const { return layout_; }
@@ -50,8 +47,6 @@ public:
   void setLayout(VkImageLayout new_layout) { layout_ = new_layout; }
 
 protected:
-  std::string name_;
-
   VkExtent2D size_;
   VkFormat   format_;
   uint32_t   mip_levels_{ 1 };
@@ -63,8 +58,6 @@ protected:
   // uint32_t   channels_{ 1 };
 
   ImageView image_view_;
-  class ImageImpl;
-  std::unique_ptr<ImageImpl> d_;
 };
 
 NAMESPACE_END(eldr::vk::wr)

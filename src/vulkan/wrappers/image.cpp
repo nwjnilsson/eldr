@@ -1,12 +1,9 @@
 #include <eldr/core/bitmap.hpp>
 
-#include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-using Bitmap = core::Bitmap;
 
 NAMESPACE_BEGIN()
 uint32_t calculateMipLevels(const Bitmap& bitmap)
@@ -25,7 +22,7 @@ ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
   // Pixel format should be RGBA at this point
   Assert(bitmap.pixelFormat() == Bitmap::PixelFormat::RGBA);
   switch (bitmap.componentFormat()) {
-    case core::StructType::UInt8:
+    case StructType::UInt8:
       if (bitmap.srgbGamma())
         format = VK_FORMAT_R8G8B8A8_SRGB;
       else
@@ -52,56 +49,14 @@ ImageCreateInfo createBitmapTextureCI(const Bitmap& bitmap, uint32_t mip_levels)
 }
 NAMESPACE_END()
 //------------------------------------------------------------------------------
-// GpuImageImpl
-//------------------------------------------------------------------------------
-
-class Image::ImageImpl : public GpuResourceAllocation {
-public:
-  ImageImpl(const Device&                  device,
-            const VkImageCreateInfo&       image_ci,
-            const VmaAllocationCreateInfo& alloc_ci);
-  ImageImpl(const Device&, VkImage); // for swapchain images
-  ~ImageImpl();
-  VkImage image_{ VK_NULL_HANDLE };
-};
-
-Image::ImageImpl::ImageImpl(const Device&                  device,
-                            const VkImageCreateInfo&       image_ci,
-                            const VmaAllocationCreateInfo& alloc_ci)
-  : GpuResourceAllocation(device, {}, {}, {})
-{
-  if (const VkResult result{ vmaCreateImage(device_.allocator(),
-                                            &image_ci,
-                                            &alloc_ci,
-                                            &image_,
-                                            &allocation_,
-                                            &alloc_info_) };
-      result != VK_SUCCESS)
-    Throw("Failed to create image! ({})", result);
-}
-
-Image::ImageImpl::ImageImpl(const Device& device, VkImage image)
-  : GpuResourceAllocation(device, {}, {}, {}), image_(image)
-{
-}
-
-Image::ImageImpl::~ImageImpl()
-{
-  if (allocation_ != VK_NULL_HANDLE) {
-    vmaDestroyImage(device_.allocator(), image_, allocation_);
-  }
-}
-
-//------------------------------------------------------------------------------
 // Image
 //------------------------------------------------------------------------------
 Image::Image()                   = default;
 Image::Image(Image&&) noexcept   = default;
-Image::~Image()                  = default;
 Image& Image::operator=(Image&&) = default;
 
 Image::Image(const Device& device, const ImageCreateInfo& image_info)
-  : name_(image_info.name), size_(image_info.extent),
+  : Base(image_info.name, device), size_(image_info.extent),
     format_(image_info.format), mip_levels_(image_info.mip_levels)
 {
   const VkImageCreateInfo image_ci{
@@ -132,7 +87,15 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
     .pUserData      = {},
     .priority       = {},
   };
-  d_          = std::make_unique<ImageImpl>(device, image_ci, alloc_ci);
+  if (const VkResult result{ vmaCreateImage(device.allocator(),
+                                            &image_ci,
+                                            &alloc_ci,
+                                            vkp(),
+                                            &allocation_,
+                                            &alloc_info_) };
+      result != VK_SUCCESS)
+    Throw("Failed to create image! ({})", result);
+
   image_view_ = ImageView{ device, *this, image_info.aspect_flags };
 
   if (image_info.final_layout != VK_IMAGE_LAYOUT_UNDEFINED) {
@@ -184,6 +147,14 @@ Image::Image(const Device& device, const Bitmap& bitmap)
 {
 }
 
+Image::~Image()
+{
+  // Swapchain images will not have an allocation, don't free those
+  if (vk() and allocation_) {
+    vmaDestroyImage(device().allocator(), vk(), allocation_);
+  }
+}
+
 Image Image::createErrorImage(const Device& device)
 {
   return Image{ device, Bitmap::createCheckerboard() };
@@ -199,9 +170,9 @@ Image Image::createSwapchainImage(const Device&    device,
   image.name_   = name;
   image.size_   = extent;
   image.format_ = format;
-  image.d_      = std::make_unique<ImageImpl>(device, vkimage);
+  image.vk()    = vkimage;
   const ImageViewCreateInfo image_view_ci{
-    .image        = image.d_->image_,
+    .image        = image.vk(),
     .format       = format,
     .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
     .mip_levels   = image.mip_levels_,
@@ -209,7 +180,5 @@ Image Image::createSwapchainImage(const Device&    device,
   image.image_view_ = ImageView{ device, image_view_ci };
   return image;
 }
-
-VkImage Image::vk() const { return d_ ? d_->image_ : VK_NULL_HANDLE; }
 
 NAMESPACE_END(eldr::vk::wr)

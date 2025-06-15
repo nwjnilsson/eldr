@@ -16,7 +16,7 @@ Sampler::Sampler(std::string_view    name,
   : Base(name, device)
 {
   VkPhysicalDeviceProperties props;
-  vkGetPhysicalDeviceProperties(device->physical(), &props);
+  vkGetPhysicalDeviceProperties(device.physical(), &props);
 
   const VkSamplerCreateInfo sampler_info{
     .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -40,13 +40,18 @@ Sampler::Sampler(std::string_view    name,
   };
 
   if (const VkResult result{
-        vkCreateSampler(device->logical(), &sampler_info, nullptr, vkp()) };
+        vkCreateSampler(device.logical(), &sampler_info, nullptr, vkp()) };
       result != VK_SUCCESS) {
     Throw("Failed to create sampler! ({})", result);
   }
 }
 
-Sampler::~Sampler() { vkDestroySampler(device_->logical(), vk(), nullptr); };
+Sampler::~Sampler()
+{
+  if (vk()) {
+    vkDestroySampler(device().logical(), vk(), nullptr);
+  }
+}
 
 // size_t hash(Sampler const& s)
 // {

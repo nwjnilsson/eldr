@@ -5,13 +5,6 @@
 
 // Misc Vulkan types
 NAMESPACE_BEGIN(eldr::vk)
-struct GpuResourceAllocation {
-  const wr::Device&     device_;
-  VmaAllocation         allocation_{ VK_NULL_HANDLE };
-  VmaAllocationInfo     alloc_info_;
-  VkMemoryPropertyFlags mem_flags_;
-};
-
 struct GpuDrawPushConstants {
   using Transform4f = CoreAliases<float>::Transform4f;
   Transform4f     world_transform;

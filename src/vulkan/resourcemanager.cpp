@@ -1,6 +1,7 @@
 #include <eldr/core/bitmap.hpp>
 #include <eldr/core/mstream.hpp>
 #include <eldr/core/util.hpp>
+#include <eldr/vulkan/material.hpp>
 #include <eldr/vulkan/resourcemanager.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
@@ -128,13 +129,13 @@ std::optional<std::shared_ptr<wr::Image>> ResourceManager::loadImage(
                  const fs::path path(filePath.uri.path().begin(),
                                      filePath.uri.path().end());
                  Bitmap         bitmap{ texture_dir / path };
-                 bitmap.setName(image.name);
+                 bitmap.setName(name);
                  newimage = std::make_shared<wr::Image>(device_, bitmap);
                },
                [&](fg::sources::Array& array) {
                  MemoryStream mstream{ array.bytes.data(), array.bytes.size() };
                  Bitmap       bitmap{ &mstream, Bitmap::FileFormat::Auto };
-                 bitmap.setName(image.name);
+                 bitmap.setName(name);
                  newimage = std::make_shared<wr::Image>(device_, bitmap);
                },
                [&](fg::sources::BufferView& view) {
@@ -153,7 +154,7 @@ std::optional<std::shared_ptr<wr::Image>> ResourceManager::loadImage(
                        MemoryStream mstream{ array.bytes.data(),
                                              array.bytes.size() };
                        Bitmap bitmap{ &mstream, Bitmap::FileFormat::Auto };
-                       bitmap.setName(image.name);
+                       bitmap.setName(name);
                        newimage = std::make_shared<wr::Image>(device_, bitmap);
                      } },
                    buffer.data);
