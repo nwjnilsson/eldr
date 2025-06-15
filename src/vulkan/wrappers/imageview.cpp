@@ -29,52 +29,23 @@ VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
 }
 
 NAMESPACE_END()
-//------------------------------------------------------------------------------
-// ImageViewImpl
-//------------------------------------------------------------------------------
-class ImageView::ImageViewImpl {
-public:
-  ImageViewImpl(const Device&                device,
-                const VkImageViewCreateInfo& image_view_ci);
-  ~ImageViewImpl();
-  const Device& device_;
-  VkImageView   image_view_{ VK_NULL_HANDLE };
-};
 
-ImageView::ImageViewImpl::ImageViewImpl(
-  const Device& device, const VkImageViewCreateInfo& image_view_ci)
-  : device_(device)
+EL_VK_IMPL_DEFAULTS(ImageView)
+EL_VK_IMPL_DESTRUCTOR(ImageView)
+ImageView::ImageView(std::string_view           name,
+                     const Device&              device,
+                     const ImageViewCreateInfo& image_view_ci)
+  : Base(name, device), aspect_flags_(image_view_ci.aspect_flags)
 {
-  if (const VkResult result{ vkCreateImageView(
-        device_.logical(), &image_view_ci, nullptr, &image_view_) };
+  const auto view_ci = getVkImageViewCI(image_view_ci);
+  if (const VkResult result{
+        vkCreateImageView(device.logical(), &view_ci, nullptr, &object_) };
       result != VK_SUCCESS)
     Throw("Failed to create image view! ({})", result);
 }
 
-ImageView::ImageViewImpl::~ImageViewImpl()
-{
-  vkDestroyImageView(device_.logical(), image_view_, nullptr);
-}
-
-//------------------------------------------------------------------------------
-// ImageView
-//------------------------------------------------------------------------------
-ImageView::ImageView()                       = default;
-ImageView::ImageView(ImageView&&) noexcept   = default;
-ImageView::~ImageView()                      = default;
-ImageView& ImageView::operator=(ImageView&&) = default;
-
-ImageView::ImageView(const Device&              device,
-                     const ImageViewCreateInfo& image_view_ci)
-  : aspect_flags_(image_view_ci.aspect_flags),
-    d_(std::make_unique<ImageViewImpl>(device, getVkImageViewCI(image_view_ci)))
-{
-}
-
-ImageView::ImageView(const Device&      device,
-                     const Image&       image,
-                     VkImageAspectFlags aspect_flags)
-  : aspect_flags_(aspect_flags)
+ImageView::ImageView(const Image& image, VkImageAspectFlags aspect_flags)
+  : Base(image.name(), image.device()), aspect_flags_(aspect_flags)
 {
   const ImageViewCreateInfo image_view_ci{
     .image        = image.vk(),
@@ -82,8 +53,12 @@ ImageView::ImageView(const Device&      device,
     .aspect_flags = aspect_flags,
     .mip_levels   = image.mipLevels(),
   };
-  d_ = std::make_unique<ImageViewImpl>(device, getVkImageViewCI(image_view_ci));
+
+  const auto view_ci = getVkImageViewCI(image_view_ci);
+  if (const VkResult result{
+        vkCreateImageView(device().logical(), &view_ci, nullptr, &object_) };
+      result != VK_SUCCESS)
+    Throw("Failed to create image view! ({})", result);
 }
 
-VkImageView ImageView::vk() const { return d_->image_view_; }
 NAMESPACE_END(eldr::vk::wr)

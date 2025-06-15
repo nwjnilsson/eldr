@@ -6,7 +6,7 @@
 #include <span>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-class AllocatedBuffer : VkAllocatedObject<VkBuffer> {
+class AllocatedBuffer : public VkAllocatedObject<VkBuffer> {
   using Base = VkAllocatedObject<VkBuffer>;
 
 public:
@@ -14,27 +14,25 @@ public:
   AllocatedBuffer(AllocatedBuffer&&) noexcept;
   virtual ~AllocatedBuffer();
 
-  AllocatedBuffer& operator=(AllocatedBuffer&&) noexcept;
+  AllocatedBuffer& operator=(AllocatedBuffer&&);
 
-  /// @brief Returns the minimum capacity, in bytes, of the buffer.
-  [[nodiscard]] size_t sizeBytes() const { return size_bytes_; }
   /// @brief Returns the size (capacity), in bytes, of the memory allocation.
-  [[nodiscard]] size_t sizeAlloc() const;
+  [[nodiscard]] size_t allocSize() const { return alloc_info_.size; }
+
   /// @brief Returns a VkDeviceAddress for this buffer
   [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
 
 protected:
-  AllocatedBuffer(const Device&            device,
-                  std::string_view         name,
+  AllocatedBuffer(std::string_view         name,
+                  const Device&            device,
                   size_t                   size_bytes,
                   VkBufferUsageFlags       buffer_usage,
                   VmaAllocationCreateFlags host_access,
                   VmaMemoryUsage           mem_usage);
 
-  void uploadData(std::span<const byte_t> src);
+  void uploadData(std::span<const byte_t> src, size_t offset = 0);
 
 protected:
-  size_t                size_bytes_;
   VmaAllocation         allocation_{ VK_NULL_HANDLE };
   VmaAllocationInfo     alloc_info_;
   VkMemoryPropertyFlags mem_flags_;

@@ -14,7 +14,6 @@
 #include <eldr/vulkan/pipelinebuilder.hpp>
 #include <eldr/vulkan/rendergraph.hpp>
 #include <eldr/vulkan/resourcemanager.hpp>
-#include <eldr/vulkan/sceneresources.hpp>
 #include <eldr/vulkan/vktypes.hpp>
 #include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
@@ -107,9 +106,9 @@ struct VulkanEngine::EngineData {
   std::unique_ptr<RenderGraph>  render_graph;
   std::unique_ptr<ImGuiOverlay> imgui_overlay;
   std::vector<Image>            textures;
-  std::vector<Shader>           shaders; // shader module is not needed after
-                               // building pipeline so check if this can be
-                               // rearranged
+  std::vector<ShaderModule>     shaders; // shader module is not needed after
+                                     // building pipeline so check if this can
+                                     // be rearranged
   std::vector<FrameData> frames_in_flight;
 
   ResourceManager manager;
@@ -145,17 +144,18 @@ VulkanEngine::VulkanEngine(const Window& window)
     .apiVersion    = VK_API_VERSION_1_3,
   };
 
-  d_->instance = Instance{ app_info, window_.instanceExtensions() };
+  d_->instance =
+    Instance{ "Main instance", app_info, window_.instanceExtensions() };
   // ---------------------------------------------------------------------------
   // Create debug messenger
   // ---------------------------------------------------------------------------
 #ifdef ELDR_VULKAN_DEBUG_REPORT
-  d_->debug_messenger = DebugUtilsMessenger{ d_->instance };
+  d_->debug_messenger = DebugUtilsMessenger{ "Main debug msg", d_->instance };
 #endif
   // ---------------------------------------------------------------------------
   // Create surface
   // ---------------------------------------------------------------------------
-  d_->surface = Surface{ d_->instance, window_ };
+  d_->surface = Surface{ "Main surface", d_->instance, window_ };
   // ---------------------------------------------------------------------------
   // Create device
   // ---------------------------------------------------------------------------
@@ -168,12 +168,14 @@ VulkanEngine::VulkanEngine(const Window& window)
 #endif
   // Pass log_ pointer to device so that all wrapper objects that have a
   // reference to the device can access the same logger
-  d_->device = Device{ d_->instance, d_->surface, device_extensions };
+  d_->device =
+    Device{ "Main device", d_->instance, d_->surface, device_extensions };
 
   // ---------------------------------------------------------------------------
   // Create swapchain
   // ---------------------------------------------------------------------------
-  d_->swapchain = Swapchain{ d_->device,
+  d_->swapchain = Swapchain{ "Main swapchain",
+                             d_->device,
                              d_->surface,
                              VkExtent2D{ window_.width(), window_.height() } };
   // ---------------------------------------------------------------------------
@@ -231,12 +233,12 @@ void VulkanEngine::loadShaders()
 {
   // TODO: get a list of shaders to load from config or something and load all
   // of them into shaders vector
-  d_->shaders.emplace_back(d_->device,
-                           "default vertex shader",
+  d_->shaders.emplace_back("default vertex shader",
+                           d_->device,
                            "main.vert.spv",
                            VK_SHADER_STAGE_VERTEX_BIT);
-  d_->shaders.emplace_back(d_->device,
-                           "default frag shader",
+  d_->shaders.emplace_back("default frag shader",
+                           d_->device,
                            "main.frag.spv",
                            VK_SHADER_STAGE_FRAGMENT_BIT);
 }
@@ -255,13 +257,13 @@ void VulkanEngine::setupFrameData()
     constexpr size_t elem_count{ 1 };
     d_->frames_in_flight.push_back({
       .descriptors       = DescriptorAllocator{ 1000, frame_sizes },
-      .scene_data_buffer = { d_->device,
-                             "Scene data uniform buffer",
+      .scene_data_buffer = { "Scene data uniform buffer",
+                             d_->device,
                              elem_count,
                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
-      .model_data_buffer = { d_->device,
-                             "Model data uniform buffer",
+      .model_data_buffer = { "Model data uniform buffer",
+                             d_->device,
                              elem_count,
                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
@@ -276,12 +278,14 @@ void VulkanEngine::initDescriptors()
   DescriptorSetLayoutBuilder layout_builder;
   layout_builder.addUniformBuffer(
     0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-  d_->scene_data_descriptor_layout = layout_builder.build(d_->device, 0);
+  d_->scene_data_descriptor_layout =
+    layout_builder.build("Scene data", d_->device, 0);
 
   layout_builder.reset();
 
   layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT);
-  d_->model_data_descriptor_layout = layout_builder.build(d_->device, 0);
+  d_->model_data_descriptor_layout =
+    layout_builder.build("Model data", d_->device, 0);
 
   // layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
   //   .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -325,15 +329,15 @@ EL_VARIANT void VulkanEngine::updateBuffers(const Scene<Float, Spectrum>* scene)
       vertices.size());
 
   d_->index_buffer = {
-    d_->device,
     "index buffer",
+    d_->device,
     indices,
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
   };
 
   d_->vertex_buffer = {
-    d_->device,
     "vertex buffer",
+    d_->device,
     vertices,
     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
       VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
@@ -608,7 +612,7 @@ EL_VARIANT void VulkanEngine::drawFrame(const Scene<Float, Spectrum>* scene)
     .pWaitSemaphores      = swapchain.imageAvailableSemaphore(frame_index_),
     .pWaitDstStageMask    = wait_stages,
     .commandBufferCount   = 1,
-    .pCommandBuffers      = cb.vkp(),
+    .pCommandBuffers      = &cb.vk(),
     .signalSemaphoreCount = 1,
     .pSignalSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
   };
@@ -622,7 +626,7 @@ EL_VARIANT void VulkanEngine::drawFrame(const Scene<Float, Spectrum>* scene)
     .waitSemaphoreCount = 1,
     .pWaitSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
     .swapchainCount     = 1,
-    .pSwapchains        = swapchain.vkp(),
+    .pSwapchains        = &swapchain.vk(),
     .pImageIndices      = &image_index,
     .pResults           = {},
   };
@@ -637,144 +641,10 @@ template void VulkanEngine::drawFrame<float, Color<float, 3ul>>(
 
 std::string VulkanEngine::deviceName() const { return d_->device.name(); }
 
-std::unique_ptr<SceneResources>
+std::vector<const Material*>
 VulkanEngine::createResources(fg::Asset& gltf) const
 {
-  //----------------------------------------------------------------------------
-  // Load samplers
-  //----------------------------------------------------------------------------
-  // idea: for each sampler:
-  //   pointers.push_back(resource_manager->addSampler(sampler))
-  // pointers[samplerIndex] is the sampler to use
-  // resource manager adds the sampler if it doesn't already exist
-  // should probably return a shared pointer, and that shared pointer should be
-  // stored in the material (?). Materials can share samplers and images. One
-  // material buffer per scene? Index into buffer using material. Material
-  // constants should probably be unique. resourcemanager should have:
-  //  - shared pointers to materials
-  //  - shared pointers to samplers, images
-  //  - shared pointers to material buffers
-  std::vector<std::shared_ptr<Sampler>> samplers;
-  for (fg::Sampler const& sampler : gltf.samplers) {
-    samplers.push_back(d_->manager.addSampler(sampler));
-  }
-
-  //----------------------------------------------------------------------------
-  // Load textures
-  //----------------------------------------------------------------------------
-  std::vector<std::shared_ptr<wr::Image>> images;
-  std::vector<size_t>                     image_indices;
-  images.reserve(gltf.images.size() + 1);
-  images.push_back(d_->manager.errorImage());
-  for (fg::Image& image : gltf.images) {
-    auto img = d_->manager.loadImage(
-      gltf, image, util::eldrRootDir() / "assets/textures");
-    if (img.has_value()) {
-      images.push_back(std::move(img.value()));
-      image_indices.push_back(image_indices.size() + 1);
-    }
-    else {
-      image_indices.push_back(0);
-    }
-  }
-
-  //----------------------------------------------------------------------------
-  // Load materials
-  //----------------------------------------------------------------------------
-  // Just an estimate of what will be needed
-  const std::vector<vk::PoolSizeRatio> sizes{
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
-    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
-  };
-  // TODO, resize according to gltf and the materials that already exist
-  material_descriptors =
-    vk::DescriptorAllocator{ static_cast<uint32_t>(gltf.materials.size()),
-                             sizes };
-
-  material_buffer = {
-    device,
-    "Material buffer",
-    gltf.materials.size(),
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    // VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-  };
-
-  int                                                   data_index{ 0 };
-  std::vector<GltfMetallicRoughness::MaterialConstants> gltf_material_constants;
-
-  std::vector<std::shared_ptr<Material>> materials;
-  for (const fg::Material& mat : gltf.materials) {
-    materials.push_back(d_->manager.addMaterial(mat));
-    // TODO: somehow add materials
-    GltfMetallicRoughness::MaterialConstants constants;
-    constants.color_factors.x = mat.pbrData.baseColorFactor[0];
-    constants.color_factors.y = mat.pbrData.baseColorFactor[1];
-    constants.color_factors.z = mat.pbrData.baseColorFactor[2];
-    constants.color_factors.w = mat.pbrData.baseColorFactor[3];
-
-    constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
-    constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
-
-    // write material parameters to buffer
-    gltf_material_constants.push_back(constants);
-
-    MaterialPass pass_type = MaterialPass::MainColor;
-    if (mat.alphaMode == fg::AlphaMode::Blend) {
-      pass_type = MaterialPass::Transparent;
-    }
-
-    GltfMetallicRoughness::Resources material_resources{
-      // default the material textures
-      .color_texture       = d_->manager.errorImage(),
-      .color_sampler       = d_->manager.defaultSampler(),
-      .metal_rough_texture = d_->manager.errorImage(),
-      .metal_rough_sampler = d_->manager.defaultSampler(),
-
-      // set the uniform buffer for the material data
-      .data_buffer = &material_buffer,
-      .data_index  = static_cast<size_t>(data_index),
-    };
-    // -------------------------------------------------------------------------
-    // Color textures
-    // -------------------------------------------------------------------------
-    if (mat.pbrData.baseColorTexture.has_value()) {
-      size_t color_img =
-        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .imageIndex.value();
-      size_t sampler =
-        gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .samplerIndex.value();
-
-      material_resources.color_texture = images[image_indices[color_img]];
-      material_resources.color_sampler = samplers[sampler];
-    }
-    // -------------------------------------------------------------------------
-    // Metallic roughness
-    // -------------------------------------------------------------------------
-    if (mat.pbrData.metallicRoughnessTexture.has_value()) {
-      size_t img =
-        gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
-          .imageIndex.value();
-      size_t sampler =
-        gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
-          .samplerIndex.value();
-      material_resources.metal_rough_texture = &images[image_indices[img]];
-      material_resources.metal_rough_sampler = &samplers[sampler];
-    }
-    // build material
-    auto material = std::make_shared<Material>();
-    this->materials.push_back(material);
-    // const auto res = materials.insert(std::make_pair(mat.name, material));
-    //  if (unlikely(not res.second)) {
-    //    Log(Warn, "Scene contains duplicate material name ({}).", mat.name);
-    //  }
-    material->data = default_data.metal_rough_material->writeMaterial(
-      device, pass_type, material_resources, material_descriptors);
-
-    data_index++;
-  }
-  material_buffer.uploaddata(gltf_material_constants);
+  return d_->manager.load(gltf);
 }
 
 void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
@@ -793,16 +663,16 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
     .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT)
     .addCombinedImageSampler(2, VK_SHADER_STAGE_FRAGMENT_BIT);
 
-  material.material_layout = layout_builder.build(device, 0);
+  material.material_layout = layout_builder.build("Material data", device, 0);
 
-  Shader          vert_shader{ device,
-                      "material vertex shader",
-                      "mesh.vert.spv",
-                      VK_SHADER_STAGE_VERTEX_BIT };
-  Shader          frag_shader{ device,
-                      "material fragment shader",
-                      "mesh.frag.spv",
-                      VK_SHADER_STAGE_FRAGMENT_BIT };
+  ShaderModule    vert_shader{ "material vertex shader",
+                            device,
+                            "mesh.vert.spv",
+                            VK_SHADER_STAGE_VERTEX_BIT };
+  ShaderModule    frag_shader{ "material fragment shader",
+                            device,
+                            "mesh.frag.spv",
+                            VK_SHADER_STAGE_FRAGMENT_BIT };
   PipelineBuilder pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(d_->scene_data_descriptor_layout)
     .addDescriptorSetLayout(material.material_layout)

@@ -48,8 +48,9 @@ PipelineBuilder& PipelineBuilder::setInputTopology(VkPrimitiveTopology topology)
   return *this;
 }
 
-PipelineBuilder& PipelineBuilder::setShaders(const wr::Shader& vertex_shader,
-                                             const wr::Shader& fragment_shader)
+PipelineBuilder&
+PipelineBuilder::setShaders(const wr::ShaderModule& vertex_shader,
+                            const wr::ShaderModule& fragment_shader)
 {
   shader_stages_.clear();
   shader_stages_.push_back({
@@ -57,7 +58,7 @@ PipelineBuilder& PipelineBuilder::setShaders(const wr::Shader& vertex_shader,
     .pNext               = {},
     .flags               = {},
     .stage               = vertex_shader.stage(),
-    .module              = vertex_shader.module(),
+    .module              = vertex_shader.vk(),
     .pName               = vertex_shader.entryPoint().c_str(),
     .pSpecializationInfo = {},
   });
@@ -67,7 +68,7 @@ PipelineBuilder& PipelineBuilder::setShaders(const wr::Shader& vertex_shader,
     .pNext               = {},
     .flags               = {},
     .stage               = fragment_shader.stage(),
-    .module              = fragment_shader.module(),
+    .module              = fragment_shader.vk(),
     .pName               = fragment_shader.entryPoint().c_str(),
     .pSpecializationInfo = {},
   });
@@ -286,6 +287,6 @@ wr::Pipeline PipelineBuilder::build(const wr::Device&           device,
     .basePipelineIndex   = -1,
   };
 
-  return wr::Pipeline{ device, name, pipeline_layout_ci, pipeline_ci };
+  return wr::Pipeline{ name, device, pipeline_layout_ci, pipeline_ci };
 }
 NAMESPACE_END(eldr::vk)

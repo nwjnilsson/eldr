@@ -32,7 +32,7 @@ public:
   EL_VARIANT void drawFrame(const Scene<Float, Spectrum>* scene);
 
   [[nodiscard]] std::string deviceName() const;
-  [[nodiscard]] std::unique_ptr<SceneResources>
+  [[nodiscard]] std::vector<const Material*>
   createResources(fastgltf::Asset&) const;
 
   void buildMaterialPipelines(GltfMetallicRoughness& material);

@@ -54,37 +54,20 @@ bool isLayerSupported(const std::string& layer)
 NAMESPACE_END()
 
 //------------------------------------------------------------------------------
-// InstanceImpl
-//------------------------------------------------------------------------------
-class Instance::InstanceImpl {
-public:
-  InstanceImpl(const VkInstanceCreateInfo& instance_ci);
-  ~InstanceImpl();
-  VkInstance instance_{ VK_NULL_HANDLE };
-};
-
-Instance::InstanceImpl::InstanceImpl(const VkInstanceCreateInfo& instance_ci)
-{
-  if (const VkResult result{
-        vkCreateInstance(&instance_ci, nullptr, &instance_) };
-      result != VK_SUCCESS)
-    Throw("Failed to create instance ({})", result);
-}
-
-Instance::InstanceImpl::~InstanceImpl()
-{
-  vkDestroyInstance(instance_, nullptr);
-}
-
-//------------------------------------------------------------------------------
 // Instance
 //------------------------------------------------------------------------------
-Instance::Instance()                      = default;
-Instance::~Instance()                     = default;
-Instance& Instance::operator=(Instance&&) = default;
+EL_VK_IMPL_DEFAULTS(Instance)
+Instance::~Instance()
+{
+  if (vk()) {
+    vkDestroyInstance(object_, nullptr);
+  }
+}
 
-Instance::Instance(const VkApplicationInfo&   app_info,
+Instance::Instance(std::string_view           name,
+                   const VkApplicationInfo&   app_info,
                    std::vector<const char*>&& extensions)
+  : Base(name)
 {
   Log(Trace, "Initializing Vulkan instance");
   Log(Trace, "Application name: {}", app_info.pApplicationName);
@@ -180,8 +163,10 @@ Instance::Instance(const VkApplicationInfo&   app_info,
   instance_ci.ppEnabledExtensionNames = extensions.data();
 
   // Create instance
-  d_ = std::make_unique<InstanceImpl>(instance_ci);
+  if (const VkResult result{
+        vkCreateInstance(&instance_ci, nullptr, &object_) };
+      result != VK_SUCCESS)
+    Throw("Failed to create instance ({})", result);
 }
 
-VkInstance Instance::vk() const { return d_->instance_; }
 NAMESPACE_END(eldr::vk::wr)

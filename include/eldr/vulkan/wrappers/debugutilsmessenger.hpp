@@ -1,18 +1,15 @@
 #pragma once
-#include <eldr/vulkan/fwd.hpp>
+#include <eldr/vulkan/vulkan.hpp>
 
-#include <memory>
 NAMESPACE_BEGIN(eldr::vk::wr)
-class DebugUtilsMessenger {
-public:
-  DebugUtilsMessenger();
-  DebugUtilsMessenger(const Instance& instance);
-  ~DebugUtilsMessenger();
+class DebugUtilsMessenger : public VkObject<VkDebugUtilsMessengerEXT> {
+  using Base = VkObject<VkDebugUtilsMessengerEXT>;
 
-  DebugUtilsMessenger& operator=(DebugUtilsMessenger&&);
+public:
+  EL_VK_IMPORT_DEFAULTS(DebugUtilsMessenger)
+  DebugUtilsMessenger(std::string_view name, const Instance& instance);
 
 private:
-  class DebugUtilsMessengerImpl;
-  std::unique_ptr<DebugUtilsMessengerImpl> d_;
+  const Instance* instance_{ nullptr };
 };
 NAMESPACE_END(eldr::vk::wr)

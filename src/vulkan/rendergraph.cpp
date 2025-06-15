@@ -626,8 +626,8 @@ void RenderGraph::render(const wr::CommandBuffer& cb, wr::Image& target)
 
         if (new_buffer_needed) {
           // Otherwise build a new GPU buffer
-          physical->buffer_ = { device_,
-                                buffer_resource->name_,
+          physical->buffer_ = { buffer_resource->name_,
+                                device_,
                                 data_size,
                                 buffer_resource->buffer_usage_ };
         }

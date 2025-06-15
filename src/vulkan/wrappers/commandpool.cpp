@@ -3,49 +3,31 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-//------------------------------------------------------------------------------
-// CommandPoolImpl
-//------------------------------------------------------------------------------
-class CommandPool::CommandPoolImpl {
-public:
-  CommandPoolImpl(const Device& device, const VkCommandPoolCreateInfo& pool_ci);
-  ~CommandPoolImpl();
-  const Device& device_;
-  VkCommandPool pool_{ VK_NULL_HANDLE };
-};
-
-CommandPool::CommandPoolImpl::CommandPoolImpl(
-  const Device& device, const VkCommandPoolCreateInfo& pool_ci)
-  : device_(device)
+EL_VK_IMPL_DEFAULTS(CommandPool)
+CommandPool::~CommandPool()
 {
+  if (vk()) {
+    command_buffers_.clear();
+    vkDestroyCommandPool(device().logical(), object_, nullptr);
+  }
+}
+
+CommandPool::CommandPool(std::string_view               name,
+                         const Device&                  device,
+                         const VkCommandPoolCreateFlags flags)
+  : Base(name, device)
+{
+  const VkCommandPoolCreateInfo pool_ci{
+    .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    .pNext            = {},
+    .flags            = flags,
+    .queueFamilyIndex = device.queueFamilyIndices().graphics_family.value(),
+  };
+
   if (const VkResult result{
-        vkCreateCommandPool(device_.logical(), &pool_ci, nullptr, &pool_) };
+        vkCreateCommandPool(device.logical(), &pool_ci, nullptr, &object_) };
       result != VK_SUCCESS)
     Throw("Failed to create command pool ({})", result);
-}
-
-CommandPool::CommandPoolImpl::~CommandPoolImpl()
-{
-  vkDestroyCommandPool(device_.logical(), pool_, nullptr);
-}
-
-//------------------------------------------------------------------------------
-// CommandPool
-//------------------------------------------------------------------------------
-CommandPool::CommandPool()                       = default;
-CommandPool::~CommandPool()                      = default;
-CommandPool::CommandPool(CommandPool&&) noexcept = default;
-
-CommandPool::CommandPool(const Device&                  device,
-                         const VkCommandPoolCreateFlags flags)
-{
-  VkCommandPoolCreateInfo pool_ci{};
-  pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  pool_ci.flags = flags;
-  pool_ci.queueFamilyIndex =
-    device.queueFamilyIndices().graphics_family.value();
-
-  d_ = std::make_unique<CommandPoolImpl>(device, pool_ci);
 }
 
 const CommandBuffer& CommandPool::requestCommandBuffer()
@@ -71,11 +53,9 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   const std::string name{ fmt::format("command buffer #{}",
                                       command_buffers_.size() + 1) };
   Log(Trace, "Creating {}", name);
-  command_buffers_.emplace_back(d_->device_, *this, name);
+  command_buffers_.emplace_back(name, device(), *this);
 
   command_buffers_.back().begin();
   return command_buffers_.back();
 }
-
-VkCommandPool CommandPool::vk() const { return d_->pool_; }
 NAMESPACE_END(eldr::vk::wr)

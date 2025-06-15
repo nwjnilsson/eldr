@@ -58,51 +58,29 @@ VkExtent2D selectSwapExtent(VkExtent2D                      requested_extent,
 }
 NAMESPACE_END()
 
-//------------------------------------------------------------------------------
-// SwapchainImpl
-//------------------------------------------------------------------------------
-class Swapchain::SwapchainImpl {
-public:
-  SwapchainImpl(const Device&                   device,
-                const VkSwapchainCreateInfoKHR& swapchain_ci);
-  ~SwapchainImpl();
-  const Device&  device_;
-  VkSwapchainKHR swapchain_{ VK_NULL_HANDLE };
-};
-
-Swapchain::SwapchainImpl::SwapchainImpl(
-  const Device& device, const VkSwapchainCreateInfoKHR& swapchain_ci)
-  : device_(device)
-{
-  if (const VkResult result{ vkCreateSwapchainKHR(
-        device_.logical(), &swapchain_ci, nullptr, &swapchain_) };
-      result != VK_SUCCESS) {
-    Throw("Failed to create swapchain! ({})", result);
-  }
-}
-
-Swapchain::SwapchainImpl::~SwapchainImpl()
-{
-  vkDestroySwapchainKHR(device_.logical(), swapchain_, nullptr);
-}
-
 // -----------------------------------------------------------------------------
 // Swapchain
 // -----------------------------------------------------------------------------
-Swapchain::Swapchain()                       = default;
-Swapchain::Swapchain(Swapchain&&) noexcept   = default;
-Swapchain::~Swapchain()                      = default;
-Swapchain& Swapchain::operator=(Swapchain&&) = default;
+EL_VK_IMPL_DEFAULTS(Swapchain)
 
-Swapchain::Swapchain(const Device&  device,
-                     const Surface& surface,
-                     VkExtent2D     extent)
+Swapchain::~Swapchain()
+{
+  if (vk()) {
+    vkDestroySwapchainKHR(device().logical(), object_, nullptr);
+  }
+}
+
+Swapchain::Swapchain(std::string_view name,
+                     const Device&    device,
+                     const Surface&   surface,
+                     VkExtent2D       extent)
+  : Base(name, device)
 {
   setupSwapchain(device, surface, extent);
   // Create sync objects
   for (uint8_t i = 0; i < max_frames_in_flight; ++i) {
-    image_available_sem_.emplace_back(device);
-    render_finished_sem_.emplace_back(device);
+    image_available_sem_.emplace_back("Image available (swapchain)", device);
+    render_finished_sem_.emplace_back("Render finished (swapchain)", device);
   }
 }
 
@@ -126,9 +104,8 @@ void Swapchain::setupSwapchain(const Device&  device,
       std::min(min_image_count, support_details.capabilities.maxImageCount);
   }
 
-  VkSwapchainKHR old_swapchain{ VK_NULL_HANDLE };
-  if (likely(d_ != nullptr))
-    old_swapchain = d_->swapchain_;
+  VkSwapchainKHR old_swapchain{ object_ };
+
   VkSwapchainCreateInfoKHR swapchain_ci{
     .sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .pNext            = {},
@@ -166,8 +143,17 @@ void Swapchain::setupSwapchain(const Device&  device,
     swapchain_ci.pQueueFamilyIndices   = nullptr; // Optional
   }
 
-  Log(core::Trace, "Creating swapchain...");
-  d_ = std::make_unique<SwapchainImpl>(device, swapchain_ci);
+  Log(Trace, "Creating swapchain...");
+  if (const VkResult result{ vkCreateSwapchainKHR(
+        device.logical(), &swapchain_ci, nullptr, &object_) };
+      result != VK_SUCCESS) {
+    Throw("Failed to create swapchain! ({})", result);
+  }
+
+  // Destroy old swapchain
+  if (old_swapchain) {
+    vkDestroySwapchainKHR(device.logical(), old_swapchain, nullptr);
+  }
 
   // Clear data from old swapchain
   images_.clear();
@@ -176,22 +162,22 @@ void Swapchain::setupSwapchain(const Device&  device,
   // Get new swapchain images
   uint32_t image_count;
   if (const VkResult result{ vkGetSwapchainImagesKHR(
-        device.logical(), d_->swapchain_, &image_count, nullptr) };
+        device.logical(), object_, &image_count, nullptr) };
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
   images.resize(image_count);
 
   if (const VkResult result{ vkGetSwapchainImagesKHR(
-        device.logical(), d_->swapchain_, &image_count, images.data()) };
+        device.logical(), object_, &image_count, images.data()) };
       result != VK_SUCCESS)
     Throw("Failed to get swapchain images! ({})", result);
 
   for (size_t i{ 0 }; i < images.size(); ++i) {
     images_.push_back(
-      Image::createSwapchainImage(device,
+      Image::createSwapchainImage(fmt::format("Swapchain image {}", i),
+                                  device,
                                   images[i],
-                                  fmt::format("Swapchain image {}", i),
                                   extent_,
                                   surface_format_.format));
   }
@@ -199,12 +185,12 @@ void Swapchain::setupSwapchain(const Device&  device,
 
 const VkSemaphore* Swapchain::imageAvailableSemaphore(uint32_t index) const
 {
-  return image_available_sem_[index].vkp();
+  return &image_available_sem_[index].vk();
 }
 
 const VkSemaphore* Swapchain::renderFinishedSemaphore(uint32_t index) const
 {
-  return render_finished_sem_[index].vkp();
+  return &render_finished_sem_[index].vk();
 }
 
 uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
@@ -212,8 +198,8 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 {
   uint32_t       image_index{ 0 };
   const VkResult result{ vkAcquireNextImageKHR(
-    d_->device_.logical(),
-    d_->swapchain_,
+    device().logical(),
+    object_,
     UINT64_MAX,
     image_available_sem_[frame_index].vk(),
     VK_NULL_HANDLE,
@@ -231,7 +217,7 @@ uint32_t Swapchain::acquireNextImage(uint32_t frame_index,
 void Swapchain::present(const VkPresentInfoKHR& present_info,
                         bool&                   invalidate_swapchain) const
 {
-  const VkResult result{ vkQueuePresentKHR(d_->device_.presentQueue(),
+  const VkResult result{ vkQueuePresentKHR(device().presentQueue(),
                                            &present_info) };
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     invalidate_swapchain = true;
@@ -240,9 +226,6 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
     Throw("Failed to present queue! ({})", result);
   }
 }
-
-VkSwapchainKHR  Swapchain::vk() const { return d_->swapchain_; }
-VkSwapchainKHR* Swapchain::vkp() const { return &d_->swapchain_; }
 
 const Image& Swapchain::image(size_t index) const { return images_[index]; }
 Image&       Swapchain::image(size_t index) { return images_[index]; }

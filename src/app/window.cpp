@@ -8,7 +8,7 @@ NAMESPACE_BEGIN(eldr)
 NAMESPACE_BEGIN()
 static void glfwErrorCallback(const int error, const char* description)
 {
-  Log(core::Error, "GLFW Error {}: {}", error, description);
+  Log(Error, "GLFW Error {}: {}", error, description);
 }
 NAMESPACE_END()
 

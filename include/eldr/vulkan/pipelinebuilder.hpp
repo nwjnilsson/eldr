@@ -37,8 +37,8 @@ public:
     push_constant_ranges_.push_back(pcr);
     return *this;
   }
-  PipelineBuilder& setShaders(const wr::Shader& vertex_shader,
-                              const wr::Shader& fragment_shader);
+  PipelineBuilder& setShaders(const wr::ShaderModule& vertex_shader,
+                              const wr::ShaderModule& fragment_shader);
   PipelineBuilder& setInputTopology(VkPrimitiveTopology topology);
   PipelineBuilder& setPolygonMode(VkPolygonMode mode);
   PipelineBuilder& setCullMode(VkCullModeFlags mode, VkFrontFace front_face);

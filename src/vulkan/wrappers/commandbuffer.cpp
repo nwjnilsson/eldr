@@ -1,4 +1,3 @@
-#include "eldr/vulkan/vulkan.hpp"
 #include <eldr/core/logger.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
@@ -10,53 +9,35 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
-// CommandBufferImpl
+// CommandBuffer
 //------------------------------------------------------------------------------
-class CommandBuffer::CommandBufferImpl {
-public:
-  CommandBufferImpl(const Device&                     device,
-                    const VkCommandBufferAllocateInfo alloc_info);
-  ~CommandBufferImpl();
-  const Device&   device_;
-  VkCommandPool   command_pool_;
-  VkCommandBuffer command_buffer_{ VK_NULL_HANDLE };
-  Fence           wait_fence_;
-};
+EL_VK_IMPL_DEFAULTS(CommandBuffer)
 
-CommandBuffer::CommandBufferImpl::CommandBufferImpl(
-  const Device& device, const VkCommandBufferAllocateInfo alloc_info)
-  : device_(device), command_pool_(alloc_info.commandPool), wait_fence_(device)
+CommandBuffer::CommandBuffer(std::string_view   name,
+                             const Device&      device,
+                             const CommandPool& command_pool)
+  : Base(name, device), command_pool_(&command_pool),
+    wait_fence_(std::string{ name } + " fence", device)
 {
-  if (const VkResult result{ vkAllocateCommandBuffers(
-        device_.logical(), &alloc_info, &command_buffer_) };
+  const VkCommandBufferAllocateInfo alloc_info{
+    .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+    .pNext              = {},
+    .commandPool        = command_pool.vk(),
+    .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    .commandBufferCount = 1
+  };
+
+  if (const VkResult result{
+        vkAllocateCommandBuffers(device.logical(), &alloc_info, &object_) };
       result != VK_SUCCESS)
     Throw("Failed to allocate command buffers ({}).", result);
 }
 
-CommandBuffer::CommandBufferImpl::~CommandBufferImpl()
+CommandBuffer::~CommandBuffer()
 {
-  vkFreeCommandBuffers(device_.logical(), command_pool_, 1, &command_buffer_);
-}
-
-//------------------------------------------------------------------------------
-// CommandBuffer
-//------------------------------------------------------------------------------
-CommandBuffer::CommandBuffer()                         = default;
-CommandBuffer::~CommandBuffer()                        = default;
-CommandBuffer::CommandBuffer(CommandBuffer&&) noexcept = default;
-
-CommandBuffer::CommandBuffer(const Device&      device,
-                             const CommandPool& command_pool,
-                             std::string_view   name)
-  : name_(name)
-{
-  VkCommandBufferAllocateInfo alloc_info{};
-  alloc_info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  alloc_info.commandPool = command_pool.vk();
-  alloc_info.level       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = 1;
-
-  d_ = std::make_unique<CommandBufferImpl>(device, alloc_info);
+  if (vk()) {
+    vkFreeCommandBuffers(device().logical(), command_pool_->vk(), 1, &object_);
+  }
 }
 
 const CommandBuffer& CommandBuffer::pipelineBarrier(
@@ -80,7 +61,7 @@ const CommandBuffer& CommandBuffer::pipelineBarrier(
     .pImageMemoryBarriers     = img_mem_barriers.data(),
   };
 
-  vkCmdPipelineBarrier2(d_->command_buffer_, &dep_info);
+  vkCmdPipelineBarrier2(vk(), &dep_info);
   return *this;
 }
 
@@ -106,8 +87,7 @@ const CommandBuffer&
 CommandBuffer::setViewport(std::span<const VkViewport> viewports,
                            uint32_t                    first_viewport) const
 {
-  vkCmdSetViewport(
-    d_->command_buffer_, first_viewport, viewports.size(), viewports.data());
+  vkCmdSetViewport(vk(), first_viewport, viewports.size(), viewports.data());
   return *this;
 }
 
@@ -115,8 +95,7 @@ const CommandBuffer&
 CommandBuffer::setScissor(std::span<const VkRect2D> scissors,
                           uint32_t                  first_scissor) const
 {
-  vkCmdSetScissor(
-    d_->command_buffer_, first_scissor, scissors.size(), scissors.data());
+  vkCmdSetScissor(vk(), first_scissor, scissors.size(), scissors.data());
   return *this;
 }
 
@@ -141,8 +120,7 @@ const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
     .flags            = usage,
     .pInheritanceInfo = nullptr,
   };
-  if (const VkResult result{
-        vkBeginCommandBuffer(d_->command_buffer_, &begin_info) };
+  if (const VkResult result{ vkBeginCommandBuffer(vk(), &begin_info) };
       result != VK_SUCCESS) {
     Throw("Failed to begin command buffer ({}).", result);
   }
@@ -153,15 +131,14 @@ const CommandBuffer& CommandBuffer::begin(VkCommandBufferUsageFlags usage) const
 const CommandBuffer& CommandBuffer::beginRenderPass(
   const VkRenderPassBeginInfo& render_pass_info) const
 {
-  vkCmdBeginRenderPass(
-    d_->command_buffer_, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(vk(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
   return *this;
 }
 
 const CommandBuffer&
 CommandBuffer::beginRendering(const VkRenderingInfoKHR& render_info) const
 {
-  vkCmdBeginRendering(d_->command_buffer_, &render_info);
+  vkCmdBeginRendering(vk(), &render_info);
   return *this;
 }
 
@@ -171,31 +148,26 @@ const CommandBuffer& CommandBuffer::drawIndexed(uint32_t index_count,
                                                 int32_t  vert_offset,
                                                 uint32_t first_inst) const
 {
-  vkCmdDrawIndexed(d_->command_buffer_,
-                   index_count,
-                   inst_count,
-                   first_index,
-                   vert_offset,
-                   first_inst);
+  vkCmdDrawIndexed(
+    vk(), index_count, inst_count, first_index, vert_offset, first_inst);
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::endRenderPass() const
 {
-  vkCmdEndRenderPass(d_->command_buffer_);
+  vkCmdEndRenderPass(vk());
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::endRendering() const
 {
-  vkCmdEndRendering(d_->command_buffer_);
+  vkCmdEndRendering(vk());
   return *this;
 }
 
 const CommandBuffer& CommandBuffer::end() const
 {
-  if (const VkResult result{ vkEndCommandBuffer(d_->command_buffer_) };
-      result != VK_SUCCESS)
+  if (const VkResult result{ vkEndCommandBuffer(vk()) }; result != VK_SUCCESS)
     Throw("Failed to end command buffer ({}).", result);
   return *this;
 }
@@ -205,7 +177,7 @@ CommandBuffer::submit(const VkSubmitInfo& submit_info) const
 {
   end();
   if (const VkResult result{ vkQueueSubmit(
-        d_->device_.graphicsQueue(), 1, &submit_info, d_->wait_fence_.vk()) };
+        device().graphicsQueue(), 1, &submit_info, wait_fence_.vk()) };
       result != VK_SUCCESS)
     Throw("Failed to submit to queue ({}).", result);
   return *this;
@@ -220,7 +192,7 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
     .pWaitSemaphores      = {},
     .pWaitDstStageMask    = {},
     .commandBufferCount   = 1,
-    .pCommandBuffers      = &d_->command_buffer_,
+    .pCommandBuffers      = &vk(),
     .signalSemaphoreCount = 0,
     .pSignalSemaphores    = {},
   };
@@ -231,7 +203,7 @@ const CommandBuffer& CommandBuffer::submitAndWait() const
 
 const CommandBuffer& CommandBuffer::reset() const
 {
-  if (const VkResult result{ vkResetCommandBuffer(d_->command_buffer_, 0) };
+  if (const VkResult result{ vkResetCommandBuffer(vk(), 0) };
       result != VK_SUCCESS)
     Throw("Failed to reset command buffer ({}).", result);
   return *this;
@@ -244,7 +216,7 @@ const CommandBuffer& CommandBuffer::blitImage(const Image&       src_image,
                                               const VkImageBlit& blit,
                                               VkFilter           filter) const
 {
-  vkCmdBlitImage(d_->command_buffer_,
+  vkCmdBlitImage(vk(),
                  src_image.vk(),
                  src_layout,
                  dst_image.vk(),
@@ -260,8 +232,7 @@ CommandBuffer::bindIndexBuffer(const Buffer<uint32_t>& buffer,
                                VkDeviceSize            offset) const
 {
   Assert(buffer.vk());
-  vkCmdBindIndexBuffer(
-    d_->command_buffer_, buffer.vk(), offset, VK_INDEX_TYPE_UINT32);
+  vkCmdBindIndexBuffer(vk(), buffer.vk(), offset, VK_INDEX_TYPE_UINT32);
   return *this;
 }
 
@@ -277,7 +248,7 @@ CommandBuffer::bindVertexBuffers(std::span<const VkBuffer>     buffers,
     Assert(buffers.size() == offsets.size());
     p_offsets = offsets.data();
   }
-  vkCmdBindVertexBuffers(d_->command_buffer_,
+  vkCmdBindVertexBuffers(vk(),
                          first_binding,
                          static_cast<uint32_t>(buffers.size()),
                          buffers.data(),
@@ -294,7 +265,7 @@ CommandBuffer::bindDescriptorSets(std::span<const VkDescriptorSet> desc_sets,
 {
   Assert(layout);
   Assert(!desc_sets.empty());
-  vkCmdBindDescriptorSets(d_->command_buffer_,
+  vkCmdBindDescriptorSets(vk(),
                           bind_point,
                           layout,
                           first_set,
@@ -310,7 +281,7 @@ CommandBuffer::bindPipeline(const Pipeline&     pipeline,
                             VkPipelineBindPoint bind_point) const
 {
   Assert(pipeline.vk());
-  vkCmdBindPipeline(d_->command_buffer_, bind_point, pipeline.vk());
+  vkCmdBindPipeline(vk(), bind_point, pipeline.vk());
   return *this;
 }
 
@@ -318,7 +289,7 @@ const CommandBuffer& CommandBuffer::generateMipmaps(const Image& image) const
 {
   VkFormatProperties format_props{};
   vkGetPhysicalDeviceFormatProperties(
-    d_->device_.physical(), image.format(), &format_props);
+    device().physical(), image.format(), &format_props);
   // Support for linear blitting is currently required
   if (!(format_props.optimalTilingFeatures &
         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
@@ -516,7 +487,7 @@ CommandBuffer::copyImage(Image&                        dst,
     .regionCount    = static_cast<uint32_t>(copy_regions.size()),
     .pRegions       = copy_regions.data(),
   };
-  vkCmdCopyImage2(d_->command_buffer_, &copy_info);
+  vkCmdCopyImage2(vk(), &copy_info);
   return *this;
 }
 
@@ -534,7 +505,7 @@ const CommandBuffer& CommandBuffer::copyBufferToImage(
     .regionCount    = static_cast<uint32_t>(copy_regions.size()),
     .pRegions       = copy_regions.data(),
   };
-  vkCmdCopyBufferToImage2(d_->command_buffer_, &copy_info);
+  vkCmdCopyBufferToImage2(vk(), &copy_info);
   return *this;
 }
 
@@ -579,7 +550,7 @@ CommandBuffer::copyDataToBuffer(AllocatedBuffer&        dst,
 const CommandBuffer&
 CommandBuffer::copyBuffer(const VkCopyBufferInfo2& copy_info) const
 {
-  vkCmdCopyBuffer2(d_->command_buffer_, &copy_info);
+  vkCmdCopyBuffer2(vk(), &copy_info);
   return *this;
 }
 
@@ -592,12 +563,8 @@ const CommandBuffer& CommandBuffer::pushConstants(VkPipelineLayout   layout,
   Assert(layout);
   Assert(size > 0);
   Assert(data);
-  vkCmdPushConstants(d_->command_buffer_,
-                     layout,
-                     stage,
-                     static_cast<uint32_t>(offset),
-                     size,
-                     data);
+  vkCmdPushConstants(
+    vk(), layout, stage, static_cast<uint32_t>(offset), size, data);
   return *this;
 }
 
@@ -606,8 +573,8 @@ CommandBuffer::createStagingBuffer(const std::string&      name,
                                    std::span<const byte_t> src) const
 {
   staging_buffers_.emplace_back(
-    d_->device_,
     name,
+    device(),
     src,
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VMA_ALLOCATION_CREATE_MAPPED_BIT |
@@ -615,18 +582,14 @@ CommandBuffer::createStagingBuffer(const std::string&      name,
   return staging_buffers_.back();
 }
 
-VkResult CommandBuffer::fenceStatus() const { return d_->wait_fence_.status(); }
+VkResult CommandBuffer::fenceStatus() const { return wait_fence_.status(); }
 void     CommandBuffer::waitFence() const
 {
   // 5 seconds, vulkan timeout is in nanoseconds
   constexpr const uint64_t timeout = 5e9;
-  if (d_->wait_fence_.wait(timeout) == VK_TIMEOUT)
-    Log(core::Debug, "{} timed out waiting for its internal fence!", name_);
+  if (wait_fence_.wait(timeout) == VK_TIMEOUT)
+    Log(Debug, "{} timed out waiting for its internal fence!", name_);
 }
 
-void CommandBuffer::resetFence() const { d_->wait_fence_.reset(); }
-
-VkCommandBuffer CommandBuffer::vk() const { return d_->command_buffer_; }
-
-VkCommandBuffer* CommandBuffer::vkp() const { return &d_->command_buffer_; }
+void CommandBuffer::resetFence() const { wait_fence_.reset(); }
 NAMESPACE_END(eldr::vk::wr)

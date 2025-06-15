@@ -10,18 +10,17 @@ struct ImageViewCreateInfo {
   uint32_t           mip_levels;
 };
 
-class ImageView {
-public:
-  ImageView();
-  ImageView(const Device&, const ImageViewCreateInfo& image_view_ci);
-  ImageView(const Device&, const Image&, VkImageAspectFlags);
-  ImageView(ImageView&&) noexcept;
-  ~ImageView();
+class ImageView : public VkDeviceObject<VkImageView> {
+  using Base = VkDeviceObject<VkImageView>;
 
-  ImageView& operator=(ImageView&&);
+public:
+  EL_VK_IMPORT_DEFAULTS(ImageView)
+  ImageView(std::string_view name,
+            const Device&,
+            const ImageViewCreateInfo& image_view_ci);
+  ImageView(const Image&, VkImageAspectFlags);
 
   [[nodiscard]] VkImageAspectFlags aspectFlags() const { return aspect_flags_; }
-  [[nodiscard]] VkImageView        vk() const;
 
   /// @brief This function is used internally in the Swapchain class to create
   /// image views tied to the VkSwapchainKHR's internal images.
@@ -30,8 +29,5 @@ public:
 
 private:
   VkImageAspectFlags aspect_flags_{ VK_IMAGE_ASPECT_NONE };
-
-  class ImageViewImpl;
-  std::unique_ptr<ImageViewImpl> d_;
 };
 NAMESPACE_END(eldr::vk::wr)

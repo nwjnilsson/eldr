@@ -42,8 +42,8 @@ private:
 
   wr::Image               imgui_texture_;
   wr::Sampler             font_sampler_;
-  wr::Shader              vertex_shader_;
-  wr::Shader              fragment_shader_;
+  wr::ShaderModule        vertex_shader_;
+  wr::ShaderModule        fragment_shader_;
   wr::DescriptorSetLayout imgui_layout_;
   wr::Pipeline            imgui_pipeline_;
 };

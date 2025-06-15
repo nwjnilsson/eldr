@@ -3,18 +3,13 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class Semaphore {
+class Semaphore : public VkDeviceObject<VkSemaphore> {
+  using Base = VkDeviceObject<VkSemaphore>;
+
 public:
-  Semaphore();
-  Semaphore(const Device& device, VkSemaphoreCreateFlags flags = 0);
-  Semaphore(Semaphore&&) noexcept;
-  ~Semaphore();
-
-  [[nodiscard]] VkSemaphore        vk() const;
-  [[nodiscard]] const VkSemaphore* vkp() const;
-
-private:
-  class SemaphoreImpl;
-  std::unique_ptr<SemaphoreImpl> d_;
+  EL_VK_IMPORT_DEFAULTS(Semaphore)
+  Semaphore(std::string_view       name,
+            const Device&          device,
+            VkSemaphoreCreateFlags flags = 0);
 };
 NAMESPACE_END(eldr::vk::wr)

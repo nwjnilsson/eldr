@@ -5,19 +5,14 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class Instance {
+class Instance : public VkObject<VkInstance> {
+  using Base = VkObject<VkInstance>;
+
 public:
-  Instance();
-  Instance(const VkApplicationInfo&, std::vector<const char*>&& extensions);
-  ~Instance();
-
-  Instance& operator=(Instance&&);
-
-  [[nodiscard]] VkInstance vk() const;
-
-private:
-  class InstanceImpl;
-  std::unique_ptr<InstanceImpl> d_;
+  EL_VK_IMPORT_DEFAULTS(Instance)
+  Instance(std::string_view name,
+           const VkApplicationInfo&,
+           std::vector<const char*>&& extensions);
 };
 
 //[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);

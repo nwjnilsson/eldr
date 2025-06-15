@@ -4,25 +4,19 @@
 #include <vector>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-class CommandPool {
+class CommandPool : public VkDeviceObject<VkCommandPool> {
+  using Base = VkDeviceObject<VkCommandPool>;
+
 public:
-  CommandPool();
-  CommandPool(const Device&                  device,
+  EL_VK_IMPORT_DEFAULTS(CommandPool)
+  CommandPool(std::string_view               name,
+              const Device&                  device,
               const VkCommandPoolCreateFlags flags =
                 VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-  CommandPool(CommandPool&&) noexcept;
-  ~CommandPool();
-
-  [[nodiscard]] VkCommandPool vk() const;
 
   [[nodiscard]] const CommandBuffer& requestCommandBuffer();
 
 private:
-  // std::string name_;
-
-  class CommandPoolImpl;
-  std::unique_ptr<CommandPoolImpl> d_;
-
   std::vector<CommandBuffer> command_buffers_;
 };
 NAMESPACE_END(eldr::vk::wr)

@@ -7,28 +7,7 @@
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
-#include <eldr/vulkan/sceneresources.hpp>
-
-#include <eldr/ext/fastgltf.hpp>
-
-// Specialize vector types for use with fastgltf. Just simple Vector<float, s>
-#define EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(Name, Size)                     \
-  template <>                                                                  \
-  struct ElementTraits<Name<float, Size>>                                      \
-    : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
-NAMESPACE_BEGIN(fastgltf)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 2)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Vector, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Normal, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Color, 4)
-NAMESPACE_END(fastgltf)
-
-// TODO: use rapidobj
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 //------------------------------------------------------------------------------
 // Scene node
 //------------------------------------------------------------------------------
@@ -66,7 +45,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
     const RenderObject obj{
       .index_count = s.count,
       .first_index = s.start_index,
-      .material    = s.material.get(),
+      .material    = s.material,
       //.transform   = node_matrix,
     };
     ctx.opaque_surfaces.push_back(obj);
@@ -88,4 +67,4 @@ EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
 }
 
 EL_INSTANTIATE_CLASS(Scene)
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

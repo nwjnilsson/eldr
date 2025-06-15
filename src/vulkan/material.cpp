@@ -7,14 +7,13 @@
 
 NAMESPACE_BEGIN(eldr)
 MaterialInstance GltfMetallicRoughness::writeMaterial(
-  const vk::wr::Device&    device,
-  MaterialPass             pass,
-  const MaterialResources& resources,
-  vk::DescriptorAllocator& descriptor_allocator)
+  const vk::wr::Device&                   device,
+  MaterialPass                            pass,
+  const GltfMetallicRoughness::Resources& resources,
+  vk::DescriptorAllocator&                descriptor_allocator)
 {
   MaterialInstance mat_data;
   mat_data.pass_type = pass;
-  mat_data.resources = resources;
   if (pass == MaterialPass::Transparent) {
     mat_data.pipeline = &transparent_pipeline;
   }

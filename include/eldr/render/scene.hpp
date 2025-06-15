@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/app/fwd.hpp>
+#include <eldr/core/config.hpp>
 #include <eldr/math/math.hpp>
 #include <eldr/render/fwd.hpp>
 #include <eldr/render/mesh.hpp>
@@ -18,7 +19,7 @@ struct RenderObject {
   uint32_t first_index;
   // vk::BufferResource* index_buffer;
 
-  Material* material;
+  const Material* material;
   // Matrix4f  transform;
 };
 
@@ -51,11 +52,11 @@ struct SceneNode : public Renderable {
 };
 
 EL_VARIANT struct MeshNode final : public SceneNode {
-  // inline MeshNode(std::shared_ptr<Mesh> s) : mesh(s) {};
   using Transform4f = CoreAliases<float>::Transform4f;
   std::shared_ptr<Mesh<Float, Spectrum>> mesh;
   void draw(const Transform4f& top_matrix, DrawContext& ctx) const override;
 };
+EL_INSTANTIATE_STRUCT(MeshNode)
 
 class SceneBase {
 

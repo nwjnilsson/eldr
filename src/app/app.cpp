@@ -1,4 +1,5 @@
 #include <eldr/app/app.hpp>
+#include <eldr/app/scenemanager.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
 
@@ -77,15 +78,14 @@ void App::mouseScrollCallback(Window* /*window*/,
 void App::run()
 {
   using Spectrum = Color<float, 3>;
-  auto scene = render::Scene<float, Spectrum>::load(*vk_engine_, { model_path })
-                 .value_or(nullptr);
-  Assert(scene);
+  SceneManager manager{};
+  Assert(manager.load(*vk_engine_, { model_path }));
 
   while (!window_.shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
     updateImGui();
-    vk_engine_->drawFrame(scene.get());
+    vk_engine_->drawFrame(manager.activeScene());
     frame_time_ = stop_watch_.seconds<float>();
   }
 }

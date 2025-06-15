@@ -7,30 +7,27 @@ NAMESPACE_BEGIN(eldr::vk::wr)
 ///
 /// TODO: might make sense to have a ComputePipeline and GraphicsPipeline that
 /// inherit from Pipeline
-class Pipeline {
+class Pipeline : public VkDeviceObject<VkPipeline> {
+  using Base = VkDeviceObject<VkPipeline>;
+
 public:
-  Pipeline();
-  Pipeline(const Device&                     device,
-           std::string_view                  name,
+  EL_VK_IMPORT_DEFAULTS(Pipeline)
+  Pipeline(std::string_view                  name,
+           const Device&                     device,
            const VkPipelineLayoutCreateInfo& layout_ci,
            VkGraphicsPipelineCreateInfo&     pipeline_ci);
-  Pipeline(const Device&                     device,
-           std::string_view                  name,
+  Pipeline(std::string_view                  name,
+           const Device&                     device,
            const VkPipelineLayoutCreateInfo& layout_ci,
            VkComputePipelineCreateInfo&      pipeline_ci);
-  Pipeline(Pipeline&&) noexcept;
-  ~Pipeline();
 
-  Pipeline& operator=(Pipeline&&);
+  [[nodiscard]] VkPipelineLayout layout() const { return pipeline_layout_; }
 
-  [[nodiscard]] const std::string& name() const { return name_; }
-  [[nodiscard]] VkPipeline         vk() const;
-  [[nodiscard]] VkPipelineLayout   layout() const;
+private:
+  void createPipelineLayout(const VkPipelineLayoutCreateInfo& layout_ci);
 
 protected:
-  std::string name_;
-  class PipelineImpl;
-  std::unique_ptr<PipelineImpl> d_;
+  VkPipelineLayout pipeline_layout_{ VK_NULL_HANDLE };
 };
 
 // Support for compute pipelines can be added if needed

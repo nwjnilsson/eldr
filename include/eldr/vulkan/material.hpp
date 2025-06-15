@@ -8,13 +8,11 @@
 enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 
 NAMESPACE_BEGIN(eldr)
-struct MaterialResources {};
 
 struct MaterialInstance {
-  vk::wr::Pipeline*                  pipeline;
-  VkDescriptorSet                    descriptor_set;
-  MaterialPass                       pass_type;
-  std::unique_ptr<MaterialResources> resources;
+  vk::wr::Pipeline* pipeline;
+  VkDescriptorSet   descriptor_set;
+  MaterialPass      pass_type;
 };
 
 struct Material {
@@ -41,19 +39,20 @@ struct GltfMetallicRoughness {
     Vector4f extra[14];
   };
 
-  struct Resources : public MaterialResources {
-    std::shared_ptr<vk::wr::Image>           color_texture;
-    std::shared_ptr<vk::wr::Sampler>         color_sampler;
-    std::shared_ptr<vk::wr::Image>           metal_rough_texture;
-    std::shared_ptr<vk::wr::Sampler>         metal_rough_sampler;
+  struct Resources {
+    const vk::wr::Image*                     color_texture;
+    const vk::wr::Sampler*                   color_sampler;
+    const vk::wr::Image*                     metal_rough_texture;
+    const vk::wr::Sampler*                   metal_rough_sampler;
     const vk::wr::Buffer<MaterialConstants>* data_buffer;
     size_t                                   data_index;
   };
 
-  MaterialInstance writeMaterial(const vk::wr::Device&    device,
-                                 MaterialPass             pass,
-                                 const MaterialResources& resources,
-                                 vk::DescriptorAllocator& descriptor_allocator);
+  MaterialInstance
+  writeMaterial(const vk::wr::Device&                   device,
+                MaterialPass                            pass,
+                const GltfMetallicRoughness::Resources& resources,
+                vk::DescriptorAllocator&                descriptor_allocator);
 
 private:
   vk::DescriptorWriter writer;

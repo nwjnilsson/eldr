@@ -51,7 +51,7 @@ class RenderPass;
 class CommandBuffer;
 class Semaphore;
 class Fence;
-class Shader;
+class ShaderModule;
 NAMESPACE_END(wr)
 NAMESPACE_END(vk)
 NAMESPACE_END(eldr)

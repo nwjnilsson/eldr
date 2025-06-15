@@ -5,18 +5,14 @@
 #include <vector>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-class Swapchain {
-public:
-  Swapchain();
-  Swapchain(const Device&, const Surface&, VkExtent2D);
-  Swapchain(Swapchain&&) noexcept;
-  ~Swapchain();
+class Swapchain : public VkDeviceObject<VkSwapchainKHR> {
+  using Base = VkDeviceObject<VkSwapchainKHR>;
 
-  Swapchain& operator=(Swapchain&&);
+public:
+  EL_VK_IMPORT_DEFAULTS(Swapchain)
+  Swapchain(std::string_view name, const Device&, const Surface&, VkExtent2D);
 
   [[nodiscard]] const VkExtent2D& extent() const { return extent_; }
-  [[nodiscard]] VkSwapchainKHR    vk() const;
-  [[nodiscard]] VkSwapchainKHR*   vkp() const;
   //[[nodiscard]] uint32_t minImageCount() const { return min_image_count_; }
   [[nodiscard]] const Image& image(size_t index) const;
   [[nodiscard]] Image&       image(size_t index);
@@ -39,9 +35,6 @@ public:
                bool&                   invalidate_swapchain) const;
 
 private:
-  class SwapchainImpl;
-  std::unique_ptr<SwapchainImpl> d_;
-
   VkExtent2D         extent_;
   VkSurfaceFormatKHR surface_format_;
   VkPresentModeKHR   present_mode_;

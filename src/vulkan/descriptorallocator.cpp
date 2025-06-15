@@ -19,7 +19,7 @@ void DescriptorAllocator::resize(uint32_t max_sets)
 
 wr::DescriptorPool DescriptorAllocator::getPool(const wr::Device& device)
 {
-  if (!ready_pools_.empty()) {
+  if (not ready_pools_.empty()) {
     wr::DescriptorPool new_pool{ std::move(ready_pools_.back()) };
     ready_pools_.pop_back();
     return new_pool;
@@ -40,7 +40,12 @@ wr::DescriptorPool DescriptorAllocator::createPool(const wr::Device& device)
                              ratio.ratio * sets_per_pool_) });
   }
 
-  wr::DescriptorPool pool{ device, sets_per_pool_, pool_sizes };
+  wr::DescriptorPool pool{ fmt::format("Allocator pool #{}",
+                                       1 + full_pools_.size() +
+                                         ready_pools_.size()),
+                           device,
+                           sets_per_pool_,
+                           pool_sizes };
   // Update max sets per pool for the pool created next
   sets_per_pool_ =
     std::min(static_cast<uint32_t>(sets_per_pool_ * 1.5), max_sets_limit);

@@ -1,20 +1,43 @@
 #include <eldr/app/scenemanager.hpp>
-#include <eldr/core/logger.hpp>
+#include <eldr/core/core.hpp>
 #include <eldr/core/spectrum.hpp>
 #include <eldr/ext/fastgltf.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
 
+// TODO: use rapidobj
+// #define TINYOBJLOADER_IMPLEMENTATION
+// #include <tiny_obj_loader.h>
+
+// Specialize vector types for use with fastgltf. Just simple Vector<float, s>
+#define EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(Name, Size)                     \
+  template <>                                                                  \
+  struct ElementTraits<Name<float, Size>>                                      \
+    : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
+NAMESPACE_BEGIN(fastgltf)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 2)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Vector, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Normal, 3)
+EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Color, 4)
+NAMESPACE_END(fastgltf)
+
 NAMESPACE_BEGIN(eldr)
 
-EL_VARIANT
-std::optional<std::vector<render::Mesh<Float, Spectrum>>>
-SceneManager::loadGltf(const vk::VulkanEngine& engine,
-                       std::filesystem::path   file_path)
+SceneManager::SceneManager()
 {
-  using Scene  = render::Scene<Float, Spectrum>;
-  using Mesh   = typename Scene::Mesh;
-  namespace fg = fastgltf;
+  scenes_["Default"] = Scene<float, Color<float, 3>>{};
+  active_scene_      = &scenes_["Default"];
+}
+
+bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
+                            std::filesystem::path   file_path)
+{
+  using Float    = float;
+  using Spectrum = Color<float, 3>;
+  using Scene    = Scene<float, Color<float, 3>>;
+  using Mesh     = typename Scene::Mesh;
+  namespace fg   = fastgltf;
   Log(Trace, "Loading glTF: {}", file_path.c_str());
 
   auto data{ fg::GltfDataBuffer::FromPath(file_path) };
@@ -23,7 +46,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
         "Failed to create GLTF data buffer: {} - {}",
         fg::getErrorName(error),
         fg::getErrorMessage(error));
-    return std::nullopt;
+    return false;
   }
 
   fg::Parser     parser{};
@@ -46,7 +69,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
           "Failed to load glTF: {} - {}",
           fg::getErrorName(error),
           fg::getErrorMessage(error));
-      return std::nullopt;
+      return false;
     }
   }
   else if (type == fg::GltfType::GLB) {
@@ -61,32 +84,31 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
           "Failed to load glTF: {} - {}",
           fg::getErrorName(error),
           fg::getErrorMessage(error));
-      return std::nullopt;
+      return false;
     }
   }
   else {
     Log(Error, "Failed to determine glTF container");
-    return std::nullopt;
+    return false;
   }
 
   if (unlikely(gltf.materials.empty())) {
     Log(Error, "glTF file contains no materials, at least one is required");
-    return std::nullopt;
+    return false;
   }
   else if (unlikely(gltf.meshes.empty())) {
     Log(Error, "glTF file contains no meshes, at least one is required");
-    return std::nullopt;
+    return false;
   }
   else if (unlikely(gltf.nodes.empty())) {
     Log(Error, "glTF file contains no nodes, at least one is required");
-    return std::nullopt;
+    return false;
   }
 
   //----------------------------------------------------------------------------
   // Load vulkan resources (images, samplers, materials)
   //----------------------------------------------------------------------------
-  auto scene                             = std::make_shared<Scene>();
-  scene_resources_[active_scene_->name_] = engine.createResources(gltf);
+  auto materials = engine.createResources(gltf);
 
   //----------------------------------------------------------------------------
   // Load meshes
@@ -95,15 +117,15 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
   for (fg::Mesh& mesh : gltf.meshes) {
     std::vector<uint32_t> indices; // currently not giving this to the mesh,
                                    // TODO: might be needed
-    std::vector<Point3f>            vertices;
-    std::vector<Point2f>            texcoords;
-    std::vector<Color4f>            colors;
-    std::vector<Normal3f>           normals;
-    std::vector<render::GeoSurface> surfaces;
+    std::vector<Point3f>    vertices;
+    std::vector<Point2f>    texcoords;
+    std::vector<Color4f>    colors;
+    std::vector<Normal3f>   normals;
+    std::vector<GeoSurface> surfaces;
     surfaces.reserve(mesh.primitives.size());
 
     for (auto&& p : mesh.primitives) {
-      render::GeoSurface surface;
+      GeoSurface surface;
       surface.start_index = static_cast<uint32_t>(indices.size());
       surface.count =
         static_cast<uint32_t>(gltf.accessors[p.indicesAccessor.value()].count);
@@ -168,12 +190,11 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
       }
 
       if (p.materialIndex.has_value()) {
-        surface.material =
-          scene->vk_resources_->materials[p.materialIndex.value()];
+        surface.material = materials[p.materialIndex.value()];
       }
       else {
         Log(Warn, "Missing primitive material index, using index 0 instead.");
-        surface.material = scene->vk_resources_->materials[0];
+        surface.material = materials[0];
       }
       surfaces.push_back(surface);
     }
@@ -192,8 +213,8 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
                                           std::move(normals),
                                           std::move(surfaces));
     meshes.emplace_back(newmesh);
-    const auto res =
-      scene->meshes_.insert(std::make_pair(mesh.name, std::move(newmesh)));
+    const auto res = active_scene_->meshes_.insert(
+      std::make_pair(mesh.name, std::move(newmesh)));
     if (unlikely(not res.second)) {
       Log(Warn, "Scene contains duplicate mesh name ({}).", mesh.name);
     }
@@ -215,7 +236,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
     }
     nodes.push_back(scene_node);
     const auto res =
-      scene->nodes_.insert(std::make_pair(node.name, scene_node));
+      active_scene_->nodes_.insert(std::make_pair(node.name, scene_node));
     if (unlikely(not res.second)) {
       Log(Warn, "Scene contains duplicate node name ({}).", node.name);
     }
@@ -263,16 +284,16 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
   // find the top nodes, with no parents
   for (auto& node : nodes) {
     if (node->parent.lock() == nullptr) {
-      scene->top_nodes_.push_back(node);
+      active_scene_->top_nodes_.push_back(node);
       node->refreshTransform(Transform4f{ 1.f });
     }
   }
   Log(Trace,
       "Loaded {} meshes, {} materials and {} nodes",
-      scene->meshes_.size(),
-      scene->vk_resources_->materials.size(),
-      scene->nodes_.size());
-  return scene;
+      active_scene_->meshes_.size(),
+      materials.size(),
+      active_scene_->nodes_.size());
+  return true;
 }
 
 // TODO: support MTL file and loading texture from such a reference
@@ -281,7 +302,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
 // Scene::loadObj(std::filesystem::path file_path)
 // {
 //   Logger log{ requestLogger("mesh") };
-//   Log(core::Trace"Loading OBJ: {}", file_path.c_str());
+//   Log(Trace"Loading OBJ: {}", file_path.c_str());
 //   // TODO: use rapidobj instead and remove tinyobjloader submodule
 //   tinyobj::attrib_t                attrib;
 //   std::vector<tinyobj::shape_t>    shapes
@@ -292,7 +313,7 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
 //
 //   if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
 //                         file_path.c_str())) {
-//     Log(core::Error"tinyobjloader error:\nwarn: {}\nerror: {}", warn, err);
+//     Log(Error"tinyobjloader error:\nwarn: {}\nerror: {}", warn, err);
 //     return std::nullopt;
 //   }
 //
@@ -339,10 +360,8 @@ SceneManager::loadGltf(const vk::VulkanEngine& engine,
 //   return loaded_shapes;
 // }
 
-EL_VARIANT
-std::optional<std::shared_ptr<Scene<Float, Spectrum>>>
-Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
-                             const SceneInfo&        scene_info)
+bool SceneManager::load(const vk::VulkanEngine&      engine,
+                        const std::filesystem::path& model_path)
 {
   const char* env_p = std::getenv("ELDR_DIR");
   if (env_p == nullptr) {
@@ -350,15 +369,15 @@ Scene<Float, Spectrum>::load(const vk::VulkanEngine& engine,
   }
 
   std::filesystem::path filepath(env_p);
-  filepath /= scene_info.model_path;
+  filepath /= model_path;
 
   if (not std::filesystem::is_regular_file(filepath)) {
     Throw("Scene file not found!");
   }
 
   // TODO: determine file type obj/gltf if obj is to be supported too
-  auto scene = Scene::loadGltf(engine, filepath);
 
-  return scene;
+  return loadGltf(engine, filepath);
 }
+
 NAMESPACE_END(eldr)

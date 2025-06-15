@@ -1,19 +1,20 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 #include <eldr/vulkan/wrappers/buffer.hpp>
+#include <eldr/vulkan/wrappers/fence.hpp>
 
 #include <span>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class CommandBuffer {
+class CommandBuffer : public VkDeviceObject<VkCommandBuffer> {
+  using Base = VkDeviceObject<VkCommandBuffer>;
+
 public:
-  CommandBuffer();
-  CommandBuffer(const Device&      device_,
-                const CommandPool& command_pool,
-                std::string_view   name);
-  CommandBuffer(CommandBuffer&&) noexcept;
-  ~CommandBuffer();
+  EL_VK_IMPORT_DEFAULTS(CommandBuffer)
+  CommandBuffer(std::string_view   name,
+                const Device&      device_,
+                const CommandPool& command_pool);
 
   const CommandBuffer& begin(VkCommandBufferUsageFlags usage = 0) const;
   const CommandBuffer& beginRenderPass(const VkRenderPassBeginInfo&) const;
@@ -108,7 +109,7 @@ public:
              const Buffer<T>&               src,
              std::span<const VkBufferCopy2> copy_regions) const
   {
-    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    Assert(dst.allocSize() >= src.allocSize());
     const VkCopyBufferInfo2 copy_info{
       .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
       .pNext       = {},
@@ -152,12 +153,9 @@ public:
   createStagingBuffer(const std::string&      name,
                       std::span<const byte_t> data) const;
 
-  [[nodiscard]] const std::string& name() const { return name_; }
-  [[nodiscard]] VkCommandBuffer    vk() const;
-  [[nodiscard]] VkCommandBuffer*   vkp() const;
-  [[nodiscard]] VkResult           fenceStatus() const;
-  void                             resetFence() const;
-  void                             waitFence() const;
+  [[nodiscard]] VkResult fenceStatus() const;
+  void                   resetFence() const;
+  void                   waitFence() const;
 
 private:
   const CommandBuffer& copyBuffer(const VkCopyBufferInfo2& copy_info) const;
@@ -169,7 +167,7 @@ private:
              const Buffer<byte_t>&          src,
              std::span<const VkBufferCopy2> copy_regions) const
   {
-    Assert(dst.sizeAlloc() >= src.sizeAlloc());
+    Assert(dst.allocSize() >= src.allocSize());
     const VkCopyBufferInfo2 copy_info{
       .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
       .pNext       = {},
@@ -188,9 +186,8 @@ private:
   //----------------------------------------------------------------------------
 
 private:
-  std::string name_;
-  class CommandBufferImpl;
-  std::unique_ptr<CommandBufferImpl>  d_;
+  const CommandPool*                  command_pool_{ nullptr };
+  Fence                               wait_fence_;
   mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
 NAMESPACE_END(eldr::vk::wr)

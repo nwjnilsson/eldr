@@ -2,7 +2,7 @@
 #include <eldr/eldr.hpp>
 #include <eldr/render/endpoint.hpp>
 
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 EL_VARIANT Endpoint<Float, Spectrum>::Endpoint() = default;
 EL_INSTANTIATE_CLASS(Endpoint)
-NAMESPACE_END(eldr::render)
+NAMESPACE_END(eldr)

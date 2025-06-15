@@ -22,14 +22,10 @@ class Image : public VkAllocatedObject<VkImage> {
   using Base = VkAllocatedObject<VkImage>;
 
 public:
-  Image();
+  EL_VK_IMPORT_DEFAULTS(Image)
   Image(const Device&, const ImageCreateInfo&);
   Image(const Device&, const Bitmap&);
   Image(const Device&, const Bitmap&, uint32_t mip_levels);
-  Image(Image&&) noexcept;
-  ~Image();
-
-  Image& operator=(Image&&);
 
   [[nodiscard]] VkExtent2D size() const { return size_; }
   [[nodiscard]] VkFormat   format() const { return format_; }
@@ -42,7 +38,7 @@ public:
 
   [[nodiscard]] static Image createErrorImage(const Device& device);
   [[nodiscard]] static Image createSwapchainImage(
-    const Device&, VkImage, std::string_view name, VkExtent2D, VkFormat);
+    std::string_view name, const Device&, VkImage, VkExtent2D, VkFormat);
 
   void setLayout(VkImageLayout new_layout) { layout_ = new_layout; }
 

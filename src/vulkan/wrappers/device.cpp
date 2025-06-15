@@ -158,66 +158,37 @@ NAMESPACE_END()
 // -----------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// DeviceImpl
+// DeviceData
 //------------------------------------------------------------------------------
-class Device::DeviceImpl {
-public:
-  DeviceImpl(VkPhysicalDevice          physical,
-             const VkDeviceCreateInfo& device_ci,
-             VmaAllocatorCreateInfo&   allocator_ci);
-  ~DeviceImpl();
-  VkPhysicalDevice physical_device_{ VK_NULL_HANDLE };
-  VkDevice         device_{ VK_NULL_HANDLE };
-  VmaAllocator     allocator_{ VK_NULL_HANDLE };
+struct Device::DeviceData {
+  VkPhysicalDeviceProperties physical_device_props;
+  VkPhysicalDevice           physical_device{ VK_NULL_HANDLE };
+  VmaAllocator               allocator{ VK_NULL_HANDLE };
   // One command pool per thread
-  mutable std::mutex              mutex_;
-  mutable std::deque<CommandPool> command_pools_;
+  mutable std::mutex              mutex;
+  mutable std::deque<CommandPool> command_pools;
 };
-
-Device::DeviceImpl::DeviceImpl(VkPhysicalDevice          physical,
-                               const VkDeviceCreateInfo& device_ci,
-                               VmaAllocatorCreateInfo&   allocator_ci)
-  : physical_device_(physical)
-{
-  if (const VkResult result{
-        vkCreateDevice(physical_device_, &device_ci, nullptr, &device_) };
-      result != VK_SUCCESS)
-    Throw("vkCreateDevice(): {}", result);
-
-  allocator_ci.device = device_;
-  if (const VkResult result = vmaCreateAllocator(&allocator_ci, &allocator_);
-      result != VK_SUCCESS)
-    Throw("vmaCreateAllocator(): {}", result);
-}
-
-Device::DeviceImpl::~DeviceImpl()
-{
-  // Ensure that command pools can be cleared properly
-  std::lock_guard lock(mutex_);
-  command_pools_.clear();
-  vmaDestroyAllocator(allocator_);
-  vkDestroyDevice(device_, nullptr);
-}
 
 //------------------------------------------------------------------------------
 // Device
 //------------------------------------------------------------------------------
-Device::Device()                    = default;
-Device::~Device()                   = default;
-Device& Device::operator=(Device&&) = default;
+EL_VK_IMPL_DEFAULTS(Device)
 
-Device::Device(const Instance&                 instance,
+Device::Device(std::string_view                name,
+               const Instance&                 instance,
                const Surface&                  surface,
                const std::vector<const char*>& device_extensions)
+  : Base(name), d_(std::make_unique<DeviceData>())
 
 {
   // Select physical device
-  VkPhysicalDevice physical_device{ selectPhysicalDevice(
-    instance.vk(), surface.vk(), device_extensions) };
+  d_->physical_device =
+    selectPhysicalDevice(instance.vk(), surface.vk(), device_extensions);
 
-  vkGetPhysicalDeviceProperties(physical_device, &physical_device_props_);
+  vkGetPhysicalDeviceProperties(d_->physical_device,
+                                &d_->physical_device_props);
 
-  queue_family_indices_ = findQueueFamilies(physical_device, surface.vk());
+  queue_family_indices_ = findQueueFamilies(d_->physical_device, surface.vk());
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::set<uint32_t>                   unique_queue_families = {
     queue_family_indices_.graphics_family.value(),
@@ -275,14 +246,20 @@ Device::Device(const Instance&                 instance,
     .pEnabledFeatures        = &device_features,
   };
 
+  // Create device
+  if (const VkResult result{
+        vkCreateDevice(d_->physical_device, &device_ci, nullptr, &object_) };
+      result != VK_SUCCESS)
+    Throw("vkCreateDevice(): {}", result);
+
   // Allocator create info
   VmaVulkanFunctions vma_vulkan_functions{};
   vma_vulkan_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
   vma_vulkan_functions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
-  VmaAllocatorCreateInfo allocator_ci{
+  const VmaAllocatorCreateInfo allocator_ci{
     .flags          = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-    .physicalDevice = physical_device,
-    .device         = VK_NULL_HANDLE, // set later
+    .physicalDevice = d_->physical_device,
+    .device         = object_,
     .preferredLargeHeapBlockSize    = {},
     .pAllocationCallbacks           = nullptr,
     .pDeviceMemoryCallbacks         = nullptr,
@@ -293,23 +270,36 @@ Device::Device(const Instance&                 instance,
     .pTypeExternalMemoryHandleTypes = nullptr,
   };
 
-  // Create device
-  d_ = std::make_unique<DeviceImpl>(physical_device, device_ci, allocator_ci);
+  // Create allocator
+  if (const VkResult result = vmaCreateAllocator(&allocator_ci, &d_->allocator);
+      result != VK_SUCCESS)
+    Throw("vmaCreateAllocator(): {}", result);
 
   // Get queues
   vkGetDeviceQueue(
-    d_->device_, queue_family_indices_.present_family.value(), 0, &p_queue_);
+    object_, queue_family_indices_.present_family.value(), 0, &p_queue_);
   vkGetDeviceQueue(
-    d_->device_, queue_family_indices_.graphics_family.value(), 0, &g_queue_);
+    object_, queue_family_indices_.graphics_family.value(), 0, &g_queue_);
 }
 
-void Device::waitIdle() const { vkDeviceWaitIdle(d_->device_); }
+Device::~Device()
+{
+  if (vk()) {
+    // Ensure that command pools can be cleared properly
+    std::lock_guard lock(d_->mutex);
+    d_->command_pools.clear();
+    vmaDestroyAllocator(d_->allocator);
+    vkDestroyDevice(object_, nullptr);
+  }
+}
+
+void Device::waitIdle() const { vkDeviceWaitIdle(object_); }
 
 VkSampleCountFlagBits Device::findMaxMsaaSampleCount() const
 {
   VkSampleCountFlags counts =
-    physical_device_props_.limits.framebufferColorSampleCounts &
-    physical_device_props_.limits.framebufferDepthSampleCounts;
+    d_->physical_device_props.limits.framebufferColorSampleCounts &
+    d_->physical_device_props.limits.framebufferDepthSampleCounts;
   if (counts & VK_SAMPLE_COUNT_64_BIT) {
     return VK_SAMPLE_COUNT_64_BIT;
   }
@@ -334,7 +324,12 @@ VkSampleCountFlagBits Device::findMaxMsaaSampleCount() const
 SwapchainSupportDetails
 Device::swapchainSupportDetails(VkSurfaceKHR surface) const
 {
-  return getSwapchainSupportDetails(d_->physical_device_, surface);
+  return getSwapchainSupportDetails(d_->physical_device, surface);
+}
+
+std::string Device::physicalDeviceName() const
+{
+  return d_->physical_device_props.deviceName;
 }
 
 VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
@@ -343,7 +338,7 @@ VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
 {
   for (VkFormat format : candidates) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(d_->physical_device_, format, &props);
+    vkGetPhysicalDeviceFormatProperties(d_->physical_device, format, &props);
     if (tiling == VK_IMAGE_TILING_LINEAR &&
         (props.linearTilingFeatures & features) == features)
       return format;
@@ -367,8 +362,9 @@ CommandPool& Device::threadGraphicsPool() const
 {
   thread_local CommandPool* thread_graphics_pool{ nullptr };
   if (thread_graphics_pool == nullptr) {
-    std::lock_guard lock(d_->mutex_);
-    thread_graphics_pool = &d_->command_pools_.emplace_back(*this);
+    std::lock_guard lock(d_->mutex);
+    thread_graphics_pool =
+      &d_->command_pools.emplace_back("Thread pool", *this);
   }
   return *thread_graphics_pool;
 }
@@ -390,7 +386,7 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
                                 VkMemoryPropertyFlags properties) const
 {
   VkPhysicalDeviceMemoryProperties mem_props;
-  vkGetPhysicalDeviceMemoryProperties(d_->physical_device_, &mem_props);
+  vkGetPhysicalDeviceMemoryProperties(d_->physical_device, &mem_props);
   for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
     if (type_filter & (1 << i) &&
         (mem_props.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -400,8 +396,8 @@ uint32_t Device::findMemoryType(uint32_t              type_filter,
   Throw("Failed to find suitable device memory type!");
 }
 
-VkPhysicalDevice Device::physical() const { return d_->physical_device_; }
-VkDevice         Device::logical() const { return d_->device_; }
-VmaAllocator     Device::allocator() const { return d_->allocator_; }
+VkPhysicalDevice Device::physical() const { return d_->physical_device; }
+VkDevice         Device::logical() const { return object_; }
+VmaAllocator     Device::allocator() const { return d_->allocator; }
 
 NAMESPACE_END(eldr::vk::wr)

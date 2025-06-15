@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr/core/config.hpp>
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/shape.hpp>
 
@@ -15,9 +16,9 @@ enum class MaterialType : uint8_t {
 };
 
 struct GeoSurface {
-  uint32_t                  start_index;
-  uint32_t                  count;
-  std::shared_ptr<Material> material;
+  uint32_t        start_index;
+  uint32_t        count;
+  const Material* material;
 };
 
 EL_VARIANT class Mesh final : public Shape<Float, Spectrum> {
@@ -30,7 +31,7 @@ public:
        std::vector<Color4f>&&    colors,
        std::vector<Normal3f>&&   normals,
        std::vector<GeoSurface>&& surfaces);
-  ~Mesh() = default;
+  ~Mesh();
 
   /// Accessors
   [[nodiscard]] const std::vector<Point3f>& vtxPositions() const
@@ -71,6 +72,7 @@ private:
 
   // std::optional<vk::wr::GpuBuffer>
 };
+EL_INSTANTIATE_CLASS(Mesh)
 
 // template <>
 // std::optional<std::vector<std::shared_ptr<Shape>>>

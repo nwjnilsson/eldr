@@ -3,21 +3,15 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class Fence {
-public:
-  Fence();
-  Fence(const Device& device);
-  Fence(Fence&&) noexcept = default;
-  ~Fence();
+class Fence : public VkDeviceObject<VkFence> {
+  using Base = VkDeviceObject<VkFence>;
 
-  [[nodiscard]] VkFence vk() const;
+public:
+  EL_VK_IMPORT_DEFAULTS(Fence)
+  Fence(std::string_view name, const Device& device);
 
   VkResult reset() const;
   VkResult wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
-
-private:
-  class FenceImpl;
-  std::unique_ptr<FenceImpl> d_;
 };
 NAMESPACE_END(eldr::vk::wr)

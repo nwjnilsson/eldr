@@ -51,14 +51,13 @@ NAMESPACE_END()
 //------------------------------------------------------------------------------
 // Image
 //------------------------------------------------------------------------------
-Image::Image()                   = default;
-Image::Image(Image&&) noexcept   = default;
-Image& Image::operator=(Image&&) = default;
+EL_VK_IMPL_DEFAULTS(Image)
 
 Image::Image(const Device& device, const ImageCreateInfo& image_info)
   : Base(image_info.name, device), size_(image_info.extent),
     format_(image_info.format), mip_levels_(image_info.mip_levels)
 {
+  Assert(this->device().vk());
   const VkImageCreateInfo image_ci{
     .sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
     .pNext                 = nullptr,
@@ -90,13 +89,13 @@ Image::Image(const Device& device, const ImageCreateInfo& image_info)
   if (const VkResult result{ vmaCreateImage(device.allocator(),
                                             &image_ci,
                                             &alloc_ci,
-                                            vkp(),
+                                            &object_,
                                             &allocation_,
                                             &alloc_info_) };
       result != VK_SUCCESS)
     Throw("Failed to create image! ({})", result);
 
-  image_view_ = ImageView{ device, *this, image_info.aspect_flags };
+  image_view_ = ImageView{ *this, image_info.aspect_flags };
 
   if (image_info.final_layout != VK_IMAGE_LAYOUT_UNDEFINED) {
     device.execute([&](const CommandBuffer& cb) {
@@ -160,9 +159,9 @@ Image Image::createErrorImage(const Device& device)
   return Image{ device, Bitmap::createCheckerboard() };
 }
 
-Image Image::createSwapchainImage(const Device&    device,
+Image Image::createSwapchainImage(std::string_view name,
+                                  const Device&    device,
                                   VkImage          vkimage,
-                                  std::string_view name,
                                   VkExtent2D       extent,
                                   VkFormat         format)
 {
@@ -170,14 +169,14 @@ Image Image::createSwapchainImage(const Device&    device,
   image.name_   = name;
   image.size_   = extent;
   image.format_ = format;
-  image.vk()    = vkimage;
+  image.object_ = vkimage;
   const ImageViewCreateInfo image_view_ci{
     .image        = image.vk(),
     .format       = format,
     .aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT,
     .mip_levels   = image.mip_levels_,
   };
-  image.image_view_ = ImageView{ device, image_view_ci };
+  image.image_view_ = ImageView{ name, device, image_view_ci };
   return image;
 }
 

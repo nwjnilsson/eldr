@@ -22,20 +22,17 @@ struct QueueFamilyIndices {
   }
 };
 
-class Device {
+class Device : public VkObject<VkDevice> {
+  using Base = VkObject<VkDevice>;
+
 public:
-  Device();
-  Device(const Instance&,
+  EL_VK_IMPORT_DEFAULTS(Device)
+  Device(std::string_view name,
+         const Instance&,
          const Surface&,
          const std::vector<const char*>& device_extensions);
-  ~Device();
 
-  Device& operator=(Device&&);
-
-  [[nodiscard]] std::string name() const
-  {
-    return physical_device_props_.deviceName;
-  }
+  [[nodiscard]] std::string physicalDeviceName() const;
 
   [[nodiscard]] VkFormat
   findSupportedFormat(const std::vector<VkFormat>& candidates,
@@ -72,9 +69,8 @@ private:
   CommandPool& threadGraphicsPool() const;
 
 private:
-  class DeviceImpl;
-  std::unique_ptr<DeviceImpl> d_;
-  VkPhysicalDeviceProperties  physical_device_props_;
+  struct DeviceData;
+  std::unique_ptr<DeviceData> d_;
   QueueFamilyIndices          queue_family_indices_;
   VkQueue                     p_queue_{ VK_NULL_HANDLE }; // present
   VkQueue                     g_queue_{ VK_NULL_HANDLE }; // graphics

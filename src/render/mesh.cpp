@@ -2,7 +2,7 @@
 #include <eldr/render/mesh.hpp>
 #include <eldr/vulkan/engine.hpp>
 
-NAMESPACE_BEGIN(eldr::render)
+NAMESPACE_BEGIN(eldr)
 
 EL_VARIANT Mesh<Float, Spectrum>::Mesh(std::string_view          name,
                                        std::vector<Point3f>&&    positions,
@@ -13,9 +13,10 @@ EL_VARIANT Mesh<Float, Spectrum>::Mesh(std::string_view          name,
   : Shape<Float, Spectrum>(name, ShapeType::Mesh), positions_(positions),
     texcoords_(texcoords), colors_(colors), normals_(normals),
     surfaces_(surfaces)
-
 {
 }
 
-EL_INSTANTIATE_CLASS(Mesh)
-NAMESPACE_END(eldr::render)
+EL_VARIANT Mesh<Float, Spectrum>::~Mesh() = default;
+
+// EL_INSTANTIATE_CLASS(Mesh)
+NAMESPACE_END(eldr)

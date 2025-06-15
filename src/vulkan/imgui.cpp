@@ -16,7 +16,7 @@ struct ImGuiOverlay::FrameData {
 };
 
 struct PushConstantBlock {
-  using Vector = core::Aliases<float>::Vector2f;
+  using Vector = CoreAliases<float>::Vector2f;
   Vector scale;
   Vector translate;
 } push_const_block_;
@@ -56,13 +56,13 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   // style.ScaleAllSizes(scale_);
 
   Log(Trace, "Loading ImGui shaders");
-  vertex_shader_ = wr::Shader{
-    device_, "ImGui vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
+  vertex_shader_ = wr::ShaderModule{
+    "ImGui vertex shader", device_, "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
   };
-  fragment_shader_ = wr::Shader{ device_,
-                                 "ImGui fragment shader",
-                                 "imgui.frag.spv",
-                                 VK_SHADER_STAGE_FRAGMENT_BIT };
+  fragment_shader_ = wr::ShaderModule{ "ImGui fragment shader",
+                                       device_,
+                                       "imgui.frag.spv",
+                                       VK_SHADER_STAGE_FRAGMENT_BIT };
 
   // Load font texture
   // TODO: Move this data into a container class; have container class also
@@ -115,7 +115,8 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       font_mip_levels,
     };
   }
-  font_sampler_ = wr::Sampler{ device_,
+  font_sampler_ = wr::Sampler{ "ImGui font sampler",
+                               device_,
                                VK_FILTER_LINEAR,
                                VK_FILTER_LINEAR,
                                VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -154,16 +155,16 @@ void ImGuiOverlay::buildPipeline()
 
   DescriptorSetLayoutBuilder descriptor_builder;
   descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
-  imgui_layout_ = descriptor_builder.build(device_);
+  imgui_layout_ = descriptor_builder.build("ImGui", device_);
 
-  wr::Shader vert_shader{
-    device_, "ImGui vertex shader", "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
+  wr::ShaderModule vert_shader{
+    "ImGui vertex shader", device_, "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
   };
-  wr::Shader      frag_shader{ device_,
-                          "ImGui fragment shader",
-                          "imgui.frag.spv",
-                          VK_SHADER_STAGE_FRAGMENT_BIT };
-  PipelineBuilder pipeline_builder;
+  wr::ShaderModule frag_shader{ "ImGui fragment shader",
+                                device_,
+                                "imgui.frag.spv",
+                                VK_SHADER_STAGE_FRAGMENT_BIT };
+  PipelineBuilder  pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(imgui_layout_)
     .addVertexBinding(0, sizeof(ImDrawVert))
     .addVertexAttribute(VK_FORMAT_R32G32_SFLOAT, offsetof(ImDrawVert, pos))
@@ -218,8 +219,8 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
   if (ibuffer.size() >= index_data.size())
     ibuffer.uploadData(index_data);
   else
-    ibuffer = { device_,
-                "imgui index buffer",
+    ibuffer = { "ImGui index buffer",
+                device_,
                 index_data,
                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT };
@@ -236,8 +237,8 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
   if (vbuffer.size() >= vertex_data.size())
     vbuffer.uploadData(vertex_data); // assuming cpu to gpu buffer.
   else {
-    vbuffer = { device_,
-                "ImGui vertex buffer",
+    vbuffer = { "ImGui vertex buffer",
+                device_,
                 vertex_data,
                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT };

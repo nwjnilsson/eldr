@@ -3,7 +3,6 @@
 #include <eldr/core/fwd.hpp>
 
 NAMESPACE_BEGIN(eldr)
-NAMESPACE_BEGIN(render)
 // struct BSDFContext;
 // class BSDF;
 // class OptixDenoiser;
@@ -43,7 +42,6 @@ EL_VARIANT class Shape;
 // struct MediumInteraction;
 // struct SurfaceInteraction;
 // struct PreliminaryIntersection;
-NAMESPACE_END(render)
 
 template <typename Float_, typename Spectrum_> struct RenderAliases {
   using Float    = Float_;
@@ -71,45 +69,45 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   // using BSDFSample3f       = BSDFSample3<Float /*, Spectrum*/>;
   // using SilhouetteSample3f = SilhouetteSample<Float /*, Spectrum*/>;
   // using PhaseFunctionContext =
-  //   render::PhaseFunctionContext<Float /*, Spectrum*/>;
+  //   PhaseFunctionContext<Float /*, Spectrum*/>;
   // using Interaction3f        = Interaction<Float /*, Spectrum*/>;
   // using MediumInteraction3f  = MediumInteraction<Float /*, Spectrum*/>;
   // using SurfaceInteraction3f = SurfaceInteraction<Float /*, Spectrum*/>;
   // using PreliminaryIntersection3f =
-  //   PreliminaryIntersection<Float, render::Shape<FloatU /*,
+  //   PreliminaryIntersection<Float, Shape<FloatU /*,
   //   SpectrumU*/>>;
 
-  using Scene = render::Scene<FloatU, Spectrum>;
-  // using Sampler = render::Sampler<FloatU , SpectrumU>;
-  //  using MicrofacetDistribution =
-  //    render::MicrofacetDistribution<FloatU , SpectrumU>;
-  using Shape = render::Shape<FloatU, Spectrum>;
-  //  using ShapeGroup  = render::ShapeGroup<FloatU , SpectrumU>;
-  //  using ShapeKDTree = render::ShapeKDTree<FloatU , SpectrumU>;
-  using Mesh = render::Mesh<FloatU, SpectrumU>;
-  //  using Integrator  = render::Integrator<FloatU , SpectrumU>;
+  // using Scene = Scene<FloatU, Spectrum>;
+  //  using Sampler = Sampler<FloatU , SpectrumU>;
+  //   using MicrofacetDistribution =
+  //     MicrofacetDistribution<FloatU , SpectrumU>;
+  using Shape = eldr::Shape<FloatU, Spectrum>;
+  //  using ShapeGroup  = ShapeGroup<FloatU , SpectrumU>;
+  //  using ShapeKDTree = ShapeKDTree<FloatU , SpectrumU>;
+  using Mesh = eldr::Mesh<FloatU, SpectrumU>;
+  //  using Integrator  = Integrator<FloatU , SpectrumU>;
   //  using SamplingIntegrator =
-  //    render::SamplingIntegrator<FloatU , SpectrumU>;
+  //    SamplingIntegrator<FloatU , SpectrumU>;
   //  using MonteCarloIntegrator =
-  //    render::MonteCarloIntegrator<FloatU , SpectrumU>;
+  //    MonteCarloIntegrator<FloatU , SpectrumU>;
   //  using AdjointIntegrator =
-  //    render::AdjointIntegrator<FloatU , SpectrumU>;
-  //  using BSDF          = render::BSDF<FloatU , SpectrumU>;
-  //  using OptixDenoiser = render::OptixDenoiser<FloatU , SpectrumU>;
-  //  using Sensor        = render::Sensor<FloatU , SpectrumU>;
+  //    AdjointIntegrator<FloatU , SpectrumU>;
+  //  using BSDF          = BSDF<FloatU , SpectrumU>;
+  //  using OptixDenoiser = OptixDenoiser<FloatU , SpectrumU>;
+  //  using Sensor        = Sensor<FloatU , SpectrumU>;
   //  using ProjectiveCamera =
-  //    render::ProjectiveCamera<FloatU , SpectrumU>;
-  //  using Emitter       = render::Emitter<FloatU , SpectrumU>;
-  //  using Endpoint      = render::Endpoint<FloatU , SpectrumU>;
-  using Medium = render::Medium<FloatU, SpectrumU>;
-  //  using PhaseFunction = render::PhaseFunction<FloatU , SpectrumU>;
-  //  using Film          = render::Film<FloatU , SpectrumU>;
-  //  using ImageBlock    = render::ImageBlock<FloatU , SpectrumU>;
+  //    ProjectiveCamera<FloatU , SpectrumU>;
+  //  using Emitter       = Emitter<FloatU , SpectrumU>;
+  //  using Endpoint      = Endpoint<FloatU , SpectrumU>;
+  using Medium = eldr::Medium<FloatU, SpectrumU>;
+  //  using PhaseFunction = PhaseFunction<FloatU , SpectrumU>;
+  //  using Film          = Film<FloatU , SpectrumU>;
+  //  using ImageBlock    = ImageBlock<FloatU , SpectrumU>;
   //  using ReconstructionFilter =
-  //    render::ReconstructionFilter<FloatU , SpectrumU>;
-  //  using Texture    = render::Texture<FloatU , SpectrumU>;
-  //  using Volume     = render::Volume<FloatU , SpectrumU>;
-  //  using VolumeGrid = render::VolumeGrid<FloatU , SpectrumU>;
+  //    ReconstructionFilter<FloatU , SpectrumU>;
+  //  using Texture    = Texture<FloatU , SpectrumU>;
+  //  using Volume     = Volume<FloatU , SpectrumU>;
+  //  using VolumeGrid = VolumeGrid<FloatU , SpectrumU>;
 };
 
 NAMESPACE_END(eldr)

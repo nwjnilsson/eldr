@@ -5,20 +5,15 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class RenderPass {
+class RenderPass : public VkDeviceObject<VkRenderPass> {
+  using Base = VkDeviceObject<VkRenderPass>;
 
 public:
-  RenderPass() = default;
-  RenderPass(const Device&                      device,
+  EL_VK_IMPORT_DEFAULTS(RenderPass)
+  RenderPass(std::string_view                   name,
+             const Device&                      device,
              std::span<VkAttachmentDescription> attachments,
              const VkSubpassDescription&        subpass_description,
              const VkSubpassDependency&         subpass_dependency);
-  ~RenderPass() = default;
-
-  [[nodiscard]] VkRenderPass vk() const;
-
-private:
-  class RenderPassImpl;
-  std::unique_ptr<RenderPassImpl> d_;
 };
 NAMESPACE_END(eldr::vk::wr)

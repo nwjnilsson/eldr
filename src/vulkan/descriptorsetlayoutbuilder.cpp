@@ -1,9 +1,8 @@
 #include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
-DescriptorSetLayoutBuilder&
-DescriptorSetLayoutBuilder::add(uint32_t binding, VkDescriptorType type,
-                                VkShaderStageFlags stage_flags)
+DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::add(
+  uint32_t binding, VkDescriptorType type, VkShaderStageFlags stage_flags)
 {
   bindings_.push_back({
     .binding            = binding,
@@ -56,10 +55,11 @@ DescriptorSetLayoutBuilder::addStorageBuffer(uint32_t           binding,
 }
 
 wr::DescriptorSetLayout
-DescriptorSetLayoutBuilder::build(const wr::Device&                device,
+DescriptorSetLayoutBuilder::build(std::string_view                 name,
+                                  const wr::Device&                device,
                                   VkDescriptorSetLayoutCreateFlags create_flags)
 {
-  return wr::DescriptorSetLayout{ device, bindings_, create_flags };
+  return wr::DescriptorSetLayout{ name, device, bindings_, create_flags };
 }
 
 NAMESPACE_END(eldr::vk)

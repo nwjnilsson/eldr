@@ -1,7 +1,8 @@
 src = [
   'app.cpp',
   'window.cpp',
-  'keyboardmouseinput.cpp'
+  'keyboardmouseinput.cpp',
+  'scenemanager.cpp'
   ]
 
 lib_app = static_library('lib-app',

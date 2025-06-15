@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 NAMESPACE_BEGIN(fastgltf)
 struct Sampler;
@@ -18,23 +19,24 @@ class ResourceManager {
   friend VulkanEngine;
 
 public:
+  ResourceManager();
   ResourceManager(const wr::Device&       device,
                   GltfMetallicRoughness&& default_material);
   ResourceManager(ResourceManager&&) noexcept;
   ~ResourceManager();
 
-  ResourceManager& operator=(ResourceManager&&) noexcept;
+  ResourceManager& operator=(ResourceManager&&);
 
-  [[nodiscard]] std::shared_ptr<wr::Image> const errorImage() const;
+  [[nodiscard]] const wr::Image& errorImage() const;
 
-  [[nodiscard]] std::shared_ptr<wr::Sampler> const defaultSampler() const;
+  [[nodiscard]] const wr::Sampler& defaultSampler() const;
 
-  [[nodiscard]] std::optional<std::shared_ptr<wr::Image>>
+  [[nodiscard]] std::optional<const wr::Image*>
   loadImage(const fastgltf::Asset&       asset,
             fastgltf::Image&             image,
             const std::filesystem::path& texture_dir);
 
-  void load(fastgltf::Asset& asset);
+  [[nodiscard]] std::vector<const Material*> load(fastgltf::Asset& asset);
 
   // void load(fastgltf::Asset&);
   // void buildMaterialPipelines(GltfMetallicRoughness& material);

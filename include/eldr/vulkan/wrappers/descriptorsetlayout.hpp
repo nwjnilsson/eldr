@@ -5,21 +5,14 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class DescriptorSetLayout {
+class DescriptorSetLayout : public VkDeviceObject<VkDescriptorSetLayout> {
+  using Base = VkDeviceObject<VkDescriptorSetLayout>;
+
 public:
-  DescriptorSetLayout();
-  DescriptorSetLayout(const Device&,
+  EL_VK_IMPORT_DEFAULTS(DescriptorSetLayout)
+  DescriptorSetLayout(std::string_view name,
+                      const Device&,
                       std::span<VkDescriptorSetLayoutBinding>,
                       VkDescriptorSetLayoutCreateFlags flags);
-  DescriptorSetLayout(DescriptorSetLayout&&) noexcept;
-  ~DescriptorSetLayout();
-
-  DescriptorSetLayout& operator=(DescriptorSetLayout&&);
-
-  [[nodiscard]] VkDescriptorSetLayout vk() const;
-
-private:
-  class DescriptorSetLayoutImpl;
-  std::unique_ptr<DescriptorSetLayoutImpl> d_;
 };
 NAMESPACE_END(eldr::vk::wr)

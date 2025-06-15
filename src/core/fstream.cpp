@@ -143,7 +143,7 @@ std::string FileStream::readLine()
 {
   std::string result;
   if (!std::getline(*file_, result))
-    Log(core::Error,
+    Log(Error,
         "\"%s\": I/O error while attempting to read a line of text: %s",
         path_.string(),
         strerror(errno));

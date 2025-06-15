@@ -4,18 +4,14 @@
 
 NAMESPACE_BEGIN(eldr::vk::wr)
 
-class Surface {
+class Surface : public VkObject<VkSurfaceKHR> {
+  using Base = VkObject<VkSurfaceKHR>;
+
 public:
-  Surface();
-  Surface(const Instance&, const Window&);
-  ~Surface();
-
-  Surface& operator=(Surface&&);
-
-  [[nodiscard]] VkSurfaceKHR vk() const;
+  EL_VK_IMPORT_DEFAULTS(Surface)
+  Surface(std::string_view name, const Instance&, const Window&);
 
 private:
-  class SurfaceImpl;
-  std::unique_ptr<SurfaceImpl> d_;
+  const Instance* instance_{ nullptr };
 };
 NAMESPACE_END(eldr::vk::wr)

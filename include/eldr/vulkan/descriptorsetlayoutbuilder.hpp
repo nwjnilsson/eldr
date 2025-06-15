@@ -22,7 +22,8 @@ public:
                                                VkShaderStageFlags stage_flags);
 
   [[nodiscard]] wr::DescriptorSetLayout
-  build(const wr::Device&                device,
+  build(std::string_view                 name,
+        const wr::Device&                device,
         VkDescriptorSetLayoutCreateFlags create_flags = 0);
 
 private:
