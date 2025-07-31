@@ -8,7 +8,7 @@ NAMESPACE_BEGIN(eldr)
 
 enum class ShapeType : uint8_t { Mesh, Disk, Rectangle, Sphere, Other };
 
-EL_VARIANT class Shape {
+class Shape {
   EL_IMPORT_CORE_TYPES()
 
 public:

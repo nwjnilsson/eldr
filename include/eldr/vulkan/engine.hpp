@@ -15,7 +15,7 @@ struct Asset;
 
 NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine {
-  EL_IMPORT_CORE_TYPES_SCALAR()
+  EL_IMPORT_CORE_TYPES()
   friend EldrApp; // TODO: I did this to be able to invalidate swapchain from
                   // EldrApp. This is probably not ideal and there should be a
                   // better way to do this
@@ -29,7 +29,7 @@ public:
 
   // drawFrame should perhaps take a vector of Shapes as argument once all
   // meshes/shapes are registered in the engine
-  EL_VARIANT void drawFrame(const Scene<Float, Spectrum>* scene);
+  void drawFrame(const Scene* scene);
 
   [[nodiscard]] std::string deviceName() const;
   [[nodiscard]] std::vector<const Material*>
@@ -41,20 +41,21 @@ public:
   void invalidateSwapchain() { swapchain_invalidated_ = true; }
 
 private:
-  void            loadTextures();
-  void            loadShaders();
-  void            setupFrameData();
-  void            initDescriptors();
-  void            initDefaultData();
-  void            createCommandBuffers();
-  void            setupRenderGraph();
-  void            recreateSwapchain();
-  EL_VARIANT void updateBuffers(const Scene<Float, Spectrum>*);
-  void            updateScene(uint32_t current_image);
-  void            drawGeometry(const wr::CommandBuffer& cb);
+  void loadTextures();
+  void loadShaders();
+  void setupFrameData();
+  void initDescriptors();
+  void initDefaultData();
+  void createCommandBuffers();
+  void setupRenderGraph();
+  void recreateSwapchain();
+  void updateBuffers(const Scene*);
+  void updateScene(uint32_t current_image);
+  void drawGeometry(const wr::CommandBuffer& cb);
 
 private:
   const Window& window_;
+  const Camera* camera_; // TODO: own camera or set dynamically?
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };
@@ -72,7 +73,7 @@ private:
 
 NAMESPACE_END(eldr::vk)
 template <> struct std::hash<eldr::vk::GpuVertex> {
-  using Float = float;
+  // using Float = float;
   EL_IMPORT_CORE_TYPES()
   size_t operator()(eldr::vk::GpuVertex const& vertex) const;
 };

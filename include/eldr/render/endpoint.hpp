@@ -2,7 +2,7 @@
 #include <eldr/render/fwd.hpp>
 #include <string>
 NAMESPACE_BEGIN(eldr)
-EL_VARIANT class Endpoint {
+class Endpoint {
   EL_IMPORT_TYPES(Medium, Shape);
 
 public:

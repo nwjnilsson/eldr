@@ -292,7 +292,7 @@ void VulkanEngine::initDescriptors()
   // d_->viking_model_descriptor_layout = layout_builder.build(d_->device, 0);
 }
 
-EL_VARIANT void VulkanEngine::updateBuffers(const Scene<Float, Spectrum>* scene)
+void VulkanEngine::updateBuffers(const Scene* scene)
 {
   std::vector<GpuVertex>                  vertices;
   std::vector<uint32_t>                   indices;
@@ -302,7 +302,7 @@ EL_VARIANT void VulkanEngine::updateBuffers(const Scene<Float, Spectrum>* scene)
   // for (const auto& es : loaded_scenes_) {
   for (const auto& en : scene->nodes_) {
     if (const auto& mesh_node{
-          dynamic_cast<const MeshNode<Float, Spectrum>*>(en.second.get()) }) {
+          dynamic_cast<const MeshNode*>(en.second.get()) }) {
       const auto&  mesh{ mesh_node->mesh };
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
@@ -343,9 +343,6 @@ EL_VARIANT void VulkanEngine::updateBuffers(const Scene<Float, Spectrum>* scene)
       VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
   };
 }
-// TODO: refactor away specialization
-template void VulkanEngine::updateBuffers<float, Color<float, 3>>(
-  const Scene<float, Color<float, 3>>* s);
 
 void VulkanEngine::setupRenderGraph()
 {
@@ -555,7 +552,7 @@ void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 //   recreateSwapchain();
 // }
 
-EL_VARIANT void VulkanEngine::drawFrame(const Scene<Float, Spectrum>* scene)
+void VulkanEngine::drawFrame(const Scene* scene)
 {
   auto&       swapchain{ d_->swapchain };
   const auto& device{ d_->device };
@@ -635,9 +632,6 @@ EL_VARIANT void VulkanEngine::drawFrame(const Scene<Float, Spectrum>* scene)
 
   frame_index_ = (frame_index_ + 1) % max_frames_in_flight;
 }
-// TODO: refactor away specialization
-template void VulkanEngine::drawFrame<float, Color<float, 3ul>>(
-  const Scene<float, Color<float, 3ul>>*);
 
 std::string VulkanEngine::deviceName() const { return d_->device.name(); }
 

@@ -36,8 +36,7 @@ void SceneNode::map(std::function<void(SceneNode*)> func)
 //------------------------------------------------------------------------------
 // Mesh node
 //------------------------------------------------------------------------------
-EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
-                                                DrawContext&       ctx) const
+void MeshNode::draw(const Transform4f& top_matrix, DrawContext& ctx) const
 {
   const Transform4f node_transform{ top_matrix * world_transform };
 
@@ -57,7 +56,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
-EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
+void Scene::draw(DrawContext& ctx) const
 {
   ctx.opaque_surfaces.clear();
   const Transform4f top_matrix{ 1.f };
@@ -66,5 +65,4 @@ EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
   }
 }
 
-EL_INSTANTIATE_CLASS(Scene)
 NAMESPACE_END(eldr)

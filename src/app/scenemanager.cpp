@@ -26,18 +26,14 @@ NAMESPACE_BEGIN(eldr)
 
 SceneManager::SceneManager()
 {
-  scenes_["Default"] = Scene<float, Color<float, 3>>{};
+  scenes_["Default"] = Scene{};
   active_scene_      = &scenes_["Default"];
 }
 
 bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
                             std::filesystem::path   file_path)
 {
-  using Float    = float;
-  using Spectrum = Color<float, 3>;
-  using Scene    = Scene<float, Color<float, 3>>;
-  using Mesh     = typename Scene::Mesh;
-  namespace fg   = fastgltf;
+  namespace fg = fastgltf;
   Log(Trace, "Loading glTF: {}", file_path.c_str());
 
   auto data{ fg::GltfDataBuffer::FromPath(file_path) };
@@ -227,7 +223,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   for (fg::Node& node : gltf.nodes) {
     std::shared_ptr<SceneNode> scene_node;
     if (node.meshIndex.has_value()) {
-      auto p_mesh  = std::make_shared<MeshNode<Float, Spectrum>>();
+      auto p_mesh  = std::make_shared<MeshNode>();
       p_mesh->mesh = meshes[*node.meshIndex];
       scene_node   = std::move(p_mesh);
     }
@@ -379,5 +375,4 @@ bool SceneManager::load(const vk::VulkanEngine&      engine,
 
   return loadGltf(engine, filepath);
 }
-
 NAMESPACE_END(eldr)

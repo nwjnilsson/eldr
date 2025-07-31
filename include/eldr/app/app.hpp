@@ -3,6 +3,7 @@
 #include <eldr/app/keyboardmouseinput.hpp>
 #include <eldr/app/window.hpp>
 #include <eldr/core/stopwatch.hpp>
+#include <eldr/render/camera.hpp>
 #include <eldr/render/scene.hpp>
 
 #include <memory>
@@ -63,10 +64,11 @@ public:
 private:
   KeyboardMouseInput input_data_;
   Window             window_;
+  Camera             main_camera_;
 
   std::unique_ptr<vk::VulkanEngine> vk_engine_;
 
-  float           frame_time_{};
+  float     frame_time_{};
   StopWatch stop_watch_{};
 };
 

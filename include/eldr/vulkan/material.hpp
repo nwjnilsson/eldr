@@ -31,7 +31,8 @@ struct Material {
 };
 
 struct GltfMetallicRoughness {
-  EL_IMPORT_CORE_TYPES_SCALAR()
+  using Float = float;
+  EL_IMPORT_CORE_TYPES()
   vk::wr::Pipeline            opaque_pipeline;
   vk::wr::Pipeline            transparent_pipeline;
   vk::wr::DescriptorSetLayout material_layout;

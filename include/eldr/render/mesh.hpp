@@ -21,7 +21,7 @@ struct GeoSurface {
   const Material* material;
 };
 
-EL_VARIANT class Mesh final : public Shape<Float, Spectrum> {
+class Mesh final : public Shape {
   EL_IMPORT_CORE_TYPES()
 
 public:
@@ -72,7 +72,6 @@ private:
 
   // std::optional<vk::wr::GpuBuffer>
 };
-EL_INSTANTIATE_CLASS(Mesh)
 
 // template <>
 // std::optional<std::vector<std::shared_ptr<Shape>>>

@@ -4,19 +4,18 @@
 
 NAMESPACE_BEGIN(eldr)
 
-EL_VARIANT Mesh<Float, Spectrum>::Mesh(std::string_view          name,
-                                       std::vector<Point3f>&&    positions,
-                                       std::vector<Point2f>&&    texcoords,
-                                       std::vector<Color4f>&&    colors,
-                                       std::vector<Normal3f>&&   normals,
-                                       std::vector<GeoSurface>&& surfaces)
-  : Shape<Float, Spectrum>(name, ShapeType::Mesh), positions_(positions),
-    texcoords_(texcoords), colors_(colors), normals_(normals),
-    surfaces_(surfaces)
+Mesh::Mesh(std::string_view          name,
+           std::vector<Point3f>&&    positions,
+           std::vector<Point2f>&&    texcoords,
+           std::vector<Color4f>&&    colors,
+           std::vector<Normal3f>&&   normals,
+           std::vector<GeoSurface>&& surfaces)
+  : Shape(name, ShapeType::Mesh), positions_(positions), texcoords_(texcoords),
+    colors_(colors), normals_(normals), surfaces_(surfaces)
 {
 }
 
-EL_VARIANT Mesh<Float, Spectrum>::~Mesh() = default;
+Mesh::~Mesh() = default;
 
 // EL_INSTANTIATE_CLASS(Mesh)
 NAMESPACE_END(eldr)

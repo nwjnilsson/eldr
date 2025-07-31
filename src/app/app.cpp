@@ -77,13 +77,14 @@ void App::mouseScrollCallback(Window* /*window*/,
 
 void App::run()
 {
-  using Spectrum = Color<float, 3>;
   SceneManager manager{};
   Assert(manager.load(*vk_engine_, { model_path }));
 
   while (!window_.shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
+    main_camera_.processInput(input_data_);
+    main_camera_.update();
     updateImGui();
     vk_engine_->drawFrame(manager.activeScene());
     frame_time_ = stop_watch_.seconds<float>();

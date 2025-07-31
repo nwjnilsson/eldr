@@ -18,7 +18,6 @@ struct ImageCreateInfo {
 };
 
 class Image : public VkAllocatedObject<VkImage> {
-  EL_IMPORT_CORE_TYPES_SCALAR();
   using Base = VkAllocatedObject<VkImage>;
 
 public:

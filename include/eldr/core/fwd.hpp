@@ -1,8 +1,9 @@
 #pragma once
+#include <eldr/arrays/traits.hpp>
 #include <eldr/eldr.hpp>
 #include <glm/fwd.hpp>
 
-#define EL_VARIANT template <typename Float, typename Spectrum>
+// #define EL_VARIANT template <typename Float, typename Spectrum>
 
 using FlagRep = uint32_t;
 using byte_t  = std::byte;
@@ -108,7 +109,7 @@ template <typename Float_> struct CoreAliases {
 NAMESPACE_END(eldr)
 
 #define EL_IMPORT_CORE_TYPES_PREFIX(Float_, prefix)                            \
-  using prefix##CoreAliases = eldr::CoreAliases<Float_>;                       \
+  using prefix##CoreAliases = eldr::CoreAliases<float>;                        \
   using prefix##Vector2i    = typename prefix##CoreAliases::Vector2i;          \
   using prefix##Vector3i    = typename prefix##CoreAliases::Vector3i;          \
   using prefix##Vector4i    = typename prefix##CoreAliases::Vector4i;          \
@@ -162,6 +163,7 @@ NAMESPACE_END(eldr)
 #define __EL_USING_MEMBERS_MACRO__(x) using Base::x;
 #define EL_USING_MEMBERS(...) EL_MAP(__EL_USING_MEMBERS_MACRO__, __VA_ARGS__)
 
+// using ScalarFloat = eldr::arr::scalar_t<Float>;
 #define EL_IMPORT_CORE_TYPES() EL_IMPORT_CORE_TYPES_PREFIX(Float, )
 
-#define EL_IMPORT_CORE_TYPES_SCALAR() EL_IMPORT_CORE_TYPES_PREFIX(float, )
+// #define EL_IMPORT_CORE_TYPES_SCALAR() EL_IMPORT_CORE_TYPES_PREFIX(float, )
