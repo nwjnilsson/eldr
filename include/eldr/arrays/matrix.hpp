@@ -8,7 +8,7 @@ struct Matrix : StaticArray<Array<_Val, _Size>, _Size, Matrix<_Val, _Size>> {
   using Row  = Array<_Val, _Size>;
   using Base = StaticArrayBase<Row, _Size, Matrix<_Val, _Size>>;
   using Base::entry;
-  using Base::Size;
+  using Base::size;
   EL_ARRAY_DEFAULTS(Matrix)
 };
 NAMESPACE_END(eldr::arr)

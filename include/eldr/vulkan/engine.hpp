@@ -33,7 +33,7 @@ public:
 
   [[nodiscard]] std::string deviceName() const;
   [[nodiscard]] std::vector<const Material*>
-  createResources(fastgltf::Asset&) const;
+  loadMaterials(fastgltf::Asset&) const;
 
   void buildMaterialPipelines(GltfMetallicRoughness& material);
 

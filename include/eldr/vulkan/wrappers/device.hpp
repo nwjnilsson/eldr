@@ -43,8 +43,6 @@ public:
   [[nodiscard]] uint32_t findMemoryType(uint32_t              type_filter,
                                         VkMemoryPropertyFlags properties) const;
 
-  [[nodiscard]] const CommandBuffer& requestCommandBuffer() const;
-
   // Accessors
   [[nodiscard]] VkSampleCountFlagBits     findMaxMsaaSampleCount() const;
   [[nodiscard]] const QueueFamilyIndices& queueFamilyIndices() const
@@ -64,6 +62,8 @@ public:
   /// @brief Executes a lambda function immediately and waits.
   void execute(
     const std::function<void(const CommandBuffer& cmd_buf)>& cmd_lambda) const;
+
+  [[nodiscard]] const CommandBuffer& requestCommandBuffer() const;
 
 private:
   CommandPool& threadGraphicsPool() const;

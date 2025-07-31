@@ -108,7 +108,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   //----------------------------------------------------------------------------
   // Load vulkan resources (images, samplers, materials)
   //----------------------------------------------------------------------------
-  auto materials = engine.createResources(gltf);
+  auto materials = engine.loadMaterials(gltf);
 
   //----------------------------------------------------------------------------
   // Load meshes

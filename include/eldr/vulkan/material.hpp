@@ -15,8 +15,19 @@ struct MaterialInstance {
   MaterialPass      pass_type;
 };
 
+// I was thinking that textures, samplers etc should somehow be reference
+// counted and if no material is using a certain sampler, the resource manager
+// can destroy it. One approach might be to have a MaterialResources base struct
+// and let each material's unique Resources struct inherit from it. On the other
+// hand, one might not want to immediately destroy materials/resources if
+// they're not used (may want to swap out materials in the gui, i.e materials
+// should stay loaded)
+//
+// struct MaterialResources {};
+
 struct Material {
   MaterialInstance data;
+  // std::unique_ptr<MaterialResources> resources;
 };
 
 struct GltfMetallicRoughness {
@@ -26,7 +37,7 @@ struct GltfMetallicRoughness {
   vk::wr::DescriptorSetLayout material_layout;
 
   // Just an estimate of what will be needed
-  static constexpr vk::PoolSizeRatio Sizes[3]{
+  static constexpr vk::PoolSizeRatio sizes[3]{
     { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
@@ -35,7 +46,7 @@ struct GltfMetallicRoughness {
   struct MaterialConstants {
     Vector4f color_factors;
     Vector4f metal_rough_factors;
-    // padding, we need it anyway for uniform buffers
+    // Padding to meet 256 byte alignment
     Vector4f extra[14];
   };
 
@@ -53,9 +64,6 @@ struct GltfMetallicRoughness {
                 MaterialPass                            pass,
                 const GltfMetallicRoughness::Resources& resources,
                 vk::DescriptorAllocator&                descriptor_allocator);
-
-private:
-  vk::DescriptorWriter writer;
 };
 
 NAMESPACE_END(eldr)

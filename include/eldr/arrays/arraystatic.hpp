@@ -16,9 +16,9 @@ struct StaticArrayBase
 
   using Base::derived;
 
-  static constexpr size_t Size{ _Size };
+  static constexpr size_t size{ _Size };
 
-  static constexpr size_t ActualSize{ Size };
+  static constexpr size_t actual_size{ size };
 
   /// Recursive array indexing operator
   template <typename... Indices>

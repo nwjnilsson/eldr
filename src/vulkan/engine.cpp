@@ -641,8 +641,7 @@ template void VulkanEngine::drawFrame<float, Color<float, 3ul>>(
 
 std::string VulkanEngine::deviceName() const { return d_->device.name(); }
 
-std::vector<const Material*>
-VulkanEngine::createResources(fg::Asset& gltf) const
+std::vector<const Material*> VulkanEngine::loadMaterials(fg::Asset& gltf) const
 {
   return d_->manager.load(gltf);
 }

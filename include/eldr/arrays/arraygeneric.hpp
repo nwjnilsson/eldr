@@ -15,7 +15,7 @@ struct StaticArray
 
   using Base::derived;
   using Base::entry;
-  using Base::Size;
+  using Base::size;
 
   /// Generic constructor forwarding arguments to glm vector
   template <typename... Ts>
@@ -33,7 +33,7 @@ struct StaticArray
   /// Pointer to the underlying storage (const)
   const Value* data() const { return array; }
 
-  using glm_t = glm::vec<Size, Value>;
+  using glm_t = glm::vec<size, Value>;
   operator glm_t*() const { return array; }
   operator glm_t*() { return array; }
   operator glm_t() const { return array; }

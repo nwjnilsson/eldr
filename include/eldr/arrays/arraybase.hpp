@@ -20,7 +20,7 @@ template <typename _Val, typename _Derived> struct ArrayBase {
   using Value   = _Val;
   using Scalar  = scalar_t<Value>;
 
-  static constexpr bool IsArray{ true };
+  static constexpr bool is_array{ true };
 
   Derived&       derived() { return static_cast<Derived>(*this); }
   Derived const& derived() const { return static_cast<Derived>(*this); }

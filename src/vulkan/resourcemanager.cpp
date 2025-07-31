@@ -64,10 +64,10 @@ struct ResourceManager::Resources {
   wr::Image             white_image;
   wr::Image             error_image;
   // ---------------------------------------------------------------------------
-  DescriptorAllocator material_descriptors; // resize for each file loaded
-  std::unordered_map<std::string, Material>                materials;
-  std::unordered_map<std::string, wr::Sampler>             samplers;
-  std::unordered_map<std::string, wr::Image>               images;
+  DescriptorAllocator     material_descriptors; // resize for each file loaded
+  std::deque<Material>    materials;
+  std::deque<wr::Sampler> samplers;
+  std::deque<wr::Image>   images;
   vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
 
@@ -93,7 +93,7 @@ ResourceManager::ResourceManager(const wr::Device&       device,
                                         d_->white_image.mipLevels() };
 
   d_->material_descriptors =
-    vk::DescriptorAllocator{ initial_pool_size, GltfMetallicRoughness::Sizes };
+    vk::DescriptorAllocator{ initial_pool_size, GltfMetallicRoughness::sizes };
 }
 
 const wr::Image& ResourceManager::errorImage() const { return d_->error_image; }
@@ -106,23 +106,19 @@ const Sampler& ResourceManager::defaultSampler() const
 std::optional<const wr::Image*> ResourceManager::loadImage(
   const fg::Asset& asset, fg::Image& image, const fs::path& texture_dir)
 {
-  std::string const name{ image.name };
-  if (d_->images.contains(name)) {
-    Log(Info, "Using already existing image called \"{}\"...", name);
-    return &d_->images[name];
-  }
+  const std::string name{ image.name };
 
   wr::Image newimage;
   std::visit(
     fg::visitor{
       [](auto&) { Log(Error, "Unknown image source data type."); },
-      [&](fg::sources::URI& filePath) {
-        Assert(filePath.fileByteOffset == 0);
-        Assert(filePath.uri.isLocalPath()); // We're only capable of
-                                            // loading local files.
+      [&](fg::sources::URI& file_path) {
+        Assert(file_path.fileByteOffset == 0);
+        Assert(file_path.uri.isLocalPath()); // We're only capable of
+                                             // loading local files.
 
-        const fs::path path(filePath.uri.path().begin(),
-                            filePath.uri.path().end());
+        const fs::path path(file_path.uri.path().begin(),
+                            file_path.uri.path().end());
         Bitmap         bitmap{ texture_dir / path };
         bitmap.setName(name);
         newimage = wr::Image{ *device_, bitmap };
@@ -162,36 +158,31 @@ std::optional<const wr::Image*> ResourceManager::loadImage(
     return std::nullopt;
   }
   else {
-    d_->images[name] = std::move(newimage);
-    return &d_->images[name];
+    d_->images.push_back(std::move(newimage));
+    return &d_->images.back();
   }
 }
 
-// TODO return a vector of materials that can be indexed as the gltf would like
 std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
 {
   //----------------------------------------------------------------------------
   // Load samplers
   //----------------------------------------------------------------------------
   std::vector<const Sampler*> samplers;
-  for (fg::Sampler const& sampler : gltf.samplers) {
-    std::string name{ sampler.name };
-    if (d_->samplers.contains(name)) {
-      Log(Info, "Using already existing sampler called \"{}\"...", name);
-      samplers.push_back(&d_->samplers[name]);
-    }
-    else {
-      VkFilter            min_filter{ extractFilter(
-        sampler.minFilter.value_or(fg::Filter::Nearest)) };
-      VkFilter            mag_filter{ extractFilter(
-        sampler.magFilter.value_or(fg::Filter::Nearest)) };
-      VkSamplerMipmapMode mipmap_mode{ extractMipmapMode(fg::Filter::Nearest) };
-      d_->samplers[name] =
-        Sampler{ name,        *device_,
-                 min_filter,  mag_filter,
-                 mipmap_mode, static_cast<uint32_t>(VK_LOD_CLAMP_NONE) };
-      samplers.push_back(&d_->samplers[name]);
-    }
+  for (const fg::Sampler& sampler : gltf.samplers) {
+    const std::string   name{ sampler.name };
+    VkFilter            min_filter{ extractFilter(
+      sampler.minFilter.value_or(fg::Filter::Nearest)) };
+    VkFilter            mag_filter{ extractFilter(
+      sampler.magFilter.value_or(fg::Filter::Nearest)) };
+    VkSamplerMipmapMode mipmap_mode{ extractMipmapMode(fg::Filter::Nearest) };
+    d_->samplers.emplace_back(name,
+                              *device_,
+                              min_filter,
+                              mag_filter,
+                              mipmap_mode,
+                              static_cast<uint32_t>(VK_LOD_CLAMP_NONE));
+    samplers.push_back(&d_->samplers.back());
   }
 
   //----------------------------------------------------------------------------
@@ -216,16 +207,10 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
   //----------------------------------------------------------------------------
   // Load materials
   //----------------------------------------------------------------------------
-  size_t new_materials{ 0 };
-  for (const fg::Material& mat : gltf.materials) {
-    std::string name{ mat.name };
-    if (not d_->materials.contains(name)) {
-      new_materials++;
-    }
-  }
-  d_->material_descriptors.resize(new_materials + d_->materials.size());
+  size_t new_materials{ gltf.materials.size() };
 
   if (new_materials > 0) {
+    d_->material_descriptors.resize(new_materials + d_->materials.size());
     wr::Buffer<GltfMetallicRoughness::MaterialConstants> new_buffer{
       "Material buffer",
       *device_,
@@ -260,12 +245,6 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
   std::vector<const Material*> materials;
   size_t                       offset{ d_->materials.size() };
   for (const fg::Material& mat : gltf.materials) {
-    std::string name{ mat.name };
-    if (d_->materials.contains(name)) {
-      Log(Info, "Using already existing material called \"{}\"...", name);
-      materials.push_back(&d_->materials[name]);
-      continue;
-    }
     // TODO: somehow add materials
     GltfMetallicRoughness::MaterialConstants constants;
     constants.color_factors.x = mat.pbrData.baseColorFactor[0];
@@ -297,15 +276,17 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
     // Color textures
     // -------------------------------------------------------------------------
     if (mat.pbrData.baseColorTexture.has_value()) {
-      size_t color_img =
+      size_t texture_idx{
         gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .imageIndex.value();
-      size_t sampler =
+          .imageIndex.value()
+      };
+      size_t sampler_idx{
         gltf.textures[mat.pbrData.baseColorTexture.value().textureIndex]
-          .samplerIndex.value();
+          .samplerIndex.value()
+      };
 
-      material_resources.color_texture = images[image_indices[color_img]];
-      material_resources.color_sampler = samplers[sampler];
+      material_resources.color_texture = images[image_indices[texture_idx]];
+      material_resources.color_sampler = samplers[sampler_idx];
     }
     else {
       Log(Info,
@@ -316,14 +297,15 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
     // Metallic roughness
     // -------------------------------------------------------------------------
     if (mat.pbrData.metallicRoughnessTexture.has_value()) {
-      size_t img =
+      size_t texture_idx =
         gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
           .imageIndex.value();
-      size_t sampler =
+      size_t sampler_idx =
         gltf.textures[mat.pbrData.metallicRoughnessTexture.value().textureIndex]
           .samplerIndex.value();
-      material_resources.metal_rough_texture = images[image_indices[img]];
-      material_resources.metal_rough_sampler = samplers[sampler];
+      material_resources.metal_rough_texture =
+        images[image_indices[texture_idx]];
+      material_resources.metal_rough_sampler = samplers[sampler_idx];
     }
     else {
       Log(Info,
@@ -340,9 +322,9 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
     material.data = d_->default_metal_rough_material.writeMaterial(
       *device_, pass_type, material_resources, d_->material_descriptors);
 
-    d_->materials[name] = std::move(material);
+    d_->materials.push_back(std::move(material));
     data_index++;
-    materials.push_back(&d_->materials[name]);
+    materials.push_back(&d_->materials.back());
   }
   d_->material_buffer.uploadData(gltf_material_constants, offset);
   return materials;
