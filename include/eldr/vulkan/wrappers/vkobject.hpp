@@ -12,7 +12,7 @@ NAMESPACE_BEGIN(eldr::vk::wr)
   ~Name();
 
 // For device objects
-#define EL_VK_IMPL_DEV_DEFAULTS(Name)                                              \
+#define EL_VK_IMPL_DEV_DEFAULTS(Name)                                          \
   Name::Name()                = default;                                       \
   Name::Name(Name&&) noexcept = default;                                       \
   Name& Name::operator=(Name&& o)                                              \
