@@ -42,12 +42,22 @@ void Camera::processInput(const KeyboardMouseInput& input_data)
   else {
     velocity.x = 0;
   }
+  // Y
+  if (input_data.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
+    velocity.y = -0.25f;
+  }
+  else if (input_data.isKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
+    velocity.y = 0.25f;
+  }
+  else {
+    velocity.y = 0;
+  }
   // Z
   if (input_data.isKeyPressed(GLFW_KEY_W)) {
     velocity.z = -0.5f;
   }
   else if (input_data.isKeyPressed(GLFW_KEY_S)) {
-    velocity.z = 1;
+    velocity.z = 0.5f;
   }
   else {
     velocity.z = 0;
