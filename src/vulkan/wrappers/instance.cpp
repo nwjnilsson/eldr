@@ -56,7 +56,19 @@ NAMESPACE_END()
 //------------------------------------------------------------------------------
 // Instance
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(Instance)
+Instance::Instance()                    = default;
+Instance::Instance(Instance&&) noexcept = default;
+Instance& Instance::operator=(Instance&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      vkDestroyInstance(object_, nullptr);
+    }
+    Base::operator=(std::move(o));
+  }
+  return *this;
+}
+
 Instance::~Instance()
 {
   if (vk()) {

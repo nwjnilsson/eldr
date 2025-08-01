@@ -3,7 +3,21 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(CommandPool)
+CommandPool::CommandPool()                       = default;
+CommandPool::CommandPool(CommandPool&&) noexcept = default;
+CommandPool& CommandPool::operator=(CommandPool&& o)
+{
+  if (this != &o) {
+    command_buffers_.clear();
+    command_buffers_ = std::move(o.command_buffers_);
+    if (vk()) {
+      vkDestroyCommandPool(device().logical(), object_, nullptr);
+    }
+    Base::operator=(std::move(o));
+  }
+  return *this;
+}
+
 CommandPool::~CommandPool()
 {
   if (vk()) {

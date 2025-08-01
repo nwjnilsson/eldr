@@ -58,11 +58,26 @@ NAMESPACE_END()
 //------------------------------------------------------------------------------
 // DebugUtilsMessenger
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(DebugUtilsMessenger)
+DebugUtilsMessenger::DebugUtilsMessenger() = default;
+DebugUtilsMessenger::DebugUtilsMessenger(DebugUtilsMessenger&&) noexcept =
+  default;
+DebugUtilsMessenger& DebugUtilsMessenger::operator=(DebugUtilsMessenger&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+        instance().vk(), "vkDestroyDebugUtilsMessengerEXT");
+      if (func != nullptr)
+        func(instance().vk(), object_, nullptr);
+    }
+    Base::operator=(std::move(o));
+  }
+  return *this;
+}
 
 DebugUtilsMessenger::DebugUtilsMessenger(std::string_view name,
-                                         const Instance&  instance)
-  : Base(name), instance_(&instance)
+                                         const Instance&  _instance)
+  : Base(name, _instance)
 {
   const VkDebugUtilsMessengerCreateInfoEXT debug_report_ci{
     .sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
@@ -78,21 +93,21 @@ DebugUtilsMessenger::DebugUtilsMessenger(std::string_view name,
     .pUserData       = {},
   };
   auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-    instance.vk(), "vkCreateDebugUtilsMessengerEXT");
+    instance().vk(), "vkCreateDebugUtilsMessengerEXT");
   Assert(func != nullptr);
-  const VkResult err{ func(
-    instance.vk(), &debug_report_ci, nullptr, &object_) };
-  if (err != VK_SUCCESS)
-    Throw("Failed to create debug utils messenger! ({})", err);
+  const VkResult result{ func(
+    instance().vk(), &debug_report_ci, nullptr, &object_) };
+  if (result != VK_SUCCESS)
+    Throw("Failed to create debug utils messenger! ({})", result);
 }
 
 DebugUtilsMessenger::~DebugUtilsMessenger()
 {
   if (vk()) {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-      instance_->vk(), "vkDestroyDebugUtilsMessengerEXT");
+      instance().vk(), "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr)
-      func(instance_->vk(), object_, nullptr);
+      func(instance().vk(), vk(), nullptr);
   }
 }
 NAMESPACE_END(eldr::vk::wr)

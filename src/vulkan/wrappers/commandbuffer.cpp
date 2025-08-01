@@ -11,7 +11,29 @@ NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // CommandBuffer
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(CommandBuffer)
+CommandBuffer::CommandBuffer()                         = default;
+CommandBuffer::CommandBuffer(CommandBuffer&&) noexcept = default;
+CommandBuffer& CommandBuffer::operator=(CommandBuffer&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      vkFreeCommandBuffers(
+        device().logical(), command_pool_->vk(), 1, &object_);
+    }
+    command_pool_    = o.command_pool_;
+    wait_fence_      = std::move(o.wait_fence_);
+    staging_buffers_ = std::move(o.staging_buffers_);
+    Base::operator=(std::move(o));
+  }
+  return *this;
+}
+
+CommandBuffer::~CommandBuffer()
+{
+  if (vk()) {
+    vkFreeCommandBuffers(device().logical(), command_pool_->vk(), 1, &object_);
+  }
+}
 
 CommandBuffer::CommandBuffer(std::string_view   name,
                              const Device&      device,
@@ -31,13 +53,6 @@ CommandBuffer::CommandBuffer(std::string_view   name,
         vkAllocateCommandBuffers(device.logical(), &alloc_info, &object_) };
       result != VK_SUCCESS)
     Throw("Failed to allocate command buffers ({}).", result);
-}
-
-CommandBuffer::~CommandBuffer()
-{
-  if (vk()) {
-    vkFreeCommandBuffers(device().logical(), command_pool_->vk(), 1, &object_);
-  }
 }
 
 const CommandBuffer& CommandBuffer::pipelineBarrier(

@@ -2,7 +2,8 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(AllocatedBuffer)
+AllocatedBuffer::AllocatedBuffer()                           = default;
+AllocatedBuffer::AllocatedBuffer(AllocatedBuffer&&) noexcept = default;
 
 AllocatedBuffer::AllocatedBuffer(std::string_view         name,
                                  const Device&            device,
@@ -62,6 +63,17 @@ AllocatedBuffer::~AllocatedBuffer()
   if (vk()) {
     vmaDestroyBuffer(device().allocator(), vk(), allocation_);
   }
+}
+
+AllocatedBuffer& AllocatedBuffer::operator=(AllocatedBuffer&& o)
+{
+  if (this != &o) {
+    if (allocation_ != VK_NULL_HANDLE) {
+      vmaDestroyBuffer(device().allocator(), vk(), allocation_);
+    }
+    Base::operator=(std::move(o));
+  }
+  return *this;
 }
 
 VkDeviceAddress AllocatedBuffer::getDeviceAddress() const

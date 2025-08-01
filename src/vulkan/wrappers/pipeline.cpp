@@ -5,7 +5,19 @@ NAMESPACE_BEGIN(eldr::vk::wr)
 //------------------------------------------------------------------------------
 // Pipeline
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(Pipeline)
+Pipeline::Pipeline()                    = default;
+Pipeline::Pipeline(Pipeline&&) noexcept = default;
+Pipeline& Pipeline::operator=(Pipeline&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      vkDestroyPipeline(device().logical(), object_, nullptr);
+    }
+    pipeline_layout_ = o.pipeline_layout_;
+    Base ::operator=(std ::move(o));
+  }
+  return *this;
+}
 Pipeline::~Pipeline()
 {
   if (vk()) {

@@ -35,6 +35,7 @@ public:
                bool&                   invalidate_swapchain) const;
 
 private:
+  // Swapchain has custom assignment operator, watch out when adding members
   VkExtent2D         extent_;
   VkSurfaceFormatKHR surface_format_;
   VkPresentModeKHR   present_mode_;

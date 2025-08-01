@@ -2,8 +2,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(DescriptorPool)
-EL_VK_IMPL_DESTRUCTOR(DescriptorPool)
+EL_VK_IMPL_DEV_DEFAULTS(DescriptorPool)
 
 DescriptorPool::DescriptorPool(std::string_view                      name,
                                const Device&                         device,

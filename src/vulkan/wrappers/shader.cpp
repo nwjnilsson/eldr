@@ -35,8 +35,7 @@ NAMESPACE_END()
 //------------------------------------------------------------------------------
 // ShaderModule
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(ShaderModule)
-EL_VK_IMPL_DESTRUCTOR(ShaderModule)
+EL_VK_IMPL_DEV_DEFAULTS(ShaderModule)
 
 ShaderModule::ShaderModule(std::string_view      name,
                            const Device&         device,

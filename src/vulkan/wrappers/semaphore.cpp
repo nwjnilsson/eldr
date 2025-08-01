@@ -2,8 +2,7 @@
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(Semaphore)
-EL_VK_IMPL_DESTRUCTOR(Semaphore)
+EL_VK_IMPL_DEV_DEFAULTS(Semaphore)
 Semaphore::Semaphore(std::string_view       name,
                      const Device&          device,
                      VkSemaphoreCreateFlags flags)

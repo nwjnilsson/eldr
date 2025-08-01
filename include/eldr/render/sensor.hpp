@@ -3,10 +3,10 @@
 NAMESPACE_BEGIN(eldr)
 class Sensor : public Endpoint {
 public:
-  ~Sensor();
+  ~Sensor() = default;
 
 protected:
-  Sensor();
+  Sensor() = default;
 
 private:
   // film

@@ -3,8 +3,7 @@
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(Sampler)
-EL_VK_IMPL_DESTRUCTOR(Sampler)
+EL_VK_IMPL_DEV_DEFAULTS(Sampler)
 
 Sampler::Sampler(std::string_view    name,
                  const Device&       device,

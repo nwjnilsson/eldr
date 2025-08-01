@@ -15,6 +15,7 @@ App::App()
 {
   setupWindowCallbacks();
   setupInputCallbacks();
+  vk_engine_->setCamera(main_camera_);
 }
 App::~App() = default;
 
@@ -73,6 +74,10 @@ void App::mouseScrollCallback(Window* /*window*/,
                               const double y_offset)
 {
   // camera_->change_zoom(static_cast<float>(y_offset));
+  ImGuiIO& io = ImGui::GetIO();
+  if (io.WantCaptureMouse) {
+    io.MouseWheel = y_offset;
+  }
 }
 
 void App::run()
@@ -83,8 +88,10 @@ void App::run()
   while (!window_.shouldClose()) {
     glfwPollEvents();
     // vk_engine_->newFrame();
-    main_camera_.processInput(input_data_);
-    main_camera_.update();
+    ImGuiIO& io = ImGui::GetIO();
+    if (not io.WantCaptureMouse and not io.WantCaptureKeyboard) {
+      main_camera_.processInput(input_data_);
+    }
     updateImGui();
     vk_engine_->drawFrame(manager.activeScene());
     frame_time_ = stop_watch_.seconds<float>();

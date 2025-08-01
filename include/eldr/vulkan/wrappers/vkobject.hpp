@@ -6,21 +6,35 @@ NAMESPACE_BEGIN(eldr::vk::wr)
 #define EL_VK_IMPORT_DEFAULTS(Name)                                            \
   Name();                                                                      \
   Name(Name&&) noexcept;                                                       \
+  Name(const Name&) = delete;                                                  \
   Name& operator=(Name&&);                                                     \
+  Name& operator=(const Name&) = delete;                                       \
   ~Name();
 
-#define EL_VK_IMPL_DEFAULTS(Name)                                              \
-  Name::Name()                  = default;                                     \
-  Name::Name(Name&&) noexcept   = default;                                     \
-  Name& Name::operator=(Name&&) = default;
-
-#define EL_VK_IMPL_DESTRUCTOR(Name)                                            \
+// For device objects
+#define EL_VK_IMPL_DEV_DEFAULTS(Name)                                              \
+  Name::Name()                = default;                                       \
+  Name::Name(Name&&) noexcept = default;                                       \
+  Name& Name::operator=(Name&& o)                                              \
+  {                                                                            \
+    if (this != &o) {                                                          \
+      if (vk()) {                                                              \
+        vkDestroy##Name(device().logical(), object_, nullptr);                 \
+      }                                                                        \
+      Base::operator=(std::move(o));                                           \
+    }                                                                          \
+    return *this;                                                              \
+  }                                                                            \
   Name::~Name()                                                                \
   {                                                                            \
     if (vk()) {                                                                \
       vkDestroy##Name(device().logical(), object_, nullptr);                   \
     }                                                                          \
   }
+
+NAMESPACE_BEGIN(detail)
+template <typename...> constexpr std::false_type always_false{};
+NAMESPACE_END(detail)
 
 template <typename T> class VkObject {
 public:
@@ -30,6 +44,7 @@ public:
       object_(std::exchange(o.object_, VK_NULL_HANDLE))
   {
   }
+
   VkObject& operator=(VkObject&& o)
   {
     if (this != &o) {
@@ -51,6 +66,42 @@ protected:
   T           object_{ VK_NULL_HANDLE };
 };
 
+template <typename T> class VkInstanceObject : public VkObject<T> {
+  using Base = VkObject<T>;
+
+public:
+  VkInstanceObject() = default;
+  VkInstanceObject(VkInstanceObject&& o) noexcept : Base(std::move(o))
+  {
+    instance_ = std::exchange(o.instance_, nullptr);
+  }
+
+  VkInstanceObject& operator=(VkInstanceObject&& o)
+  {
+    if (this != &o) {
+      instance_ = o.instance_;
+      Base::operator=(std::move(o));
+    }
+    return *this;
+  }
+
+public:
+  const Instance& instance() const
+  {
+    Assert(instance_);
+    return *instance_;
+  }
+
+protected:
+  VkInstanceObject(std::string_view name, const Instance& instance)
+    : Base(name), instance_(&instance)
+  {
+  }
+
+private:
+  const Instance* instance_{ nullptr };
+};
+
 template <typename T> class VkDeviceObject : public VkObject<T> {
   using Base = VkObject<T>;
 
@@ -63,7 +114,15 @@ public:
     }
     device_ = std::exchange(o.device_, nullptr);
   }
-  VkDeviceObject& operator=(VkDeviceObject&&) = default;
+
+  VkDeviceObject& operator=(VkDeviceObject&& o)
+  {
+    if (this != &o) {
+      device_ = o.device_;
+      Base::operator=(std::move(o));
+    }
+    return *this;
+  }
 
   const Device& device() const
   {
@@ -96,8 +155,11 @@ public:
   VkAllocatedObject& operator=(VkAllocatedObject&& o)
   {
     if (this != &o) {
-      Base::operator=(std::move(o));
+      // Destruction of allocation happens in Buffer/Image operator= overload
       allocation_ = std::exchange(o.allocation_, VK_NULL_HANDLE);
+      alloc_info_ = std::move(o.alloc_info_);
+      mem_flags_  = std::move(o.mem_flags_);
+      Base::operator=(std::move(o));
     }
     return *this;
   }

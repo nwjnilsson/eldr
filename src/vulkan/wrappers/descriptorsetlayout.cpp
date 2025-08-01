@@ -2,8 +2,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(DescriptorSetLayout)
-EL_VK_IMPL_DESTRUCTOR(DescriptorSetLayout)
+EL_VK_IMPL_DEV_DEFAULTS(DescriptorSetLayout)
 
 DescriptorSetLayout::DescriptorSetLayout(
   std::string_view                        name,

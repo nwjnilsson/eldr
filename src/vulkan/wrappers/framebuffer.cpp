@@ -4,8 +4,7 @@
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(Framebuffer)
-EL_VK_IMPL_DESTRUCTOR(Framebuffer)
+EL_VK_IMPL_DEV_DEFAULTS(Framebuffer)
 
 Framebuffer::Framebuffer(std::string_view                name,
                          const Device&                   device,

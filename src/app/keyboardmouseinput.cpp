@@ -112,17 +112,18 @@ bool KeyboardMouseInput::wasMouseButtonPressedOnce(const int button)
 void KeyboardMouseInput::setCursorPos(const double pos_x, const double pos_y)
 {
   std::lock_guard lock(d_->input_mutex);
+  d_->previous_cursor_pos   = d_->current_cursor_pos;
   d_->current_cursor_pos[0] = pos_x;
   d_->current_cursor_pos[1] = pos_y;
 }
 
 std::array<double, 2> KeyboardMouseInput::cursorPos() const
 {
-  std::shared_lock lock(d_->input_mutex);
+  std::lock_guard lock(d_->input_mutex);
   return d_->current_cursor_pos;
 }
 
-std::array<double, 2> KeyboardMouseInput::calculateCursorPositionDelta()
+std::array<double, 2> KeyboardMouseInput::calculateCursorPositionDelta() const
 {
   std::lock_guard lock(d_->input_mutex);
   // Calculate the change in cursor position in x- and y-axis.
@@ -130,9 +131,7 @@ std::array<double, 2> KeyboardMouseInput::calculateCursorPositionDelta()
     d_->current_cursor_pos[0] - d_->previous_cursor_pos[0],
     d_->current_cursor_pos[1] - d_->previous_cursor_pos[1]
   };
-
   d_->previous_cursor_pos = d_->current_cursor_pos;
-
   return cursor_pos_delta;
 }
 

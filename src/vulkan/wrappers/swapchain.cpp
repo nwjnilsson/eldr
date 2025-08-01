@@ -61,7 +61,24 @@ NAMESPACE_END()
 // -----------------------------------------------------------------------------
 // Swapchain
 // -----------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(Swapchain)
+Swapchain::Swapchain()                     = default;
+Swapchain::Swapchain(Swapchain&&) noexcept = default;
+Swapchain& Swapchain::operator=(Swapchain&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      vkDestroySwapchainKHR(device().logical(), object_, nullptr);
+    }
+    extent_              = o.extent_;
+    surface_format_      = o.surface_format_;
+    present_mode_        = o.present_mode_;
+    images_              = std::move(o.images_);
+    image_available_sem_ = std::move(o.image_available_sem_);
+    render_finished_sem_ = std::move(o.render_finished_sem_);
+    Base::operator=(std ::move(o));
+  }
+  return *this;
+}
 
 Swapchain::~Swapchain()
 {

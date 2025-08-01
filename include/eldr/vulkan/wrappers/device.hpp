@@ -67,6 +67,7 @@ public:
 
 private:
   CommandPool& threadGraphicsPool() const;
+  void         destroyDevice();
 
 private:
   struct DeviceData;

@@ -3,6 +3,7 @@
 #include <eldr/app/window.hpp>
 #include <eldr/buildinfo.hpp>
 #include <eldr/core/core.hpp>
+#include <eldr/render/camera.hpp>
 #include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/descriptorallocator.hpp>
@@ -390,21 +391,19 @@ void VulkanEngine::updateScene(uint32_t current_image)
 {
 
   static StopWatch stop_watch;
-  float            time{ stop_watch.seconds<float>(false) };
+  const float      time{ stop_watch.seconds<float>(false) };
 
-  Transform4f model{ glm::rotate(Matrix4f{ 1.0 },
-                                 time * glm::radians<float>(20.0f),
-                                 Vector3f{ 0.0f, 0.0f, 1.0f }) };
+  const Transform4f model{ glm::rotate(Matrix4f{ 1.0 },
+                                       time * glm::radians<float>(20.0f),
+                                       Vector3f{ 0.0f, 0.0f, 1.0f }) };
 
-  Transform4f view{ glm::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
-                                Point3f{ 0.0f, 0.0f, 0.0f },
-                                Vector3f{ 0.0f, 0.0f, 1.0f }) };
-  Transform4f proj{ glm::perspective(
+  const Transform4f view{ camera_->getViewMatrix() };
+  Transform4f       proj{ glm::perspective(
     glm::radians(45.0f),
     d_->swapchain.extent().width /
       static_cast<float>(d_->swapchain.extent().height),
-    0.1f,
-    10.0f) };
+    camera_->nearClip(),
+    camera_->farClip()) };
   proj[1][1] *= -1;
 
   /// TODO: the model matrix lives inside RenderObject. Remove GpuModelData and

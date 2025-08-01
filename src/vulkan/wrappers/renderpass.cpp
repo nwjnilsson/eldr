@@ -3,8 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(RenderPass)
-EL_VK_IMPL_DESTRUCTOR(RenderPass)
+EL_VK_IMPL_DEV_DEFAULTS(RenderPass)
 RenderPass::RenderPass(std::string_view                   name,
                        const Device&                      device,
                        std::span<VkAttachmentDescription> attachments,

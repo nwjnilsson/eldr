@@ -51,7 +51,23 @@ NAMESPACE_END()
 //------------------------------------------------------------------------------
 // Image
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(Image)
+Image::Image()                 = default;
+Image::Image(Image&&) noexcept = default;
+Image& Image::operator=(Image&& o)
+{
+  if (this != &o) {
+    if (vk() and allocation_) {
+      vmaDestroyImage(device().allocator(), vk(), allocation_);
+    }
+    size_       = o.size_;
+    format_     = o.format_;
+    mip_levels_ = o.mip_levels_;
+    layout_     = o.layout_;
+    image_view_ = std::move(o.image_view_);
+    Base::operator=(std::move(o));
+  }
+  return *this;
+}
 
 Image::Image(const Device& device, const ImageCreateInfo& image_info)
   : Base(image_info.name, device), size_(image_info.extent),

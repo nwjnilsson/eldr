@@ -8,7 +8,10 @@ NAMESPACE_BEGIN(eldr)
 class ProjectiveCamera : public Sensor {
 public:
   EL_IMPORT_TYPES()
-  ~ProjectiveCamera();
+  // ~ProjectiveCamera();
+
+  float nearClip() const { return near_clip_; }
+  float farClip() const { return far_clip_; }
 
   Matrix4f         getRotationMatrix() const;
   virtual Matrix4f getViewMatrix() const = 0;
@@ -26,18 +29,20 @@ protected:
   ProjectiveCamera();
 
 protected:
-  Point3f position_;
+  Point3f position_{ 0, 0, 5 };
   float   pitch_{ 0.f };
   float   yaw_{ 0.f };
 
 private:
-  float near_clip_{ 1.f };
-  float far_clip_{ 1000.f };
-  float focus_distance_;
+  float near_clip_{ 1e-2f };
+  float far_clip_{ 1e4f };
+  float focus_distance_{ far_clip_ };
 };
 
 // Perspective camera type used to render from
 class PerspectiveCamera : public ProjectiveCamera {
+  using Base = ProjectiveCamera;
+
 public:
   PerspectiveCamera();
 
@@ -46,13 +51,13 @@ public:
 
 // Main camera type used to navigate around the scene
 class Camera : public PerspectiveCamera {
+  using Base = PerspectiveCamera;
+
 public:
   Camera();
 
-  void update();
   void processInput(const KeyboardMouseInput&);
 
 private:
-  Vector3f velocity_;
 };
 NAMESPACE_END(eldr)

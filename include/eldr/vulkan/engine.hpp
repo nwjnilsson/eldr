@@ -40,6 +40,8 @@ public:
   // TODO: decide how to handle this
   void invalidateSwapchain() { swapchain_invalidated_ = true; }
 
+  void setCamera(const Camera& camera) { camera_ = &camera; }
+
 private:
   void loadTextures();
   void loadShaders();
@@ -55,7 +57,7 @@ private:
 
 private:
   const Window& window_;
-  const Camera* camera_; // TODO: own camera or set dynamically?
+  const Camera* camera_;
 
   bool     initialized_{ false };
   bool     swapchain_invalidated_{ false };

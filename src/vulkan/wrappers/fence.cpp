@@ -2,8 +2,7 @@
 #include <eldr/vulkan/wrappers/fence.hpp>
 
 NAMESPACE_BEGIN(eldr::vk::wr)
-EL_VK_IMPL_DEFAULTS(Fence)
-EL_VK_IMPL_DESTRUCTOR(Fence)
+EL_VK_IMPL_DEV_DEFAULTS(Fence)
 
 Fence::Fence(std::string_view name, const Device& device) : Base(name, device)
 {

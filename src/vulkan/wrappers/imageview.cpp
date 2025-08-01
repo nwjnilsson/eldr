@@ -30,8 +30,26 @@ VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
 
 NAMESPACE_END()
 
-EL_VK_IMPL_DEFAULTS(ImageView)
-EL_VK_IMPL_DESTRUCTOR(ImageView)
+ImageView ::ImageView()                     = default;
+ImageView ::ImageView(ImageView&&) noexcept = default;
+ImageView& ImageView ::operator=(ImageView&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      vkDestroyImageView(device().logical(), object_, nullptr);
+    }
+    aspect_flags_ = o.aspect_flags_;
+    Base ::operator=(std ::move(o));
+  }
+  return *this;
+}
+ImageView ::~ImageView()
+{
+  if (vk()) {
+    vkDestroyImageView(device().logical(), object_, nullptr);
+  }
+}
+
 ImageView::ImageView(std::string_view           name,
                      const Device&              device,
                      const ImageViewCreateInfo& image_view_ci)

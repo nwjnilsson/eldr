@@ -1,4 +1,5 @@
 #include <eldr/app/keyboardmouseinput.hpp>
+#include <eldr/core/logger.hpp>
 #include <eldr/render/camera.hpp>
 
 #include <GLFW/glfw3.h>
@@ -6,7 +7,7 @@
 NAMESPACE_BEGIN(eldr)
 using Matrix4f = ProjectiveCamera::Matrix4f;
 
-ProjectiveCamera::ProjectiveCamera() = default;
+ProjectiveCamera::ProjectiveCamera() {}
 
 Matrix4f ProjectiveCamera::getRotationMatrix() const
 {
@@ -15,47 +16,50 @@ Matrix4f ProjectiveCamera::getRotationMatrix() const
   return glm::toMat4(yaw_rot) * glm::toMat4(pitch_rot);
 }
 
+PerspectiveCamera::PerspectiveCamera() = default;
+
 Matrix4f PerspectiveCamera::getViewMatrix() const
 {
   Matrix4f translation{ glm::translate(Matrix4f{ 1.f }, position_) };
   return glm::inverse(translation * getRotationMatrix());
+  // return glm::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
+  //                    Point3f{ 0.0f, 0.0f, 0.0f },
+  //                    Vector3f{ 0.0f, 0.0f, 1.0f });
 }
 
 Camera::Camera() = default;
 
-void Camera::update()
-{
-  position_ +=
-    Vector3f{ getRotationMatrix() * Vector4f{ velocity_ * 0.5f, 0.f } };
-}
-
 void Camera::processInput(const KeyboardMouseInput& input_data)
 {
   // X
+  Vector3f velocity{ 0.f };
   if (input_data.isKeyPressed(GLFW_KEY_A)) {
-    velocity_.x = -1;
+    velocity.x = -0.5f;
   }
   else if (input_data.isKeyPressed(GLFW_KEY_D)) {
-    velocity_.x = 1;
+    velocity.x = 0.5f;
   }
   else {
-    velocity_.x = 0;
+    velocity.x = 0;
   }
   // Z
   if (input_data.isKeyPressed(GLFW_KEY_W)) {
-    velocity_.z = -1;
+    velocity.z = -0.5f;
   }
   else if (input_data.isKeyPressed(GLFW_KEY_S)) {
-    velocity_.z = 1;
+    velocity.z = 1;
   }
   else {
-    velocity_.z = 0;
+    velocity.z = 0;
   }
+
+  position_ +=
+    Vector3f{ getRotationMatrix() * Vector4f{ velocity * 0.5f, 0.f } };
 
   if (input_data.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
     auto diff = input_data.calculateCursorPositionDelta();
-    yaw_ += diff[0] / 200.f;
-    pitch_ += diff[1] / 200.f;
+    yaw_ -= diff[0] / 300.f;
+    pitch_ += diff[1] / 300.f;
   }
 }
 

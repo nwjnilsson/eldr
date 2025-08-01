@@ -172,7 +172,40 @@ struct Device::DeviceData {
 //------------------------------------------------------------------------------
 // Device
 //------------------------------------------------------------------------------
-EL_VK_IMPL_DEFAULTS(Device)
+Device::Device()                  = default;
+Device::Device(Device&&) noexcept = default;
+Device& Device::operator=(Device&& o)
+{
+  if (this != &o) {
+    if (vk()) {
+      destroyDevice();
+    }
+    d_                    = std::move(o.d_);
+    queue_family_indices_ = std::move(o.queue_family_indices_);
+    g_queue_              = std::exchange(o.g_queue_, VK_NULL_HANDLE);
+    p_queue_              = std::exchange(o.p_queue_, VK_NULL_HANDLE);
+    Base::operator=(std ::move(o));
+  }
+  return *this;
+}
+
+void Device::destroyDevice()
+{
+  if (vk()) {
+    // Ensure that command pools can be cleared properly
+    std::lock_guard lock(d_->mutex);
+    d_->command_pools.clear();
+    vmaDestroyAllocator(d_->allocator);
+    vkDestroyDevice(object_, nullptr);
+  }
+}
+
+Device::~Device()
+{
+  if (vk()) {
+    destroyDevice();
+  }
+}
 
 Device::Device(std::string_view                name,
                const Instance&                 instance,
@@ -280,17 +313,6 @@ Device::Device(std::string_view                name,
     object_, queue_family_indices_.present_family.value(), 0, &p_queue_);
   vkGetDeviceQueue(
     object_, queue_family_indices_.graphics_family.value(), 0, &g_queue_);
-}
-
-Device::~Device()
-{
-  if (vk()) {
-    // Ensure that command pools can be cleared properly
-    std::lock_guard lock(d_->mutex);
-    d_->command_pools.clear();
-    vmaDestroyAllocator(d_->allocator);
-    vkDestroyDevice(object_, nullptr);
-  }
 }
 
 void Device::waitIdle() const { vkDeviceWaitIdle(object_); }

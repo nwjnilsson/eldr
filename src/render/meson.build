@@ -1,4 +1,5 @@
 src = [
+  'camera.cpp',
   'endpoint.cpp',
   'mesh.cpp',
   'scene.cpp',

@@ -55,7 +55,9 @@ VkSamplerMipmapMode extractMipmapMode(fg::Filter filter)
 
 NAMESPACE_END()
 
-EL_VK_IMPL_DEFAULTS(ResourceManager)
+ResourceManager::ResourceManager()                             = default;
+ResourceManager::ResourceManager(ResourceManager&&) noexcept   = default;
+ResourceManager& ResourceManager::operator=(ResourceManager&&) = default;
 
 struct ResourceManager::Resources {
   // Default data --------------------------------------------------------------

@@ -31,11 +31,6 @@ protected:
                   VmaMemoryUsage           mem_usage);
 
   void uploadData(std::span<const byte_t> src, size_t offset = 0);
-
-protected:
-  VmaAllocation         allocation_{ VK_NULL_HANDLE };
-  VmaAllocationInfo     alloc_info_;
-  VkMemoryPropertyFlags mem_flags_;
 };
 
 NAMESPACE_END(eldr::vk::wr)
