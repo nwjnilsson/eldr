@@ -88,7 +88,7 @@ bool RenderStage::hasReadDependency(
 }
 
 void RenderGraph::recordCommandBuffer(const RenderStage*       stage,
-                                      const wr::CommandBuffer& cb) const
+                                      const CommandBuffer& cb) const
 {
   const PhysicalStage& physical = *stage->physical_;
 
@@ -537,7 +537,7 @@ void RenderGraph::compile()
       usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // to copy to swapchain
     }
 
-    const wr::ImageCreateInfo texture_info{
+    const ImageCreateInfo texture_info{
       .name         = fmt::format("{} image", texture->name_),
       .extent       = swapchain_.extent(),
       .format       = texture->format_,
@@ -551,7 +551,7 @@ void RenderGraph::compile()
     };
 
     auto physical      = std::make_unique<PhysicalImage>();
-    physical->image_   = wr::Image{ device_, texture_info };
+    physical->image_   = Image{ device_, texture_info };
     texture->physical_ = std::move(physical);
   }
 
@@ -586,7 +586,7 @@ void RenderGraph::compile()
   }
 }
 
-void RenderGraph::render(const wr::CommandBuffer& cb, wr::Image& target)
+void RenderGraph::render(const CommandBuffer& cb, Image& target)
 {
   Assert(target.layout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
          "Render graph expects target to be in "

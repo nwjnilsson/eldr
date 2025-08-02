@@ -26,7 +26,6 @@ enum class TextureUsage;
 class DescriptorWriter;
 class DescriptorAllocator;
 
-NAMESPACE_BEGIN(wr)
 class DebugUtilsMessenger;
 template <typename T> class VkObject;
 template <typename T> class VkDeviceObject;
@@ -52,6 +51,5 @@ class CommandBuffer;
 class Semaphore;
 class Fence;
 class ShaderModule;
-NAMESPACE_END(wr)
 NAMESPACE_END(vk)
 NAMESPACE_END(eldr)

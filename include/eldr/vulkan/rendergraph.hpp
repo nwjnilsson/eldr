@@ -25,7 +25,7 @@ class PhysicalResource;
 class RenderGraphObject {
 public:
   RenderGraphObject() = default;
-  RenderGraphObject(const wr::Device&);
+  RenderGraphObject(const Device&);
   RenderGraphObject(const RenderGraphObject&) = delete;
   RenderGraphObject(RenderGraphObject&&)      = delete;
   virtual ~RenderGraphObject()                = default;
@@ -174,7 +174,7 @@ public:
   /// @note This function will be removed in the near future, as we are aiming
   /// for users of the API to not have to deal with descriptors at all.
   // TODO: Refactor descriptor management in the render graph
-  // void addDescriptorLayout(wr::DescriptorSetLayout& layout)
+  // void addDescriptorLayout(DescriptorSetLayout& layout)
   // {
   //   descriptor_layouts_.push_back(layout.vk());
   // }
@@ -192,7 +192,7 @@ public:
   /// command buffer recording. The most common use for this is for draw
   /// commands.
   RenderStage&
-  setOnRecord(std::function<void(const wr::CommandBuffer&)> on_record)
+  setOnRecord(std::function<void(const CommandBuffer&)> on_record)
   {
     on_record_ = std::move(on_record);
     return *this;
@@ -213,7 +213,7 @@ protected:
 
   // std::vector<VkDescriptorSetLayout> descriptor_layouts_;
   // std::vector<VkPushConstantRange>   push_constant_ranges_;
-  std::function<void(const wr::CommandBuffer&)> on_record_{ [](auto&) {} };
+  std::function<void(const CommandBuffer&)> on_record_{ [](auto&) {} };
 };
 
 class GraphicsStage : public RenderStage {
@@ -270,7 +270,7 @@ public:
   PhysicalBuffer& operator=(PhysicalBuffer&&)      = delete;
 
 private:
-  wr::Buffer<byte_t> buffer_;
+  Buffer<byte_t> buffer_;
 };
 
 class PhysicalImage : public PhysicalResource {
@@ -286,7 +286,7 @@ public:
   PhysicalImage& operator=(PhysicalImage&&)      = delete;
 
 private:
-  wr::Image image_;
+  Image image_;
 };
 
 class PhysicalBackBuffer : public PhysicalImage {
@@ -330,15 +330,15 @@ public:
 private:
   std::vector<VkRenderingAttachmentInfo>     color_attachments_;
   std::unique_ptr<VkRenderingAttachmentInfo> depth_attachment_;
-  // wr::RenderPass               render_pass_;
-  // std::vector<wr::Framebuffer> framebuffers_;
+  // RenderPass               render_pass_;
+  // std::vector<Framebuffer> framebuffers_;
 };
 
 // class ComputePass {};
 
 class RenderGraph {
 public:
-  explicit RenderGraph(const wr::Device& device, const wr::Swapchain& swapchain)
+  explicit RenderGraph(const Device& device, const Swapchain& swapchain)
     : device_(device), swapchain_(swapchain)
   {
     back_buffer_ = add<TextureResource>(
@@ -378,14 +378,14 @@ public:
   //                            PhysicalGraphicsStage&) const;
 
   void recordCommandBuffer(const RenderStage*       stage,
-                           const wr::CommandBuffer& cb) const;
+                           const CommandBuffer& cb) const;
   void compile();
 
-  void render(const wr::CommandBuffer& cb, wr::Image& target);
+  void render(const CommandBuffer& cb, Image& target);
 
 private:
-  const wr::Device&    device_;
-  const wr::Swapchain& swapchain_;
+  const Device&    device_;
+  const Swapchain& swapchain_;
 
   TextureResource*                              back_buffer_;
   std::vector<std::unique_ptr<TextureResource>> texture_resources_;

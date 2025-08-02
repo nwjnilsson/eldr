@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/fence.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Fence)
 
 Fence::Fence(std::string_view name, const Device& device) : Base(name, device)
@@ -36,4 +36,4 @@ VkResult Fence::status() const
 {
   return vkGetFenceStatus(device().logical(), object_);
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

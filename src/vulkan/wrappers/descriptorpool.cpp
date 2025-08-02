@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/descriptorpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(DescriptorPool)
 
 DescriptorPool::DescriptorPool(std::string_view                      name,
@@ -29,4 +29,4 @@ void DescriptorPool::reset(VkDescriptorPoolResetFlags flags)
 {
   vkResetDescriptorPool(device().logical(), object_, flags);
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

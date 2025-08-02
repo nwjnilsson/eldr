@@ -3,7 +3,7 @@
 
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class Framebuffer : public VkDeviceObject<VkFramebuffer> {
   using Base = VkDeviceObject<VkFramebuffer>;
@@ -17,4 +17,4 @@ public:
               const Swapchain&                swapchain);
 };
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

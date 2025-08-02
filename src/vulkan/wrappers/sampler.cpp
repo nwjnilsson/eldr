@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/sampler.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Sampler)
 
 Sampler::Sampler(std::string_view    name,
@@ -43,4 +43,4 @@ Sampler::Sampler(std::string_view    name,
     Throw("Failed to create sampler! ({})", result);
   }
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

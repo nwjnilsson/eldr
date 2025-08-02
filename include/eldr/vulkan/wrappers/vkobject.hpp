@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/core/logger.hpp>
 #include <utility>
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 #define EL_VK_IMPORT_DEFAULTS(Name)                                            \
   Name();                                                                      \

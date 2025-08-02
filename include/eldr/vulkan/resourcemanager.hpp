@@ -20,18 +20,18 @@ class ResourceManager {
 
 public:
   ResourceManager();
-  ResourceManager(const wr::Device&       device,
+  ResourceManager(const Device&           device,
                   GltfMetallicRoughness&& default_material);
   ResourceManager(ResourceManager&&) noexcept;
   ~ResourceManager();
 
   ResourceManager& operator=(ResourceManager&&);
 
-  [[nodiscard]] const wr::Image& errorImage() const;
+  [[nodiscard]] const Image& errorImage() const;
 
-  [[nodiscard]] const wr::Sampler& defaultSampler() const;
+  [[nodiscard]] const Sampler& defaultSampler() const;
 
-  [[nodiscard]] std::optional<const wr::Image*>
+  [[nodiscard]] std::optional<const Image*>
   loadImage(const fastgltf::Asset&       asset,
             fastgltf::Image&             image,
             const std::filesystem::path& texture_dir);
@@ -42,7 +42,7 @@ public:
   // void buildMaterialPipelines(GltfMetallicRoughness& material);
 
 private:
-  const wr::Device* device_{ nullptr };
+  const Device* device_{ nullptr };
   struct Resources;
   std::unique_ptr<Resources> d_;
 };

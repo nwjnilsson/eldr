@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN(eldr::vk)
 
-/// @brief Builder class for wr::Pipeline, which combines the pipeline layout
+/// @brief Builder class for Pipeline, which combines the pipeline layout
 /// and pipeline into the same object
 class PipelineBuilder {
 public:
@@ -14,7 +14,7 @@ public:
 
   void reset();
 
-  PipelineBuilder& addDescriptorSetLayout(const wr::DescriptorSetLayout& layout)
+  PipelineBuilder& addDescriptorSetLayout(const DescriptorSetLayout& layout)
   {
     descriptor_layouts_.push_back(layout.vk());
     return *this;
@@ -37,8 +37,8 @@ public:
     push_constant_ranges_.push_back(pcr);
     return *this;
   }
-  PipelineBuilder& setShaders(const wr::ShaderModule& vertex_shader,
-                              const wr::ShaderModule& fragment_shader);
+  PipelineBuilder& setShaders(const ShaderModule& vertex_shader,
+                              const ShaderModule& fragment_shader);
   PipelineBuilder& setInputTopology(VkPrimitiveTopology topology);
   PipelineBuilder& setPolygonMode(VkPolygonMode mode);
   PipelineBuilder& setCullMode(VkCullModeFlags mode, VkFrontFace front_face);
@@ -53,7 +53,7 @@ public:
   PipelineBuilder& setDepthFormat(VkFormat format);
   PipelineBuilder& setColorAttachmentFormat(VkFormat format);
 
-  [[nodiscard]] wr::Pipeline build(const wr::Device& device,
+  [[nodiscard]] Pipeline build(const Device& device,
                                    std::string_view  name,
                                    VkPipelineLayoutCreateFlags = 0,
                                    VkPipelineCreateFlags       = 0);

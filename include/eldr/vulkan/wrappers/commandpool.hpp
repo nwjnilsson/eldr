@@ -3,7 +3,7 @@
 
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 class CommandPool : public VkDeviceObject<VkCommandPool> {
   using Base = VkDeviceObject<VkCommandPool>;
 
@@ -19,4 +19,4 @@ public:
 private:
   std::vector<CommandBuffer> command_buffers_;
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 struct SwapchainSupportDetails {
   VkSurfaceCapabilitiesKHR        capabilities;
@@ -77,4 +77,4 @@ private:
   VkQueue                     g_queue_{ VK_NULL_HANDLE }; // graphics
 };
 // QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice, VkSurfaceKHR);
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

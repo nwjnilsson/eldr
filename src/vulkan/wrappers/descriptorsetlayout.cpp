@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(DescriptorSetLayout)
 
 DescriptorSetLayout::DescriptorSetLayout(
@@ -24,4 +24,4 @@ DescriptorSetLayout::DescriptorSetLayout(
     Throw("Failed to create descriptor set layout! ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

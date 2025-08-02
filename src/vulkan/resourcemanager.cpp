@@ -14,7 +14,6 @@ NAMESPACE_BEGIN(eldr::vk)
 // This is just a guess, the size will change as materials are loaded
 constexpr uint32_t initial_pool_size{ 5 };
 
-using namespace eldr::vk::wr;
 namespace fg = fastgltf;
 namespace fs = std::filesystem;
 // -----------------------------------------------------------------------------
@@ -62,20 +61,20 @@ ResourceManager& ResourceManager::operator=(ResourceManager&&) = default;
 struct ResourceManager::Resources {
   // Default data --------------------------------------------------------------
   GltfMetallicRoughness default_metal_rough_material;
-  wr::Sampler           default_sampler_linear;
-  wr::Image             white_image;
-  wr::Image             error_image;
+  Sampler           default_sampler_linear;
+  Image             white_image;
+  Image             error_image;
   // ---------------------------------------------------------------------------
   DescriptorAllocator     material_descriptors; // resize for each file loaded
   std::deque<Material>    materials;
-  std::deque<wr::Sampler> samplers;
-  std::deque<wr::Image>   images;
-  vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
+  std::deque<Sampler> samplers;
+  std::deque<Image>   images;
+  vk::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
 
 ResourceManager::~ResourceManager() = default;
 
-ResourceManager::ResourceManager(const wr::Device&       device,
+ResourceManager::ResourceManager(const Device&       device,
                                  GltfMetallicRoughness&& default_material)
   : device_(&device), d_(std::make_unique<Resources>())
 {
@@ -98,19 +97,19 @@ ResourceManager::ResourceManager(const wr::Device&       device,
     vk::DescriptorAllocator{ initial_pool_size, GltfMetallicRoughness::sizes };
 }
 
-const wr::Image& ResourceManager::errorImage() const { return d_->error_image; }
+const Image& ResourceManager::errorImage() const { return d_->error_image; }
 
 const Sampler& ResourceManager::defaultSampler() const
 {
   return d_->default_sampler_linear;
 }
 
-std::optional<const wr::Image*> ResourceManager::loadImage(
+std::optional<const Image*> ResourceManager::loadImage(
   const fg::Asset& asset, fg::Image& image, const fs::path& texture_dir)
 {
   const std::string name{ image.name };
 
-  wr::Image newimage;
+  Image newimage;
   std::visit(
     fg::visitor{
       [](auto&) { Log(Error, "Unknown image source data type."); },
@@ -123,13 +122,13 @@ std::optional<const wr::Image*> ResourceManager::loadImage(
                             file_path.uri.path().end());
         Bitmap         bitmap{ texture_dir / path };
         bitmap.setName(name);
-        newimage = wr::Image{ *device_, bitmap };
+        newimage = Image{ *device_, bitmap };
       },
       [&](fg::sources::Array& array) {
         MemoryStream mstream{ array.bytes.data(), array.bytes.size() };
         Bitmap       bitmap{ &mstream, Bitmap::FileFormat::Auto };
         bitmap.setName(name);
-        newimage = wr::Image{ *device_, bitmap };
+        newimage = Image{ *device_, bitmap };
       },
       [&](fg::sources::BufferView& view) {
         auto& bufferView = asset.bufferViews[view.bufferViewIndex];
@@ -147,7 +146,7 @@ std::optional<const wr::Image*> ResourceManager::loadImage(
                                                array.bytes.size() };
                          Bitmap bitmap{ &mstream, Bitmap::FileFormat::Auto };
                          bitmap.setName(name);
-                         newimage = wr::Image{ *device_, bitmap };
+                         newimage = Image{ *device_, bitmap };
                        } },
           buffer.data);
       },
@@ -190,7 +189,7 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
   //----------------------------------------------------------------------------
   // Load textures
   //----------------------------------------------------------------------------
-  std::vector<const wr::Image*> images;
+  std::vector<const Image*> images;
   std::vector<size_t>           image_indices;
   images.reserve(gltf.images.size() + 1);
   images.push_back(&d_->error_image);
@@ -213,7 +212,7 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
 
   if (new_materials > 0) {
     d_->material_descriptors.resize(new_materials + d_->materials.size());
-    wr::Buffer<GltfMetallicRoughness::MaterialConstants> new_buffer{
+    Buffer<GltfMetallicRoughness::MaterialConstants> new_buffer{
       "Material buffer",
       *device_,
       gltf.materials.size() + new_materials,

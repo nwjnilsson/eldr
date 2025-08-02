@@ -3,7 +3,7 @@
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 NAMESPACE_BEGIN()
 uint32_t calculateMipLevels(const Bitmap& bitmap)
@@ -196,4 +196,4 @@ Image Image::createSwapchainImage(std::string_view name,
   return image;
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

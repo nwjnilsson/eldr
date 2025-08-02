@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/buffer.hpp>
 #include <eldr/vulkan/wrappers/commandbuffer.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 AllocatedBuffer::AllocatedBuffer()                           = default;
 AllocatedBuffer::AllocatedBuffer(AllocatedBuffer&&) noexcept = default;
 
@@ -108,4 +108,4 @@ void AllocatedBuffer::uploadData(std::span<const byte_t> src, size_t offset)
       [&](const CommandBuffer& cb) { cb.copyDataToBuffer(*this, src); });
   }
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

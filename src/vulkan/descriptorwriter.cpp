@@ -40,14 +40,14 @@ DescriptorWriter& DescriptorWriter::writeImage(uint32_t         binding,
 }
 
 DescriptorWriter& DescriptorWriter::writeSampler(uint32_t           binding,
-                                                 const wr::Sampler& sampler)
+                                                 const Sampler& sampler)
 {
   return writeImage(
     binding, VK_NULL_HANDLE, sampler.vk(), VK_DESCRIPTOR_TYPE_SAMPLER, {});
 }
 
 DescriptorWriter& DescriptorWriter::writeSampledImage(
-  uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
+  uint32_t binding, const ImageView& image, VkImageLayout layout)
 {
   return writeImage(binding,
                     image.vk(),
@@ -58,8 +58,8 @@ DescriptorWriter& DescriptorWriter::writeSampledImage(
 
 DescriptorWriter&
 DescriptorWriter::writeCombinedImageSampler(uint32_t           binding,
-                                            const wr::Image&   image,
-                                            const wr::Sampler& sampler,
+                                            const Image&   image,
+                                            const Sampler& sampler,
                                             VkImageLayout      layout)
 {
   return writeImage(binding,
@@ -70,7 +70,7 @@ DescriptorWriter::writeCombinedImageSampler(uint32_t           binding,
 }
 
 DescriptorWriter& DescriptorWriter::writeStorageImage(
-  uint32_t binding, const wr::ImageView& image, VkImageLayout layout)
+  uint32_t binding, const ImageView& image, VkImageLayout layout)
 {
   return writeImage(binding,
                     image.vk(),
@@ -79,7 +79,7 @@ DescriptorWriter& DescriptorWriter::writeStorageImage(
                     layout);
 }
 
-void DescriptorWriter::updateSet(const wr::Device& device, VkDescriptorSet set)
+void DescriptorWriter::updateSet(const Device& device, VkDescriptorSet set)
 {
   for (auto& write : write_sets_)
     write.dstSet = set;

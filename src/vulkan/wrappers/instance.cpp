@@ -4,7 +4,7 @@
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 //------------------------------------------------------------------------------
 // Instance helpers
 //------------------------------------------------------------------------------
@@ -181,4 +181,4 @@ Instance::Instance(std::string_view           name,
     Throw("Failed to create instance ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

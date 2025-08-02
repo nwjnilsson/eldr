@@ -3,7 +3,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class RenderPass : public VkDeviceObject<VkRenderPass> {
   using Base = VkDeviceObject<VkRenderPass>;
@@ -16,4 +16,4 @@ public:
              const VkSubpassDescription&        subpass_description,
              const VkSubpassDependency&         subpass_dependency);
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

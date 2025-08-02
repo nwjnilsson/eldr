@@ -3,7 +3,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 class DescriptorPool : public VkDeviceObject<VkDescriptorPool> {
   using Base = VkDeviceObject<VkDescriptorPool>;
 
@@ -17,4 +17,4 @@ public:
 
   void reset(VkDescriptorPoolResetFlags flags = 0);
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

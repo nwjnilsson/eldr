@@ -36,9 +36,7 @@
 #include <memory>
 #include <string>
 
-using namespace eldr::vk::wr;
 namespace fg = fastgltf;
-namespace fs = std::filesystem;
 
 NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
@@ -67,7 +65,7 @@ struct GpuSceneData {
 struct FrameData {
   DescriptorAllocator      descriptors;
   Buffer<GpuSceneData>     scene_data_buffer;
-  const wr::CommandBuffer* cmd_buf;
+  const CommandBuffer* cmd_buf;
 };
 
 struct VulkanEngine::Settings {

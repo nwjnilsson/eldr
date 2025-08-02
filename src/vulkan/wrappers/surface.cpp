@@ -4,7 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 Surface ::Surface()                   = default;
 Surface ::Surface(Surface&&) noexcept = default;
@@ -37,4 +37,4 @@ Surface::Surface(std::string_view name,
     Throw("Failed to create window surface! ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

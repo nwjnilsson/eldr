@@ -11,8 +11,8 @@
 
 NAMESPACE_BEGIN(eldr::vk)
 struct ImGuiOverlay::FrameData {
-  wr::Buffer<uint32_t>   index_buffer;
-  wr::Buffer<ImDrawVert> vertex_buffer;
+  Buffer<uint32_t>   index_buffer;
+  Buffer<ImDrawVert> vertex_buffer;
 };
 
 struct PushConstantBlock {
@@ -21,8 +21,8 @@ struct PushConstantBlock {
   Vector translate;
 } push_const_block_;
 
-ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
-                           const wr::Swapchain& swapchain,
+ImGuiOverlay::ImGuiOverlay(const Device&    device,
+                           const Swapchain& swapchain,
                            RenderGraph* const   render_graph)
   : device_(device), swapchain_(swapchain)
 {
@@ -56,10 +56,10 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
   // style.ScaleAllSizes(scale_);
 
   Log(Trace, "Loading ImGui shaders");
-  vertex_shader_ = wr::ShaderModule{
+  vertex_shader_ = ShaderModule{
     "ImGui vertex shader", device_, "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
   };
-  fragment_shader_ = wr::ShaderModule{ "ImGui fragment shader",
+  fragment_shader_ = ShaderModule{ "ImGui fragment shader",
                                        device_,
                                        "imgui.frag.spv",
                                        VK_SHADER_STAGE_FRAGMENT_BIT };
@@ -97,12 +97,12 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
         "Unable to load font {}.  Falling back to error texture",
         font_file_path);
     imgui_texture_ =
-      wr::Image{ device_, Bitmap::createCheckerboard(), font_mip_levels };
+      Image{ device_, Bitmap::createCheckerboard(), font_mip_levels };
   }
   else {
     Log(Trace, "Creating ImGui font texture");
 
-    imgui_texture_ = wr::Image{
+    imgui_texture_ = Image{
       device_,
       Bitmap{ "ImGui font texture",
               Bitmap::PixelFormat::RGBA,
@@ -115,7 +115,7 @@ ImGuiOverlay::ImGuiOverlay(const wr::Device&    device,
       font_mip_levels,
     };
   }
-  font_sampler_ = wr::Sampler{ "ImGui font sampler",
+  font_sampler_ = Sampler{ "ImGui font sampler",
                                device_,
                                VK_FILTER_LINEAR,
                                VK_FILTER_LINEAR,
@@ -157,10 +157,10 @@ void ImGuiOverlay::buildPipeline()
   descriptor_builder.addCombinedImageSampler(0, VK_SHADER_STAGE_FRAGMENT_BIT);
   imgui_layout_ = descriptor_builder.build("ImGui", device_);
 
-  wr::ShaderModule vert_shader{
+  ShaderModule vert_shader{
     "ImGui vertex shader", device_, "imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT
   };
-  wr::ShaderModule frag_shader{ "ImGui fragment shader",
+  ShaderModule frag_shader{ "ImGui fragment shader",
                                 device_,
                                 "imgui.frag.spv",
                                 VK_SHADER_STAGE_FRAGMENT_BIT };
@@ -244,7 +244,7 @@ void ImGuiOverlay::update(DescriptorAllocator& descriptors)
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT };
   }
 
-  stage_->setOnRecord([&](const wr::CommandBuffer& cb) {
+  stage_->setOnRecord([&](const CommandBuffer& cb) {
     ImDrawData* imgui_draw_data = ImGui::GetDrawData();
     if (imgui_draw_data == nullptr) {
       return;

@@ -19,20 +19,20 @@ public:
 
   void            resetPools();
   void            destroyPools();
-  VkDescriptorSet allocate(const wr::Device&              device,
-                           const wr::DescriptorSetLayout& layout,
+  VkDescriptorSet allocate(const Device&              device,
+                           const DescriptorSetLayout& layout,
                            void*                          pNext = nullptr);
 
 private:
-  wr::DescriptorPool getPool(const wr::Device& device);
-  wr::DescriptorPool createPool(const wr::Device& device);
+  DescriptorPool getPool(const Device& device);
+  DescriptorPool createPool(const Device& device);
 
 private:
   static constexpr uint32_t max_sets_limit{ 4092 };
 
   std::vector<PoolSizeRatio>      ratios_;
-  std::vector<wr::DescriptorPool> full_pools_;
-  std::vector<wr::DescriptorPool> ready_pools_;
+  std::vector<DescriptorPool> full_pools_;
+  std::vector<DescriptorPool> ready_pools_;
   uint32_t                        sets_per_pool_;
 };
 NAMESPACE_END(eldr::vk)

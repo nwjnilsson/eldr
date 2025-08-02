@@ -7,7 +7,7 @@
 #include <eldr/vulkan/wrappers/image.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 //------------------------------------------------------------------------------
 // CommandBuffer
 //------------------------------------------------------------------------------
@@ -607,4 +607,4 @@ void     CommandBuffer::waitFence() const
 }
 
 void CommandBuffer::resetFence() const { wait_fence_.reset(); }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

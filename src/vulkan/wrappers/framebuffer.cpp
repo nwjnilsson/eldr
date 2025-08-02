@@ -3,7 +3,7 @@
 #include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <eldr/vulkan/wrappers/swapchain.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Framebuffer)
 
 Framebuffer::Framebuffer(std::string_view                name,
@@ -30,4 +30,4 @@ Framebuffer::Framebuffer(std::string_view                name,
     Throw("Failed to create framebuffer! ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

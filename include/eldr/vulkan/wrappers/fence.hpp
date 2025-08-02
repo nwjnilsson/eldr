@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class Fence : public VkDeviceObject<VkFence> {
   using Base = VkDeviceObject<VkFence>;
@@ -14,4 +14,4 @@ public:
   VkResult wait(uint64_t timeout = std::numeric_limits<uint64_t>::max()) const;
   [[nodiscard]] VkResult status() const;
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/semaphore.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Semaphore)
 Semaphore::Semaphore(std::string_view       name,
                      const Device&          device,
@@ -19,4 +19,4 @@ Semaphore::Semaphore(std::string_view       name,
     Throw("Failed to create semaphore ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

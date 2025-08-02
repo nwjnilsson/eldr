@@ -49,8 +49,8 @@ PipelineBuilder& PipelineBuilder::setInputTopology(VkPrimitiveTopology topology)
 }
 
 PipelineBuilder&
-PipelineBuilder::setShaders(const wr::ShaderModule& vertex_shader,
-                            const wr::ShaderModule& fragment_shader)
+PipelineBuilder::setShaders(const ShaderModule& vertex_shader,
+                            const ShaderModule& fragment_shader)
 {
   shader_stages_.clear();
   shader_stages_.push_back({
@@ -203,7 +203,7 @@ PipelineBuilder& PipelineBuilder::enableDepthtest(bool depth_write_enable,
   return *this;
 }
 
-wr::Pipeline PipelineBuilder::build(const wr::Device&           device,
+Pipeline PipelineBuilder::build(const Device&           device,
                                     std::string_view            name,
                                     VkPipelineLayoutCreateFlags layout_flags,
                                     VkPipelineCreateFlags       pipeline_flags)
@@ -287,6 +287,6 @@ wr::Pipeline PipelineBuilder::build(const wr::Device&           device,
     .basePipelineIndex   = -1,
   };
 
-  return wr::Pipeline{ name, device, pipeline_layout_ci, pipeline_ci };
+  return Pipeline{ name, device, pipeline_layout_ci, pipeline_ci };
 }
 NAMESPACE_END(eldr::vk)

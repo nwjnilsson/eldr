@@ -5,7 +5,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class CommandBuffer : public VkDeviceObject<VkCommandBuffer> {
   using Base = VkDeviceObject<VkCommandBuffer>;
@@ -190,4 +190,4 @@ private:
   Fence                               wait_fence_;
   mutable std::vector<Buffer<byte_t>> staging_buffers_;
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

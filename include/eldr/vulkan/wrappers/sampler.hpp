@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class Sampler : public VkDeviceObject<VkSampler> {
   using Base = VkDeviceObject<VkSampler>;
@@ -16,4 +16,4 @@ public:
           uint32_t            mip_levels);
 };
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

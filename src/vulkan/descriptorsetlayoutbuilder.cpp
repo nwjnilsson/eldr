@@ -54,12 +54,12 @@ DescriptorSetLayoutBuilder::addStorageBuffer(uint32_t           binding,
   return add(binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, stage_flags);
 }
 
-wr::DescriptorSetLayout
+DescriptorSetLayout
 DescriptorSetLayoutBuilder::build(std::string_view                 name,
-                                  const wr::Device&                device,
+                                  const Device&                device,
                                   VkDescriptorSetLayoutCreateFlags create_flags)
 {
-  return wr::DescriptorSetLayout{ name, device, bindings_, create_flags };
+  return DescriptorSetLayout{ name, device, bindings_, create_flags };
 }
 
 NAMESPACE_END(eldr::vk)

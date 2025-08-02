@@ -12,35 +12,35 @@ public:
 
   template <typename T>
   DescriptorWriter& writeUniformBuffer(uint32_t             binding,
-                                       const wr::Buffer<T>& buffer,
+                                       const Buffer<T>& buffer,
                                        size_t               offset = 0);
   template <typename T>
   DescriptorWriter& writeStorageBuffer(uint32_t             binding,
-                                       const wr::Buffer<T>& buffer,
+                                       const Buffer<T>& buffer,
                                        size_t               offset = 0);
 
-  DescriptorWriter& writeSampler(uint32_t binding, const wr::Sampler& sampler);
+  DescriptorWriter& writeSampler(uint32_t binding, const Sampler& sampler);
 
   DescriptorWriter& writeSampledImage(uint32_t             binding,
-                                      const wr::ImageView& image,
+                                      const ImageView& image,
                                       VkImageLayout        layout);
 
   DescriptorWriter& writeCombinedImageSampler(
     uint32_t           binding,
-    const wr::Image&   image,
-    const wr::Sampler& sampler,
+    const Image&   image,
+    const Sampler& sampler,
     VkImageLayout      layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   DescriptorWriter& writeStorageImage(uint32_t             binding,
-                                      const wr::ImageView& image,
+                                      const ImageView& image,
                                       VkImageLayout        layout);
 
-  void updateSet(const wr::Device& device, VkDescriptorSet set);
+  void updateSet(const Device& device, VkDescriptorSet set);
 
 private:
   template <typename T>
   DescriptorWriter& writeBuffer(uint32_t             binding,
-                                const wr::Buffer<T>& buffer,
+                                const Buffer<T>& buffer,
                                 size_t               offset,
                                 VkDescriptorType     type);
   DescriptorWriter&
@@ -58,7 +58,7 @@ private:
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t             binding,
-                                                const wr::Buffer<T>& buffer,
+                                                const Buffer<T>& buffer,
                                                 size_t           index_offset,
                                                 VkDescriptorType type)
 {
@@ -86,7 +86,7 @@ DescriptorWriter& DescriptorWriter::writeBuffer(uint32_t             binding,
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeUniformBuffer(
-  uint32_t binding, const wr::Buffer<T>& buffer, size_t index_offset)
+  uint32_t binding, const Buffer<T>& buffer, size_t index_offset)
 {
   return writeBuffer<T>(
     binding, buffer, index_offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -94,7 +94,7 @@ DescriptorWriter& DescriptorWriter::writeUniformBuffer(
 
 template <typename T>
 DescriptorWriter& DescriptorWriter::writeStorageBuffer(
-  uint32_t binding, const wr::Buffer<T>& buffer, size_t offset)
+  uint32_t binding, const Buffer<T>& buffer, size_t offset)
 {
   return writeBuffer<T>(
     binding, buffer, offset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);

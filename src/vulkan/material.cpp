@@ -7,7 +7,7 @@
 
 NAMESPACE_BEGIN(eldr)
 MaterialInstance GltfMetallicRoughness::writeMaterial(
-  const vk::wr::Device&                   device,
+  const vk::Device&                   device,
   MaterialPass                            pass,
   const GltfMetallicRoughness::Resources& resources,
   vk::DescriptorAllocator&                descriptor_allocator)

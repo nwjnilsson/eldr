@@ -3,7 +3,7 @@
 
 #ifdef ELDR_VULKAN_DEBUG_REPORT
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 //------------------------------------------------------------------------------
 // Debug report callback
@@ -110,5 +110,5 @@ DebugUtilsMessenger::~DebugUtilsMessenger()
       func(instance().vk(), vk(), nullptr);
   }
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)
 #endif

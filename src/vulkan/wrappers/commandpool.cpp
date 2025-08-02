@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/commandpool.hpp>
 #include <eldr/vulkan/wrappers/device.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 CommandPool::CommandPool()                       = default;
 CommandPool::CommandPool(CommandPool&&) noexcept = default;
 CommandPool& CommandPool::operator=(CommandPool&& o)
@@ -72,4 +72,4 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   command_buffers_.back().begin();
   return command_buffers_.back();
 }
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

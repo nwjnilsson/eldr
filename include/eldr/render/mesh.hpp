@@ -68,8 +68,6 @@ private:
   std::vector<Color4f>    colors_;
   std::vector<Normal3f>   normals_;
   std::vector<GeoSurface> surfaces_;
-
-  // std::optional<vk::wr::GpuBuffer>
 };
 
 // template <>

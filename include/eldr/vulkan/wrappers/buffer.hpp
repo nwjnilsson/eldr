@@ -3,7 +3,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 // Should probably support uploading to a specific section of the buffer, and
 // not just overwriting from the beginning of the mapped data
@@ -82,4 +82,4 @@ void Buffer<T>::uploadData(std::span<const T> src, size_t offset)
   AllocatedBuffer::uploadData(std::as_bytes(src), offset * sizeof(T));
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

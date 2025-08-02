@@ -10,7 +10,7 @@ enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 NAMESPACE_BEGIN(eldr)
 
 struct MaterialInstance {
-  vk::wr::Pipeline* pipeline;
+  vk::Pipeline* pipeline;
   VkDescriptorSet   descriptor_set;
   MaterialPass      pass_type;
 };
@@ -33,9 +33,9 @@ struct Material {
 struct GltfMetallicRoughness {
   // using Float = float;
   EL_IMPORT_CORE_TYPES()
-  vk::wr::Pipeline            opaque_pipeline;
-  vk::wr::Pipeline            transparent_pipeline;
-  vk::wr::DescriptorSetLayout material_layout;
+  vk::Pipeline            opaque_pipeline;
+  vk::Pipeline            transparent_pipeline;
+  vk::DescriptorSetLayout material_layout;
 
   // Just an estimate of what will be needed
   static constexpr vk::PoolSizeRatio sizes[3]{
@@ -52,16 +52,16 @@ struct GltfMetallicRoughness {
   };
 
   struct Resources {
-    const vk::wr::Image*                     color_texture;
-    const vk::wr::Sampler*                   color_sampler;
-    const vk::wr::Image*                     metal_rough_texture;
-    const vk::wr::Sampler*                   metal_rough_sampler;
-    const vk::wr::Buffer<MaterialConstants>* data_buffer;
+    const vk::Image*                     color_texture;
+    const vk::Sampler*                   color_sampler;
+    const vk::Image*                     metal_rough_texture;
+    const vk::Sampler*                   metal_rough_sampler;
+    const vk::Buffer<MaterialConstants>* data_buffer;
     size_t                                   data_index;
   };
 
   MaterialInstance
-  writeMaterial(const vk::wr::Device&                   device,
+  writeMaterial(const vk::Device&                   device,
                 MaterialPass                            pass,
                 const GltfMetallicRoughness::Resources& resources,
                 vk::DescriptorAllocator&                descriptor_allocator);

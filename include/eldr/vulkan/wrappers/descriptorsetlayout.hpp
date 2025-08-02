@@ -3,7 +3,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class DescriptorSetLayout : public VkDeviceObject<VkDescriptorSetLayout> {
   using Base = VkDeviceObject<VkDescriptorSetLayout>;
@@ -15,4 +15,4 @@ public:
                       std::span<VkDescriptorSetLayoutBinding>,
                       VkDescriptorSetLayoutCreateFlags flags);
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

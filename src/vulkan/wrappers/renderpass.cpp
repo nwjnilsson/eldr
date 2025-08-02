@@ -2,7 +2,7 @@
 #include <eldr/vulkan/wrappers/renderpass.hpp>
 #include <vulkan/vulkan_core.h>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(RenderPass)
 RenderPass::RenderPass(std::string_view                   name,
                        const Device&                      device,
@@ -29,4 +29,4 @@ RenderPass::RenderPass(std::string_view                   name,
   }
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

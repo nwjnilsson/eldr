@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 struct ImageViewCreateInfo {
   VkImage            image;
@@ -30,4 +30,4 @@ public:
 private:
   VkImageAspectFlags aspect_flags_{ VK_IMAGE_ASPECT_NONE };
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

@@ -4,7 +4,7 @@
 
 #include <fstream>
 #include <vector>
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 //------------------------------------------------------------------------------
 // ShaderModule helper
@@ -57,4 +57,4 @@ ShaderModule::ShaderModule(std::string_view      name,
     Throw("Failed to create shader module from \"{}\" ({})", filename, result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

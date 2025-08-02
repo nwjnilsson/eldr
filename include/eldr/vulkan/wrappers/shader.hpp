@@ -3,7 +3,7 @@
 
 #include <string>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 class ShaderModule : public VkDeviceObject<VkShaderModule> {
   using Base = VkDeviceObject<VkShaderModule>;
 
@@ -26,4 +26,4 @@ private:
   std::string           entry_point_{ "main" };
   VkShaderStageFlagBits stage_;
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

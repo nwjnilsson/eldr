@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/pipeline.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 //------------------------------------------------------------------------------
 // Pipeline
 //------------------------------------------------------------------------------
@@ -62,4 +62,4 @@ void Pipeline::createPipelineLayout(const VkPipelineLayoutCreateInfo& layout_ci)
     Throw("Failed to create pipeline layout! ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

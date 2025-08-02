@@ -8,7 +8,7 @@
 #include <mutex>
 #include <set>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 NAMESPACE_BEGIN()
 // -----------------------------------------------------------------------------
 // Helper functions
@@ -422,4 +422,4 @@ VkPhysicalDevice Device::physical() const { return d_->physical_device; }
 VkDevice         Device::logical() const { return object_; }
 VmaAllocator     Device::allocator() const { return d_->allocator; }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

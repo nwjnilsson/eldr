@@ -5,7 +5,7 @@
 
 #include <span>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 class AllocatedBuffer : public VkAllocatedObject<VkBuffer> {
   using Base = VkAllocatedObject<VkBuffer>;
 
@@ -33,4 +33,4 @@ protected:
   void uploadData(std::span<const byte_t> src, size_t offset = 0);
 };
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

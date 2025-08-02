@@ -17,10 +17,10 @@ void DescriptorAllocator::resize(uint32_t max_sets)
   sets_per_pool_ = std::min(std::max(max_sets, sets_per_pool_), max_sets_limit);
 }
 
-wr::DescriptorPool DescriptorAllocator::getPool(const wr::Device& device)
+DescriptorPool DescriptorAllocator::getPool(const Device& device)
 {
   if (not ready_pools_.empty()) {
-    wr::DescriptorPool new_pool{ std::move(ready_pools_.back()) };
+    DescriptorPool new_pool{ std::move(ready_pools_.back()) };
     ready_pools_.pop_back();
     return new_pool;
   }
@@ -30,7 +30,7 @@ wr::DescriptorPool DescriptorAllocator::getPool(const wr::Device& device)
   }
 }
 
-wr::DescriptorPool DescriptorAllocator::createPool(const wr::Device& device)
+DescriptorPool DescriptorAllocator::createPool(const Device& device)
 {
 
   std::vector<VkDescriptorPoolSize> pool_sizes;
@@ -40,7 +40,7 @@ wr::DescriptorPool DescriptorAllocator::createPool(const wr::Device& device)
                              ratio.ratio * sets_per_pool_) });
   }
 
-  wr::DescriptorPool pool{ fmt::format("Allocator pool #{}",
+  DescriptorPool pool{ fmt::format("Allocator pool #{}",
                                        1 + full_pools_.size() +
                                          ready_pools_.size()),
                            device,
@@ -64,7 +64,7 @@ void DescriptorAllocator::resetPools()
 }
 
 VkDescriptorSet DescriptorAllocator::allocate(
-  const wr::Device& device, const wr::DescriptorSetLayout& layout, void* pNext)
+  const Device& device, const DescriptorSetLayout& layout, void* pNext)
 {
   /**
    * From Vulkan tutorial:
@@ -82,7 +82,7 @@ VkDescriptorSet DescriptorAllocator::allocate(
    */
 
   // get or create a pool to allocate from
-  wr::DescriptorPool pool_to_use{ getPool(device) };
+  DescriptorPool pool_to_use{ getPool(device) };
 
   VkDescriptorSetLayout       layouts[]{ layout.vk() };
   VkDescriptorSetAllocateInfo alloc_info{

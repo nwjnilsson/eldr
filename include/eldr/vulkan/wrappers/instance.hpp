@@ -3,7 +3,7 @@
 
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class Instance : public VkObject<VkInstance> {
   using Base = VkObject<VkInstance>;
@@ -17,4 +17,4 @@ public:
 
 //[[nodiscard]] static bool isExtensionAvailable(const std::string& extension);
 //[[nodiscard]] static bool isLayerSupported(const std::string& layer);
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

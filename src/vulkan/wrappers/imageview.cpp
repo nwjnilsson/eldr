@@ -1,7 +1,7 @@
 #include <eldr/vulkan/wrappers/device.hpp>
 #include <eldr/vulkan/wrappers/image.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 NAMESPACE_BEGIN()
 VkImageViewCreateInfo getVkImageViewCI(const ImageViewCreateInfo& ci)
 {
@@ -79,4 +79,4 @@ ImageView::ImageView(const Image& image, VkImageAspectFlags aspect_flags)
     Throw("Failed to create image view! ({})", result);
 }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

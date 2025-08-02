@@ -2,7 +2,7 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/vulkan/wrappers/imageview.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 /// Info required to create image, image view, and allocating memory
 struct ImageCreateInfo {
   std::string           name;
@@ -55,4 +55,4 @@ protected:
   ImageView image_view_;
 };
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

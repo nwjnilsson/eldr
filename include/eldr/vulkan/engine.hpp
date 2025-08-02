@@ -53,7 +53,7 @@ private:
   void recreateSwapchain();
   void updateBuffers(const Scene*);
   void updateScene(const Scene*);
-  void drawGeometry(const wr::CommandBuffer& cb);
+  void drawGeometry(const CommandBuffer& cb);
 
 private:
   const Window& window_;

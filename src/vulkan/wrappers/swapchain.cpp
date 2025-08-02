@@ -7,7 +7,7 @@
 
 #include <GLFW/glfw3.h>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
@@ -247,4 +247,4 @@ void Swapchain::present(const VkPresentInfoKHR& present_info,
 const Image& Swapchain::image(size_t index) const { return images_[index]; }
 Image&       Swapchain::image(size_t index) { return images_[index]; }
 
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

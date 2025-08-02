@@ -21,9 +21,9 @@ public:
   DescriptorSetLayoutBuilder& addStorageBuffer(uint32_t           binding,
                                                VkShaderStageFlags stage_flags);
 
-  [[nodiscard]] wr::DescriptorSetLayout
+  [[nodiscard]] DescriptorSetLayout
   build(std::string_view                 name,
-        const wr::Device&                device,
+        const Device&                device,
         VkDescriptorSetLayoutCreateFlags create_flags = 0);
 
 private:

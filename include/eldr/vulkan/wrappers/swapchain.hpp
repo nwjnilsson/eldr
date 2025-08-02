@@ -4,7 +4,7 @@
 
 #include <vector>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 class Swapchain : public VkDeviceObject<VkSwapchainKHR> {
   using Base = VkDeviceObject<VkSwapchainKHR>;
 
@@ -44,4 +44,4 @@ private:
   std::vector<Semaphore> image_available_sem_;
   std::vector<Semaphore> render_finished_sem_;
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)

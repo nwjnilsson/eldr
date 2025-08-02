@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/vulkan/vulkan.hpp>
 
-NAMESPACE_BEGIN(eldr::vk::wr)
+NAMESPACE_BEGIN(eldr::vk)
 
 class Semaphore : public VkDeviceObject<VkSemaphore> {
   using Base = VkDeviceObject<VkSemaphore>;
@@ -12,4 +12,4 @@ public:
             const Device&          device,
             VkSemaphoreCreateFlags flags = 0);
 };
-NAMESPACE_END(eldr::vk::wr)
+NAMESPACE_END(eldr::vk)
