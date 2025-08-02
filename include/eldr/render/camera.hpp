@@ -5,9 +5,9 @@
 #include <eldr/math/glm.hpp>
 
 NAMESPACE_BEGIN(eldr)
-class ProjectiveCamera : public Sensor {
-public:
+EL_VARIANT class ProjectiveCamera : public Sensor<Float, Spectrum> {
   EL_IMPORT_TYPES()
+public:
   // ~ProjectiveCamera();
 
   float nearClip() const { return near_clip_; }
@@ -40,8 +40,9 @@ private:
 };
 
 // Perspective camera type used to render from
-class PerspectiveCamera : public ProjectiveCamera {
-  using Base = ProjectiveCamera;
+EL_VARIANT class PerspectiveCamera : public ProjectiveCamera<Float, Spectrum> {
+  EL_IMPORT_CORE_TYPES()
+  using Base = ProjectiveCamera<Float, Spectrum>;
 
 public:
   PerspectiveCamera();
@@ -49,15 +50,14 @@ public:
   Matrix4f getViewMatrix() const override;
 };
 
-// Main camera type used to navigate around the scene
-class Camera : public PerspectiveCamera {
+// Main camera type used to navigate around the scene, maybe move this to vulkan
+// engine
+class Camera : public PerspectiveCamera<float, Color<float, 3>> {
   using Base = PerspectiveCamera;
 
 public:
   Camera();
 
   void processInput(const KeyboardMouseInput&);
-
-private:
 };
 NAMESPACE_END(eldr)

@@ -1,9 +1,15 @@
 #pragma once
 
+// -----------------------------------------------------------------------------
+// TODO: generate this file
+// -----------------------------------------------------------------------------
+
 #include <eldr/core/fwd.hpp>
 
-/// List of enabled Eldr variants (spectral not implemented yet)
-#define EL_VARIANTS "scalar_rgb, scalar_spectral\n"
+/// List of enabled Eldr variants
+#define EL_VARIANTS                                                            \
+  "scalar_rgb\n"                                                               \
+  "scalar_spectral\n"
 
 /// Default variant to be used by the "eldr" executable
 #define EL_DEFAULT_VARIANT "scalar_rgb"
@@ -24,7 +30,7 @@
     if (variant == "scalar_rgb")                                               \
       return func<float, Color<float, 3>>(__VA_ARGS__);                        \
     else if (variant == "scalar_spectral")                                     \
-      return func<float, Spectrum<float, 4>>(__VA_ARGS__);                     \
+      return func<float, SampledSpectrum<float, 4>>(__VA_ARGS__);              \
     else                                                                       \
       Throw("Unsupported variant: \"%s\". Must be one of scalar_rgb, "         \
             "scalar_spectral!",                                                \

@@ -14,20 +14,20 @@ NAMESPACE_BEGIN(eldr)
 // class SamplingIntegrator;
 // class MonteCarloIntegrator;
 // class AdjointIntegrator;
-class Medium;
-class Mesh;
+EL_VARIANT class Medium;
+EL_VARIANT class Mesh;
 enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;
-class SceneBase;
-class Scene;
+EL_VARIANT class SceneBase;
+EL_VARIANT class Scene;
 // class Sensor;
 // class PhaseFunction;
-class ProjectiveCamera;
-class PerspectiveCamera;
+EL_VARIANT class ProjectiveCamera;
+EL_VARIANT class PerspectiveCamera;
 class Camera;
-class Shape;
+EL_VARIANT class Shape;
 // class ShapeGroup;
 // class ShapeKDTree;
 // class Texture;
@@ -49,7 +49,7 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   using Float    = Float_;
   using Spectrum = Spectrum_;
 
-  // Until I use vector types (if ever)
+  // Until I use vector floats (if ever)
   using FloatU    = Float;
   using SpectrumU = Spectrum;
 
@@ -83,10 +83,10 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   //  using Sampler = Sampler<FloatU , SpectrumU>;
   //   using MicrofacetDistribution =
   //     MicrofacetDistribution<FloatU , SpectrumU>;
-  using Shape = eldr::Shape;
+  using Shape = eldr::Shape<FloatU, SpectrumU>;
   //  using ShapeGroup  = ShapeGroup<FloatU , SpectrumU>;
   //  using ShapeKDTree = ShapeKDTree<FloatU , SpectrumU>;
-  using Mesh = eldr::Mesh;
+  using Mesh = eldr::Mesh<FloatU, SpectrumU>;
   //  using Integrator  = Integrator<FloatU , SpectrumU>;
   //  using SamplingIntegrator =
   //    SamplingIntegrator<FloatU , SpectrumU>;
@@ -101,7 +101,7 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   //    ProjectiveCamera<FloatU , SpectrumU>;
   //  using Emitter       = Emitter<FloatU , SpectrumU>;
   //  using Endpoint      = Endpoint<FloatU , SpectrumU>;
-  using Medium = eldr::Medium;
+  using Medium = eldr::Medium<FloatU, SpectrumU>;
   //  using PhaseFunction = PhaseFunction<FloatU , SpectrumU>;
   //  using Film          = Film<FloatU , SpectrumU>;
   //  using ImageBlock    = ImageBlock<FloatU , SpectrumU>;
@@ -122,7 +122,7 @@ NAMESPACE_END(eldr)
 
 #define EL_IMPORT_RENDER_BASIC_TYPES()                                         \
   EL_IMPORT_CORE_TYPES()                                                       \
-  using RenderAliases = eldr::RenderAliases<float, Color<float, 3>>;           \
+  using RenderAliases = eldr::RenderAliases<Float, Spectrum>;                  \
   using Ray3f         = typename RenderAliases::Ray3f;
 // using Wavelength          = typename RenderAliases::Wavelength;
 // using UnpolarizedSpectrum = typename RenderAliases::UnpolarizedSpectrum;

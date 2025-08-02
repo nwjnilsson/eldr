@@ -6,19 +6,14 @@
 #include <functional>
 
 // fwd declarations
-NAMESPACE_BEGIN(eldr)
-class EldrApp;
-NAMESPACE_END(eldr)
 NAMESPACE_BEGIN(fastgltf)
 struct Asset;
-}
+NAMESPACE_END(fastgltf)
 
 NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine {
+  using Float = float;
   EL_IMPORT_CORE_TYPES()
-  friend EldrApp; // TODO: I did this to be able to invalidate swapchain from
-                  // EldrApp. This is probably not ideal and there should be a
-                  // better way to do this
 
 public:
   VulkanEngine() = delete;
@@ -73,7 +68,7 @@ private:
 
 NAMESPACE_END(eldr::vk)
 template <> struct std::hash<eldr::vk::GpuVertex> {
-  // using Float = float;
+  using Float = float;
   EL_IMPORT_CORE_TYPES()
   size_t operator()(eldr::vk::GpuVertex const& vertex) const;
 };

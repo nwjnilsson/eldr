@@ -20,7 +20,8 @@ struct GeoSurface {
   const Material* material;
 };
 
-class Mesh final : public Shape {
+EL_VARIANT class Mesh final : public Shape<Float, Spectrum> {
+  using Base = Shape<Float, Spectrum>;
   EL_IMPORT_CORE_TYPES()
 
 public:

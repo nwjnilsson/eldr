@@ -1,7 +1,7 @@
 #pragma once
 #include <eldr/render/endpoint.hpp>
 NAMESPACE_BEGIN(eldr)
-class Sensor : public Endpoint {
+EL_VARIANT class Sensor : public Endpoint<Float, Spectrum> {
 public:
   ~Sensor() = default;
 

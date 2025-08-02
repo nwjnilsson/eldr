@@ -6,15 +6,15 @@
 #include <eldr/render/camera.hpp>
 #include <eldr/render/scene.hpp>
 
-#include <memory>
 #include <filesystem>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // fwd
 // -----------------------------------------------------------------------------
 NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine;
-}
+NAMESPACE_END(eldr::vk)
 // -----------------------------------------------------------------------------
 NAMESPACE_BEGIN(eldr)
 class App {

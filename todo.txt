@@ -1,2 +1,21 @@
 Material/image/sampler names aren't good enough as ID's, as they are sometimes
-empty. The ID should consist of something else, e.g filename + material name or something
+empty. The ID should consist of something else, e.g filename + material name or something.
+
+A very rough outline of what I think I want to do next (not necessarily in this order):
+ - Start making some form of UI with ImGui. Add ways to load model/material from file.
+   List materials etc.
+ - Textures and MIPMaps on the CPU. Sampling textures will be needed when path tracing
+   later on. CPU textures would also serve as a way to enable loading resources before
+   handing them to the Vulkan backend. This is nice because all vulkan related resources
+   such as pipelines, descriptors etc are separated from the material logic.
+   Vulkan resources can then be created from the "CPU material" (whether that will be implemented
+   as a bsdf or not idk)
+   https://www.pbr-book.org/4ed/Textures_and_Materials/Image_Texture#ImageTextureEvaluation
+
+On Variants in the vulkan backend:
+I think the vulkan backend should be kept as simple as possible, i.e regular float
+precision and RGB spectrum:
+ -> Load meshes and RGB colors, keep this in memory. glTF uses single precision floats at most.
+ -> Select rendering variant in UI, i.e RGB/monochromatic/spectral and float precision
+ -> When beginning the offline rendering, build a dedicated scene graph and bvh etc with the
+    selected spectrum and precision.

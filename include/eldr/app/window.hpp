@@ -8,7 +8,6 @@
 struct GLFWwindow;
 
 NAMESPACE_BEGIN(eldr)
-class App;
 class Window {
 
 public:

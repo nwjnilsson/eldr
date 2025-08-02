@@ -48,18 +48,18 @@ struct SceneNode : public Renderable {
   virtual void map(std::function<void(SceneNode*)> func);
 };
 
-struct MeshNode final : public SceneNode {
+EL_VARIANT struct MeshNode final : public SceneNode {
   using Transform4f = CoreAliases<float>::Transform4f;
-  std::shared_ptr<Mesh> mesh;
+  std::shared_ptr<Mesh<Float, Spectrum>> mesh;
   void draw(const Transform4f& top_matrix, DrawContext& ctx) const override;
 };
 
-class SceneBase {
+EL_VARIANT class SceneBase {
 
   std::string name_;
 };
 
-class Scene : public SceneBase {
+EL_VARIANT class Scene : public SceneBase<Float, Spectrum> {
   EL_IMPORT_TYPES(Shape, Mesh)
   friend SceneManager;
 

@@ -1,6 +1,9 @@
 #include <eldr/app/app.hpp>
 #include <eldr/core/logger.hpp>
+#include <eldr/core/spectrum.hpp>
 #include <eldr/core/util.hpp>
+
+#include <eldr/core/config.hpp>
 
 #include <cxxopts.hpp>
 
@@ -37,7 +40,7 @@ int main(int argc, char* argv[])
     help(options.help({ "", "Group" }));
     return 0;
   }
-  const int threads{ result["threads"].as<int>() };
+  const auto threads = result["threads"].as<int>();
 
   std::cout <<
     R"(###########################################
@@ -47,10 +50,9 @@ Running Eldr with the following settings:
 ###########################################
 )";
 
-  // Run Eldr main app
-  eldr::App main_app;
+  App app;
   try {
-    main_app.run();
+    app.run();
   }
   catch (const std::exception& e) {
     Log(eldr::Critical, "{}", e.what());

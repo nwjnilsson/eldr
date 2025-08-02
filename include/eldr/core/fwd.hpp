@@ -3,7 +3,7 @@
 #include <eldr/eldr.hpp>
 #include <glm/fwd.hpp>
 
-// #define EL_VARIANT template <typename Float, typename Spectrum>
+#define EL_VARIANT template <typename Float, typename Spectrum>
 
 using FlagRep = uint32_t;
 using byte_t  = std::byte;
@@ -25,14 +25,13 @@ class Thread;
 // template <typename Point> struct Transform;
 // template <typename Value, std::size_t Size_> struct Vector;
 // template <typename Value, std::size_t Size_> struct Normal;
-template <typename Value, std::size_t Size_> struct Point;
+template <typename Value, std::size_t size> struct Point;
 // template <typename Value, std::size_t Size_> struct Matrix;
-template <typename Value, size_t Size> struct Spectrum;
-template <typename Value, size_t Size> struct CoefficientSpectrum;
-template <typename Value, size_t Samples> struct SampledSpectrum;
-template <typename Value, size_t Channels>
-  requires(Channels <= 4)
+template <typename Value, size_t size> struct Spectrum;
+template <typename Value, size_t channels>
+  requires(channels <= 4)
 struct Color;
+
 template <typename Point, typename Spectrum> struct Ray;
 
 template <typename Float_> struct CoreAliases {
@@ -109,7 +108,7 @@ template <typename Float_> struct CoreAliases {
 NAMESPACE_END(eldr)
 
 #define EL_IMPORT_CORE_TYPES_PREFIX(Float_, prefix)                            \
-  using prefix##CoreAliases = eldr::CoreAliases<float>;                        \
+  using prefix##CoreAliases = eldr::CoreAliases<Float_>;                       \
   using prefix##Vector2i    = typename prefix##CoreAliases::Vector2i;          \
   using prefix##Vector3i    = typename prefix##CoreAliases::Vector3i;          \
   using prefix##Vector4i    = typename prefix##CoreAliases::Vector4i;          \
