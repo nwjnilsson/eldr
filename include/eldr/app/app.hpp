@@ -7,6 +7,7 @@
 #include <eldr/render/scene.hpp>
 
 #include <memory>
+#include <filesystem>
 
 // -----------------------------------------------------------------------------
 // fwd

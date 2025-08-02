@@ -63,28 +63,11 @@ struct GpuSceneData {
   Vector4f    sunlight_direction;
   Vector4f    sunlight_color;
 };
-struct GpuModelData {
-  CoreAliases<float>::Transform4f model_mat;
-};
+
 struct FrameData {
-  DescriptorAllocator  descriptors;
-  Buffer<GpuSceneData> scene_data_buffer;
-  // TODO: move to mesh or scene node or keep a registry of scene node-> model
-  // data buffer
-  Buffer<GpuModelData>     model_data_buffer;
+  DescriptorAllocator      descriptors;
+  Buffer<GpuSceneData>     scene_data_buffer;
   const wr::CommandBuffer* cmd_buf;
-};
-// TODO: decide where structs should live
-
-// struct SceneData {
-//   std::vector<vk::wr::Sampler>                             samplers;
-//   vk::DescriptorAllocator                                  descriptors;
-//   vk::wr::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
-// };
-
-// TODO: is this even used
-struct GpuMeshBuffers {
-  VkDeviceAddress vertex_buffer_address;
 };
 
 struct VulkanEngine::Settings {
@@ -116,7 +99,6 @@ struct VulkanEngine::EngineData {
   // The data below is experimental, default data
   // TODO: move to resourcemanager?
   DescriptorSetLayout   scene_data_descriptor_layout;
-  DescriptorSetLayout   model_data_descriptor_layout;
   GltfMetallicRoughness metal_rough_material;
   // MaterialInstance      default_material_data;
 };
@@ -263,11 +245,6 @@ void VulkanEngine::setupFrameData()
                              elem_count,
                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
-      .model_data_buffer = { "Model data uniform buffer",
-                             d_->device,
-                             elem_count,
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
       .cmd_buf           = nullptr, // Set later when drawing frames
     });
   }
@@ -282,11 +259,7 @@ void VulkanEngine::initDescriptors()
   d_->scene_data_descriptor_layout =
     layout_builder.build("Scene data", d_->device, 0);
 
-  layout_builder.reset();
-
-  layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT);
-  d_->model_data_descriptor_layout =
-    layout_builder.build("Model data", d_->device, 0);
+  // layout_builder.reset();
 
   // layout_builder.addUniformBuffer(0, VK_SHADER_STAGE_VERTEX_BIT)
   //   .addCombinedImageSampler(1, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -387,7 +360,7 @@ void VulkanEngine::recreateSwapchain()
   graph->compile();
 }
 
-void VulkanEngine::updateScene(uint32_t current_image)
+void VulkanEngine::updateScene(const Scene* scene)
 {
 
   static StopWatch stop_watch;
@@ -406,9 +379,8 @@ void VulkanEngine::updateScene(uint32_t current_image)
     camera_->farClip()) };
   proj[1][1] *= -1;
 
-  /// TODO: the model matrix lives inside RenderObject. Remove GpuModelData and
-  /// write directly to the RenderObject or something like that.
-  const GpuModelData model_data[]{ { .model_mat = model } };
+  scene->nodes_.at("Suzanne")->refreshTransform(model);
+
   const GpuSceneData scene_data[]{ {
     .view               = view,
     .proj               = proj,
@@ -417,8 +389,7 @@ void VulkanEngine::updateScene(uint32_t current_image)
     .sunlight_direction = Vector4f{ 0, 1, 0.5, 1.f },
     .sunlight_color     = Vector4f{ 1, 1, 1, 1.f },
   } };
-  d_->frames_in_flight[current_image].scene_data_buffer.uploadData(scene_data);
-  d_->frames_in_flight[current_image].model_data_buffer.uploadData(model_data);
+  d_->frames_in_flight[frame_index_].scene_data_buffer.uploadData(scene_data);
 }
 
 void VulkanEngine::drawGeometry(const CommandBuffer& cb)
@@ -437,19 +408,12 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
   VkDescriptorSet scene_descriptor{ frame.descriptors.allocate(
     device, d_->scene_data_descriptor_layout) };
 
-  VkDescriptorSet model_descriptor{ frame.descriptors.allocate(
-    device, d_->model_data_descriptor_layout) };
-
   size_t idx_offset{ 0 };
 
   DescriptorWriter writer;
   writer.writeUniformBuffer(0, frame.scene_data_buffer, 0)
     .updateSet(device, scene_descriptor);
   writer.reset();
-
-  // TODO: model should be incorporated with mesh or draw or something
-  writer.writeUniformBuffer(0, frame.model_data_buffer, 0)
-    .updateSet(device, model_descriptor);
 
   for (size_t i{ 0 }; i < surface_count; ++i) {
     const RenderObject& draw{ main_draw_context_.opaque_surfaces[i] };
@@ -467,6 +431,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
 
     GpuDrawPushConstants push_constants{
       .world_transform = Transform4f{ 1.0f },
+      .model_transform = draw.transform,
       .vertex_buffer   = d_->vertex_buffer.getDeviceAddress(),
     };
     cb.pushConstant(draw.material->data.pipeline->layout(),
@@ -474,7 +439,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
                     VK_SHADER_STAGE_VERTEX_BIT);
 
     std::vector<VkDescriptorSet> descriptor_sets{
-      scene_descriptor, draw.material->data.descriptor_set, model_descriptor
+      scene_descriptor, draw.material->data.descriptor_set
     };
     cb.bindDescriptorSets(descriptor_sets,
                           draw.material->data.pipeline->layout());
@@ -568,7 +533,7 @@ void VulkanEngine::drawFrame(const Scene* scene)
     last_scene_node_count = scene->meshes_.size();
   }
 
-  updateScene(frame_index_); // move
+  updateScene(scene); // move
   scene->draw(main_draw_context_);
 
   // Current frame
@@ -668,7 +633,6 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
   PipelineBuilder pipeline_builder;
   pipeline_builder.addDescriptorSetLayout(d_->scene_data_descriptor_layout)
     .addDescriptorSetLayout(material.material_layout)
-    .addDescriptorSetLayout(d_->model_data_descriptor_layout)
     .addPushConstantRange(matrix_range)
     .setShaders(vert_shader, frag_shader)
     .setInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)

@@ -2,8 +2,11 @@
 #include <eldr/core/core.hpp>
 #include <eldr/core/spectrum.hpp>
 #include <eldr/ext/fastgltf.hpp>
+#include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/engine.hpp>
+
+#include <filesystem>
 
 // TODO: use rapidobj
 // #define TINYOBJLOADER_IMPLEMENTATION

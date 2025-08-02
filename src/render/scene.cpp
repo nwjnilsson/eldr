@@ -1,11 +1,5 @@
-#include <eldr/core/core.hpp>
-#include <eldr/render/mesh.hpp>
 #include <eldr/render/scene.hpp>
-#include <eldr/vulkan/descriptorallocator.hpp> // SceneData
-#include <eldr/vulkan/engine.hpp>
-#include <eldr/vulkan/material.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
+#include <eldr/render/mesh.hpp>
 
 NAMESPACE_BEGIN(eldr)
 //------------------------------------------------------------------------------
@@ -19,8 +13,8 @@ void SceneNode::refreshTransform(const Transform4f& parent_transform)
   }
 }
 
-void SceneNode::draw(const RenderObject::Matrix4f& top_matrix,
-                     DrawContext&                  ctx) const
+void SceneNode::draw(const RenderObject::Transform4f& top_matrix,
+                     DrawContext&                     ctx) const
 {
   for (auto& c : children)
     c->draw(top_matrix, ctx);
@@ -45,7 +39,7 @@ void MeshNode::draw(const Transform4f& top_matrix, DrawContext& ctx) const
       .index_count = s.count,
       .first_index = s.start_index,
       .material    = s.material,
-      //.transform   = node_matrix,
+      .transform   = node_transform,
     };
     ctx.opaque_surfaces.push_back(obj);
   }

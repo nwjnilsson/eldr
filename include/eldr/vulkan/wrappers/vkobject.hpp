@@ -32,10 +32,6 @@ NAMESPACE_BEGIN(eldr::vk::wr)
     }                                                                          \
   }
 
-NAMESPACE_BEGIN(detail)
-template <typename...> constexpr std::false_type always_false{};
-NAMESPACE_END(detail)
-
 template <typename T> class VkObject {
 public:
   VkObject() = default;

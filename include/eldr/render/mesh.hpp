@@ -3,7 +3,6 @@
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/shape.hpp>
 
-#include <memory>
 #include <vector>
 
 NAMESPACE_BEGIN(eldr)

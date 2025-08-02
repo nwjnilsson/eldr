@@ -7,6 +7,7 @@
 #include <eldr/vulkan/wrappers/shader.hpp>
 
 #include <deque>
+#include <sstream>
 
 NAMESPACE_BEGIN(eldr::vk)
 RenderStage& RenderStage::writesTo(const RenderResource* resource)

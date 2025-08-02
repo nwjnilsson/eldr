@@ -1,26 +1,22 @@
 #pragma once
 #include <eldr/app/fwd.hpp>
-#include <eldr/core/config.hpp>
 #include <eldr/math/math.hpp>
 #include <eldr/render/fwd.hpp>
-#include <eldr/render/mesh.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
-#include <filesystem>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <vector>
 
 NAMESPACE_BEGIN(eldr)
 struct RenderObject {
-  using Matrix4f = CoreAliases<float>::Matrix4f;
+  using Transform4f = CoreAliases<float>::Transform4f;
   uint32_t index_count;
   uint32_t first_index;
   // vk::BufferResource* index_buffer;
 
   const Material* material;
-  // Matrix4f  transform;
+  Transform4f     transform;
 };
 
 struct DrawContext {
@@ -43,6 +39,7 @@ struct SceneNode : public Renderable {
   Transform4f local_transform;
   Transform4f world_transform;
 
+  /// @brief Apply a new transform to this node and its children
   void         refreshTransform(const Transform4f& parent);
   virtual void draw(const Transform4f& top_matrix,
                     DrawContext&       ctx) const override;

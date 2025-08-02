@@ -52,7 +52,7 @@ private:
   void setupRenderGraph();
   void recreateSwapchain();
   void updateBuffers(const Scene*);
-  void updateScene(uint32_t current_image);
+  void updateScene(const Scene*);
   void drawGeometry(const wr::CommandBuffer& cb);
 
 private:
@@ -69,8 +69,6 @@ private:
   std::unique_ptr<EngineData> d_;
   struct Settings;
   std::unique_ptr<Settings> s_;
-
-  // std::unordered_map<Mesh*, GpuMeshBuffers> mesh_buffer_table_;
 };
 
 NAMESPACE_END(eldr::vk)
