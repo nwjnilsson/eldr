@@ -17,11 +17,13 @@
 /// Explicitly instantiate all variants of a "struct" template
 #define EL_INSTANTIATE_STRUCT(Name)                                            \
   template struct Name<float, Color<float, 3>>;                                \
+  template struct Name<float, Color<float, 4>>;                                \
   template struct Name<float, Spectrum<float, 4>>;
 
 /// Explicitly instantiate all variants of a "class" template
 #define EL_INSTANTIATE_CLASS(Name)                                             \
   template class Name<float, Color<float, 3>>;                                 \
+  template class Name<float, Color<float, 4>>;                                 \
   template class Name<float, Spectrum<float, 4>>;
 
 /// Call the variant function "func" for a specific variant "variant"

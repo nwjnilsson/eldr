@@ -12,3 +12,4 @@
 #include <eldr/core/util.hpp>
 #include <eldr/core/vector.hpp>
 #include <eldr/eldr.hpp>
+#include <eldr/core/config.hpp>

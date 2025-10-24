@@ -54,19 +54,14 @@ EL_VARIANT struct MeshNode final : public SceneNode {
   void draw(const Transform4f& top_matrix, DrawContext& ctx) const override;
 };
 
-EL_VARIANT class SceneBase {
-
-  std::string name_;
-};
-
-EL_VARIANT class Scene : public SceneBase<Float, Spectrum> {
-  EL_IMPORT_TYPES(Shape, Mesh)
+EL_VARIANT class Scene {
   friend SceneManager;
+  EL_IMPORT_TYPES(Shape, Mesh)
 
 public:
-  void draw(DrawContext& ctx) const;
+  virtual void draw(DrawContext& ctx) const;
 
-  std::unordered_map<std::string, std::shared_ptr<Mesh>>  meshes_;
+  // std::unordered_map<std::string, std::shared_ptr<Mesh>>  meshes_;
   std::unordered_map<std::string, std::shared_ptr<Shape>> shapes_;
   // Keep nodes in scene, or move to engine?
   std::unordered_map<std::string, std::shared_ptr<SceneNode>> nodes_;

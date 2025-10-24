@@ -93,8 +93,8 @@ void App::run()
       main_camera_.processInput(input_data_);
     }
     updateImGui();
-    vk_engine_->drawFrame(manager.activeScene());
-    frame_time_ = stop_watch_.seconds<float>();
+    vk_engine_->drawFrame(manager.getActiveScene());
+    frame_time_ = stop_watch_.seconds();
   }
 }
 

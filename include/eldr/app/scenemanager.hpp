@@ -10,13 +10,18 @@
 NAMESPACE_BEGIN(eldr)
 
 class SceneManager {
-  EL_IMPORT_CORE_TYPES()
+  // Scene manager maintains scalar RGBA scene representations. The idea is to
+  // convert to spectral or whatever else when starting the render
+  using Float    = float;
+  using Spectrum = Color<float, 4>;
+  EL_IMPORT_TYPES(Scene, Mesh)
+
 public:
   SceneManager();
   ~SceneManager() = default;
 
-  bool loadGltf(const vk::VulkanEngine& engine,
-                std::filesystem::path   file_path);
+  [[nodiscard]] bool loadGltf(const vk::VulkanEngine& engine,
+                              std::filesystem::path   file_path);
 
   [[nodiscard]]
   bool loadObj(std::filesystem::path file_path);
@@ -25,8 +30,8 @@ public:
   bool load(const vk::VulkanEngine& engine, const std::filesystem::path&);
 
   void                       setActiveScene(std::string_view name);
-  [[nodiscard]] Scene*       activeScene() { return active_scene_; }
-  [[nodiscard]] const Scene* activeScene() const { return active_scene_; }
+  [[nodiscard]] Scene*       getActiveScene() { return active_scene_; }
+  [[nodiscard]] const Scene* getActiveScene() const { return active_scene_; }
 
 private:
   Scene*                                 active_scene_{ nullptr };

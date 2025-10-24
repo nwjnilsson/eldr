@@ -17,9 +17,7 @@ build instructions etc. will therefore be Linux(debian)-oriented to begin with.
 ## Current status
 Eldr is in early stage development and I am still working on the Vulkan backend.
 I knew Vulkan would be overkill for a project like this but I want to learn it
-so it will take the time it takes. I am nearly done refactoring the Vulkan code
-and integrating ImGui. After that I need to write some shaders and work on the
-scene representation and then I can start path tracing (probably).
+so it will take the time it takes.
 
 ## Requirements
 A possibly out-of-date list of required software:

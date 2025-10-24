@@ -15,19 +15,19 @@ NAMESPACE_BEGIN(eldr)
 // class MonteCarloIntegrator;
 // class AdjointIntegrator;
 EL_VARIANT class Medium;
+EL_VARIANT class Shape;
 EL_VARIANT class Mesh;
+EL_VARIANT struct MeshNode;
 enum class MaterialType : uint8_t;
 // class MicrofacetDistribution;
 // class ReconstructionFilter;
 // class Sampler;
-EL_VARIANT class SceneBase;
 EL_VARIANT class Scene;
 // class Sensor;
 // class PhaseFunction;
 EL_VARIANT class ProjectiveCamera;
 EL_VARIANT class PerspectiveCamera;
 class Camera;
-EL_VARIANT class Shape;
 // class ShapeGroup;
 // class ShapeKDTree;
 // class Texture;
@@ -79,14 +79,15 @@ template <typename Float_, typename Spectrum_> struct RenderAliases {
   //   PreliminaryIntersection<Float, Shape<FloatU /*,
   //   SpectrumU*/>>;
 
-  // using Scene = Scene<FloatU, Spectrum>;
+  using Scene = eldr::Scene<FloatU, Spectrum>;
   //  using Sampler = Sampler<FloatU , SpectrumU>;
   //   using MicrofacetDistribution =
   //     MicrofacetDistribution<FloatU , SpectrumU>;
   using Shape = eldr::Shape<FloatU, SpectrumU>;
   //  using ShapeGroup  = ShapeGroup<FloatU , SpectrumU>;
   //  using ShapeKDTree = ShapeKDTree<FloatU , SpectrumU>;
-  using Mesh = eldr::Mesh<FloatU, SpectrumU>;
+  using Mesh     = eldr::Mesh<FloatU, SpectrumU>;
+  using MeshNode = eldr::MeshNode<FloatU, SpectrumU>;
   //  using Integrator  = Integrator<FloatU , SpectrumU>;
   //  using SamplingIntegrator =
   //    SamplingIntegrator<FloatU , SpectrumU>;

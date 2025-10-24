@@ -44,7 +44,7 @@ NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
 
 struct GpuVertex {
-  EL_IMPORT_CORE_TYPES_PREFIX(float, )
+  EL_IMPORT_CORE_TYPES_SCALAR()
   Point3f  pos;
   float    uv_x;
   Normal3f normal;
@@ -53,7 +53,7 @@ struct GpuVertex {
   bool     operator==(GpuVertex const&) const = default;
 };
 struct GpuSceneData {
-  EL_IMPORT_CORE_TYPES_PREFIX(float, )
+  EL_IMPORT_CORE_TYPES_SCALAR()
   Transform4f view;
   Transform4f proj;
   Transform4f viewproj;
@@ -63,8 +63,8 @@ struct GpuSceneData {
 };
 
 struct FrameData {
-  DescriptorAllocator      descriptors;
-  Buffer<GpuSceneData>     scene_data_buffer;
+  DescriptorAllocator  descriptors;
+  Buffer<GpuSceneData> scene_data_buffer;
   const CommandBuffer* cmd_buf;
 };
 
@@ -99,6 +99,7 @@ struct VulkanEngine::EngineData {
   DescriptorSetLayout   scene_data_descriptor_layout;
   GltfMetallicRoughness metal_rough_material;
   // MaterialInstance      default_material_data;
+  size_t last_scene_node_count{ 0 };
 };
 
 // -----------------------------------------------------------------------------
@@ -525,10 +526,9 @@ void VulkanEngine::drawFrame(const Scene* scene)
   }
 
   // Update scene resources and draw context
-  static size_t last_scene_node_count{ 0 };
-  if (scene->meshes_.size() != last_scene_node_count) {
+  if (scene->shapes_.size() != d_->last_scene_node_count) {
     updateBuffers(scene);
-    last_scene_node_count = scene->meshes_.size();
+    d_->last_scene_node_count = scene->shapes_.size();
   }
 
   updateScene(scene); // move

@@ -34,8 +34,8 @@ struct Color;
 
 template <typename Point, typename Spectrum> struct Ray;
 
-template <typename Float_> struct CoreAliases {
-  using Float = Float_;
+template <typename _Float> struct CoreAliases {
+  using Float = _Float;
 
   using Int8   = glm::int8_t;
   using Int32  = glm::int32_t;
@@ -164,5 +164,7 @@ NAMESPACE_END(eldr)
 
 // using ScalarFloat = eldr::arr::scalar_t<Float>;
 #define EL_IMPORT_CORE_TYPES() EL_IMPORT_CORE_TYPES_PREFIX(Float, )
+
+#define EL_IMPORT_CORE_TYPES_SCALAR() EL_IMPORT_CORE_TYPES_PREFIX(float, )
 
 // #define EL_IMPORT_CORE_TYPES_SCALAR() EL_IMPORT_CORE_TYPES_PREFIX(float, )

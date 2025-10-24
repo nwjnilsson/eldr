@@ -1,31 +1,36 @@
 #include <eldr/app/keyboardmouseinput.hpp>
 #include <eldr/core/logger.hpp>
 #include <eldr/render/camera.hpp>
+#include <eldr/core/fwd.hpp>
+#include <eldr/core/config.hpp>
 
 #include <GLFW/glfw3.h>
 
 NAMESPACE_BEGIN(eldr)
-using Matrix4f = ProjectiveCamera::Matrix4f;
+using Matrix4f = CoreAliases<float>::Matrix4f;
 
-ProjectiveCamera::ProjectiveCamera() {}
+EL_VARIANT ProjectiveCamera<Float, Spectrum>::ProjectiveCamera() {}
 
-Matrix4f ProjectiveCamera::getRotationMatrix() const
+EL_VARIANT CoreAliases<Float>::Matrix4f
+           ProjectiveCamera<Float, Spectrum>::getRotationMatrix() const
 {
   Quat4f pitch_rot{ glm::angleAxis(pitch_, Vector3f{ 1.f, 0.f, 0.f }) };
   Quat4f yaw_rot{ glm::angleAxis(yaw_, Vector3f{ 0.f, -1.f, 0.f }) };
   return glm::toMat4(yaw_rot) * glm::toMat4(pitch_rot);
 }
 
-PerspectiveCamera::PerspectiveCamera() = default;
+EL_VARIANT PerspectiveCamera<Float, Spectrum>::PerspectiveCamera() = default;
 
-Matrix4f PerspectiveCamera::getViewMatrix() const
+EL_VARIANT CoreAliases<Float>::Matrix4f
+           PerspectiveCamera<Float, Spectrum>::getViewMatrix() const
 {
-  Matrix4f translation{ glm::translate(Matrix4f{ 1.f }, position_) };
-  return glm::inverse(translation * getRotationMatrix());
+  Matrix4f translation{ glm::translate(Matrix4f{ 1.f }, this->position_) };
+  return glm::inverse(translation * this->getRotationMatrix());
   // return glm::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
   //                    Point3f{ 0.0f, 0.0f, 0.0f },
   //                    Vector3f{ 0.0f, 0.0f, 1.0f });
 }
+EL_INSTANTIATE_CLASS(PerspectiveCamera)
 
 Camera::Camera() = default;
 

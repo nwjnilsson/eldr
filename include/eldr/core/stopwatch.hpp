@@ -64,7 +64,7 @@ public:
   /// will return the time passed since the last updated timestamp, whether that
   /// is from a previous call to seconds(true) or since initialization.
   /// @return float The time, in seconds, since the previous timestamp.
-  template <typename Rep = int64_t> [[nodiscard]] Rep seconds(bool reset = true)
+  template <typename Rep = float> [[nodiscard]] Rep seconds(bool reset = true)
   {
     return time<Rep, std::chrono::seconds>(reset);
   }

@@ -212,7 +212,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
                                           std::move(normals),
                                           std::move(surfaces));
     meshes.emplace_back(newmesh);
-    const auto res = active_scene_->meshes_.insert(
+    const auto res = active_scene_->shapes_.insert(
       std::make_pair(mesh.name, std::move(newmesh)));
     if (unlikely(not res.second)) {
       Log(Warn, "Scene contains duplicate mesh name ({}).", mesh.name);
@@ -226,7 +226,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   for (fg::Node& node : gltf.nodes) {
     std::shared_ptr<SceneNode> scene_node;
     if (node.meshIndex.has_value()) {
-      auto p_mesh  = std::make_shared<MeshNode>();
+      auto p_mesh  = std::make_shared<MeshNode<Float, Spectrum>>();
       p_mesh->mesh = meshes[*node.meshIndex];
       scene_node   = std::move(p_mesh);
     }
@@ -289,7 +289,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   }
   Log(Trace,
       "Loaded {} meshes, {} materials and {} nodes",
-      active_scene_->meshes_.size(),
+      active_scene_->shapes_.size(),
       materials.size(),
       active_scene_->nodes_.size());
   return true;

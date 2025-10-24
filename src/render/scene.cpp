@@ -1,5 +1,6 @@
-#include <eldr/render/scene.hpp>
 #include <eldr/render/mesh.hpp>
+#include <eldr/render/scene.hpp>
+#include <eldr/core/config.hpp>
 
 NAMESPACE_BEGIN(eldr)
 //------------------------------------------------------------------------------
@@ -30,7 +31,8 @@ void SceneNode::map(std::function<void(SceneNode*)> func)
 //------------------------------------------------------------------------------
 // Mesh node
 //------------------------------------------------------------------------------
-void MeshNode::draw(const Transform4f& top_matrix, DrawContext& ctx) const
+EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
+                                                DrawContext&       ctx) const
 {
   const Transform4f node_transform{ top_matrix * world_transform };
 
@@ -50,7 +52,7 @@ void MeshNode::draw(const Transform4f& top_matrix, DrawContext& ctx) const
 //------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
-void Scene::draw(DrawContext& ctx) const
+EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
 {
   ctx.opaque_surfaces.clear();
   const Transform4f top_matrix{ 1.f };
@@ -58,5 +60,8 @@ void Scene::draw(DrawContext& ctx) const
     n->draw(top_matrix, ctx);
   }
 }
+
+EL_INSTANTIATE_STRUCT(MeshNode)
+EL_INSTANTIATE_CLASS(Scene)
 
 NAMESPACE_END(eldr)

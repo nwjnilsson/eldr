@@ -1,5 +1,6 @@
 #pragma once
 #include <eldr/app/fwd.hpp>
+#include <eldr/render/fwd.hpp>
 #include <eldr/render/scene.hpp>
 #include <eldr/vulkan/fwd.hpp>
 
@@ -12,8 +13,9 @@ NAMESPACE_END(fastgltf)
 
 NAMESPACE_BEGIN(eldr::vk)
 class VulkanEngine {
-  using Float = float;
-  EL_IMPORT_CORE_TYPES()
+  using Float    = float;
+  using Spectrum = Color<float, 4>;
+  EL_IMPORT_TYPES(Shape, Scene, MeshNode)
 
 public:
   VulkanEngine() = delete;
@@ -68,7 +70,6 @@ private:
 
 NAMESPACE_END(eldr::vk)
 template <> struct std::hash<eldr::vk::GpuVertex> {
-  using Float = float;
-  EL_IMPORT_CORE_TYPES()
+  EL_IMPORT_CORE_TYPES_SCALAR()
   size_t operator()(eldr::vk::GpuVertex const& vertex) const;
 };

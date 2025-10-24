@@ -1,5 +1,4 @@
 #pragma once
-#include <eldr/core/config.hpp>
 #include <eldr/core/fwd.hpp>
 #include <eldr/render/shape.hpp>
 

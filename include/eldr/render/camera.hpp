@@ -23,7 +23,7 @@ public:
     yaw_   = yaw;
   }
 
-  Point3f position() const { return position_; }
+  Point3f getPosition() const { return position_; }
 
 protected:
   ProjectiveCamera();
@@ -54,6 +54,7 @@ public:
 // engine
 class Camera : public PerspectiveCamera<float, Color<float, 3>> {
   using Base = PerspectiveCamera;
+  EL_IMPORT_CORE_TYPES_SCALAR()
 
 public:
   Camera();
