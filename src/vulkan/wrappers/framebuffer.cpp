@@ -1,7 +1,7 @@
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/framebuffer.hpp>
-#include <eldr/vulkan/wrappers/renderpass.hpp>
-#include <eldr/vulkan/wrappers/swapchain.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/framebuffer.hpp>
+#include <vulkan/wrappers/renderpass.hpp>
+#include <vulkan/wrappers/swapchain.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Framebuffer)

@@ -1,6 +1,6 @@
-#include <eldr/core/util.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/shader.hpp>
+#include <core/util.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/shader.hpp>
 
 #include <fstream>
 #include <vector>

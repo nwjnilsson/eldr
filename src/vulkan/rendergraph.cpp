@@ -1,10 +1,10 @@
-#include <eldr/core/platform.hpp>
-#include <eldr/vulkan/engine.hpp>
-#include <eldr/vulkan/pipelinebuilder.hpp>
-#include <eldr/vulkan/rendergraph.hpp>
-#include <eldr/vulkan/vulkan.hpp>
-#include <eldr/vulkan/wrappers/framebuffer.hpp>
-#include <eldr/vulkan/wrappers/shader.hpp>
+#include <core/platform.hpp>
+#include <vulkan/engine.hpp>
+#include <vulkan/pipelinebuilder.hpp>
+#include <vulkan/rendergraph.hpp>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/wrappers/framebuffer.hpp>
+#include <vulkan/wrappers/shader.hpp>
 
 #include <deque>
 #include <sstream>

@@ -1,6 +1,6 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/core/thread.hpp>
-#include <eldr/core/util.hpp>
+#include <core/logger.hpp>
+#include <core/thread.hpp>
+#include <core/util.hpp>
 
 #include <thread>
 #include <unordered_map>

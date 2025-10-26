@@ -1,6 +1,6 @@
-#include <eldr/render/mesh.hpp>
-#include <eldr/render/scene.hpp>
-#include <eldr/core/config.hpp>
+#include <render/mesh.hpp>
+#include <render/scene.hpp>
+#include <core/config.hpp>
 
 NAMESPACE_BEGIN(eldr)
 //------------------------------------------------------------------------------

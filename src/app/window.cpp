@@ -1,6 +1,6 @@
-#include <eldr/app/app.hpp>
-#include <eldr/app/window.hpp>
-#include <eldr/core/logger.hpp>
+#include <app/app.hpp>
+#include <app/window.hpp>
+#include <core/logger.hpp>
 
 #include <GLFW/glfw3.h>
 

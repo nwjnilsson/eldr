@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/descriptorpool.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/descriptorpool.hpp>
+#include <vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(DescriptorPool)

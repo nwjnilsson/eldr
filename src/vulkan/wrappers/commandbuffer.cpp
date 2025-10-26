@@ -1,11 +1,11 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/commandpool.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/fence.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <core/logger.hpp>
+#include <vulkan/wrappers/buffer.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/commandpool.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/fence.hpp>
+#include <vulkan/wrappers/image.hpp>
+#include <vulkan/wrappers/pipeline.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 //------------------------------------------------------------------------------

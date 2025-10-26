@@ -1,9 +1,9 @@
 /**
  * Struct implementation adapted from the Mitsuba project
  */
-#include <eldr/core/hash.hpp>
-#include <eldr/core/logger.hpp>
-#include <eldr/core/struct.hpp>
+#include <core/hash.hpp>
+#include <core/logger.hpp>
+#include <core/struct.hpp>
 
 #include <sstream>
 

@@ -1,5 +1,5 @@
-#include <eldr/core/formatter.hpp>
-#include <eldr/core/logger.hpp>
+#include <core/formatter.hpp>
+#include <core/logger.hpp>
 
 #include <fmt/args.h>
 #include <fmt/format.h>

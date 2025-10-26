@@ -1,9 +1,9 @@
-#include <eldr/vulkan/descriptorallocator.hpp>
-#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
-#include <eldr/vulkan/engine.hpp>
-#include <eldr/vulkan/material.hpp>
-#include <eldr/vulkan/vktypes.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <vulkan/descriptorallocator.hpp>
+#include <vulkan/descriptorsetlayoutbuilder.hpp>
+#include <vulkan/engine.hpp>
+#include <vulkan/material.hpp>
+#include <vulkan/vktypes.hpp>
+#include <vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr)
 MaterialInstance GltfMetallicRoughness::writeMaterial(

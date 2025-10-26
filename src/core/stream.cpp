@@ -1,7 +1,7 @@
 /**
  * Stream implementation adapted from the Mitsuba project
  */
-#include <eldr/core/stream.hpp>
+#include <core/stream.hpp>
 
 #include <sstream>
 

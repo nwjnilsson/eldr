@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/buffer.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 AllocatedBuffer::AllocatedBuffer()                           = default;

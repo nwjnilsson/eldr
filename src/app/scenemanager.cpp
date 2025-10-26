@@ -1,10 +1,10 @@
-#include <eldr/app/scenemanager.hpp>
-#include <eldr/core/core.hpp>
-#include <eldr/core/spectrum.hpp>
-#include <eldr/ext/fastgltf.hpp>
-#include <eldr/render/mesh.hpp>
-#include <eldr/render/scene.hpp>
-#include <eldr/vulkan/engine.hpp>
+#include <app/scenemanager.hpp>
+#include <core/core.hpp>
+#include <core/spectrum.hpp>
+#include <ext/fastgltf.hpp>
+#include <render/mesh.hpp>
+#include <render/scene.hpp>
+#include <vulkan/engine.hpp>
 
 #include <filesystem>
 

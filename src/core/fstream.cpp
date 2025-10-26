@@ -1,9 +1,9 @@
 /**
  * FileStream implementation adapted from Mitsuba3
  */
-#include <eldr/core/fstream.hpp>
-#include <eldr/core/logger.hpp>
-#include <eldr/core/platform.hpp>
+#include <core/fstream.hpp>
+#include <core/logger.hpp>
+#include <core/platform.hpp>
 
 #include <fstream>
 

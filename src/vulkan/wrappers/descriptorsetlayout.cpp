@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/descriptorsetlayout.hpp>
+#include <vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(DescriptorSetLayout)

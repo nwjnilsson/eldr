@@ -1,6 +1,6 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/vulkan/wrappers/commandpool.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <core/logger.hpp>
+#include <vulkan/wrappers/commandpool.hpp>
+#include <vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 CommandPool::CommandPool()                       = default;

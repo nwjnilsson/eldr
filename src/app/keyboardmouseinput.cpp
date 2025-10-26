@@ -1,5 +1,6 @@
-#include <eldr/app/keyboardmouseinput.hpp>
-#include <eldr/core/logger.hpp>
+#include <app/keyboardmouseinput.hpp>
+#include <core/logger.hpp>
+#include <core/vector.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -8,8 +9,8 @@
 
 NAMESPACE_BEGIN(eldr)
 struct KeyboardMouseInput::KeyboardMouseInputData {
-  std::array<double, 2>                    previous_cursor_pos{ 0, 0 };
-  std::array<double, 2>                    current_cursor_pos{ 0, 0 };
+  Point2d                                  previous_cursor_pos{ 0, 0 };
+  Point2d                                  current_cursor_pos{ 0, 0 };
   std::array<bool, GLFW_KEY_LAST>          pressed_keys{ false };
   std::array<bool, GLFW_MOUSE_BUTTON_LAST> pressed_mouse_buttons{ false };
   bool                                     keyboard_updated{ false };
@@ -117,17 +118,18 @@ void KeyboardMouseInput::setCursorPos(const double pos_x, const double pos_y)
   d_->current_cursor_pos[1] = pos_y;
 }
 
-std::array<double, 2> KeyboardMouseInput::cursorPos() const
+KeyboardMouseInput::Point2d KeyboardMouseInput::cursorPos() const
 {
   std::lock_guard lock(d_->input_mutex);
   return d_->current_cursor_pos;
 }
 
-std::array<double, 2> KeyboardMouseInput::calculateCursorPositionDelta() const
+KeyboardMouseInput::Point2d
+KeyboardMouseInput::calculateCursorPositionDelta() const
 {
   std::lock_guard lock(d_->input_mutex);
   // Calculate the change in cursor position in x- and y-axis.
-  const std::array cursor_pos_delta{
+  const Point2d cursor_pos_delta{
     d_->current_cursor_pos[0] - d_->previous_cursor_pos[0],
     d_->current_cursor_pos[1] - d_->previous_cursor_pos[1]
   };

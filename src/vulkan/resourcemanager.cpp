@@ -1,13 +1,13 @@
-#include <eldr/core/bitmap.hpp>
-#include <eldr/core/mstream.hpp>
-#include <eldr/core/util.hpp>
-#include <eldr/vulkan/material.hpp>
-#include <eldr/vulkan/resourcemanager.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
+#include <core/bitmap.hpp>
+#include <core/mstream.hpp>
+#include <core/util.hpp>
+#include <vulkan/material.hpp>
+#include <vulkan/resourcemanager.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/image.hpp>
+#include <vulkan/wrappers/sampler.hpp>
 
-#include <eldr/ext/fastgltf.hpp>
+#include <ext/fastgltf.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 

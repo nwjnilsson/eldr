@@ -1,7 +1,8 @@
-#include <eldr/app/app.hpp>
-#include <eldr/app/scenemanager.hpp>
-#include <eldr/render/scene.hpp>
-#include <eldr/vulkan/engine.hpp>
+#include "app.hpp"
+#include "scenemanager.hpp"
+
+#include <render/scene.hpp>
+#include <vulkan/engine.hpp>
 
 #include <GLFW/glfw3.h>
 

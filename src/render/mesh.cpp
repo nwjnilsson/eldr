@@ -1,6 +1,6 @@
-#include <eldr/core/core.hpp>
-#include <eldr/render/mesh.hpp>
-#include <eldr/vulkan/engine.hpp>
+#include <core/core.hpp>
+#include <render/mesh.hpp>
+#include <vulkan/engine.hpp>
 
 NAMESPACE_BEGIN(eldr)
 

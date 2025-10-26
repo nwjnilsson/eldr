@@ -1,9 +1,9 @@
 /**
  * Bitmap implementation adapted from the Mitsuba3
  */
-#include <eldr/core/bitmap.hpp>
-#include <eldr/core/fstream.hpp>
-#include <eldr/core/logger.hpp>
+#include <core/bitmap.hpp>
+#include <core/fstream.hpp>
+#include <core/logger.hpp>
 
 extern "C" {
 #include <jerror.h>

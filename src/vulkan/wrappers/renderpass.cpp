@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/renderpass.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/renderpass.hpp>
 #include <vulkan/vulkan_core.h>
 
 NAMESPACE_BEGIN(eldr::vk)

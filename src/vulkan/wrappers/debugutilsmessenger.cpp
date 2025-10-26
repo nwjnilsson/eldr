@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
-#include <eldr/vulkan/wrappers/instance.hpp>
+#include <vulkan/wrappers/debugutilsmessenger.hpp>
+#include <vulkan/wrappers/instance.hpp>
 
 #ifdef ELDR_VULKAN_DEBUG_REPORT
 

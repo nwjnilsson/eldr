@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/pipeline.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/pipeline.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 //------------------------------------------------------------------------------

@@ -1,0 +1,15 @@
+#pragma once
+#include <core/bitmap.hpp>
+#include <core/config.hpp>
+#include <core/flags.hpp>
+#include <core/fstream.hpp>
+#include <core/fwd.hpp>
+#include <core/hash.hpp>
+#include <core/logger.hpp>
+#include <core/mstream.hpp>
+#include <core/spectrum.hpp>
+#include <core/stopwatch.hpp>
+#include <core/util.hpp>
+#include <core/vector.hpp>
+#include <eldr.hpp>
+#include <core/config.hpp>

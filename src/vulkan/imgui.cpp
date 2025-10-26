@@ -1,13 +1,13 @@
-#include <eldr/core/bitmap.hpp>
-#include <eldr/vulkan/descriptorallocator.hpp>
-#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
-#include <eldr/vulkan/descriptorwriter.hpp>
-#include <eldr/vulkan/imgui.hpp>
-#include <eldr/vulkan/pipelinebuilder.hpp>
-#include <eldr/vulkan/rendergraph.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/shader.hpp>
+#include <core/bitmap.hpp>
+#include <vulkan/descriptorallocator.hpp>
+#include <vulkan/descriptorsetlayoutbuilder.hpp>
+#include <vulkan/descriptorwriter.hpp>
+#include <vulkan/imgui.hpp>
+#include <vulkan/pipelinebuilder.hpp>
+#include <vulkan/rendergraph.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/shader.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 struct ImGuiOverlay::FrameData {

@@ -1,6 +1,6 @@
-#include <eldr/vulkan/pipelinebuilder.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/shader.hpp>
+#include <vulkan/pipelinebuilder.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/shader.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 void PipelineBuilder::reset()

@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/fence.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/fence.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Fence)

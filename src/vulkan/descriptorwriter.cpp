@@ -1,6 +1,6 @@
-#include <eldr/vulkan/descriptorwriter.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
+#include <vulkan/descriptorwriter.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/sampler.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 

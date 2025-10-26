@@ -1,8 +1,8 @@
 /**
  * MemoryStream class adapted from Mitsuba3
  */
-#include <eldr/core/logger.hpp>
-#include <eldr/core/mstream.hpp>
+#include <core/logger.hpp>
+#include <core/mstream.hpp>
 
 #include <sstream>
 

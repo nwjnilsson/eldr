@@ -1,6 +1,6 @@
-#include <eldr/core/hash.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
+#include <core/hash.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/sampler.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Sampler)

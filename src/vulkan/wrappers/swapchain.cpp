@@ -1,9 +1,9 @@
-#include <eldr/core/platform.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
-#include <eldr/vulkan/wrappers/semaphore.hpp>
-#include <eldr/vulkan/wrappers/surface.hpp>
-#include <eldr/vulkan/wrappers/swapchain.hpp>
+#include <core/platform.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/image.hpp>
+#include <vulkan/wrappers/semaphore.hpp>
+#include <vulkan/wrappers/surface.hpp>
+#include <vulkan/wrappers/swapchain.hpp>
 
 #include <GLFW/glfw3.h>
 

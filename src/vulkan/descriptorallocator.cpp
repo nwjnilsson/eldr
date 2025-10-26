@@ -1,7 +1,7 @@
-#include <eldr/vulkan/descriptorallocator.hpp>
-#include <eldr/vulkan/wrappers/descriptorpool.hpp>
-#include <eldr/vulkan/wrappers/descriptorsetlayout.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
+#include <vulkan/descriptorallocator.hpp>
+#include <vulkan/wrappers/descriptorpool.hpp>
+#include <vulkan/wrappers/descriptorsetlayout.hpp>
+#include <vulkan/wrappers/device.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 

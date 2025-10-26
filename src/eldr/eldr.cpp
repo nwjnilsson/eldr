@@ -1,9 +1,9 @@
-#include <eldr/app/app.hpp>
-#include <eldr/core/logger.hpp>
-#include <eldr/core/spectrum.hpp>
-#include <eldr/core/util.hpp>
+#include <app/app.hpp>
+#include <core/logger.hpp>
+#include <core/spectrum.hpp>
+#include <core/util.hpp>
 
-#include <eldr/core/config.hpp>
+#include <core/config.hpp>
 
 #include <cxxopts.hpp>
 

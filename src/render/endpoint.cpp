@@ -1,6 +1,6 @@
-#include <eldr/core/core.hpp>
-#include <eldr/eldr.hpp>
-#include <eldr/render/endpoint.hpp>
+#include <core/core.hpp>
+#include <eldr.hpp>
+#include <render/endpoint.hpp>
 
 NAMESPACE_BEGIN(eldr)
 

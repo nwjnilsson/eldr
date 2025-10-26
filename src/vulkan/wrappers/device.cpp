@@ -1,8 +1,8 @@
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/commandpool.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/instance.hpp>
-#include <eldr/vulkan/wrappers/surface.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/commandpool.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/instance.hpp>
+#include <vulkan/wrappers/surface.hpp>
 
 #include <deque>
 #include <mutex>

@@ -1,7 +1,7 @@
-#include <eldr/core/bitmap.hpp>
+#include <core/bitmap.hpp>
 
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/image.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/image.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 

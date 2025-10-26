@@ -1,4 +1,4 @@
-#include <eldr/core/stopwatch.hpp>
+#include <core/stopwatch.hpp>
 
 // Keeping this .cpp file for now in case I want to extend the stopwatch class.
 // Otherwise everything can be moved to the header.

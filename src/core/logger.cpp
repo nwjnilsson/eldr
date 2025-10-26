@@ -1,6 +1,6 @@
-#include <eldr/core/formatter.hpp>
-#include <eldr/core/logger.hpp>
-#include <eldr/core/sink.hpp>
+#include <core/formatter.hpp>
+#include <core/logger.hpp>
+#include <core/sink.hpp>
 
 #include <iostream>
 #include <memory>

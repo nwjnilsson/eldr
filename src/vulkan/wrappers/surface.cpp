@@ -1,6 +1,6 @@
-#include <eldr/app/window.hpp>
-#include <eldr/vulkan/wrappers/instance.hpp>
-#include <eldr/vulkan/wrappers/surface.hpp>
+#include <app/window.hpp>
+#include <vulkan/wrappers/instance.hpp>
+#include <vulkan/wrappers/surface.hpp>
 
 #include <GLFW/glfw3.h>
 

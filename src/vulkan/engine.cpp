@@ -1,37 +1,37 @@
 // Ensure that vma implementation is included
 #define VMA_IMPLEMENTATION
-#include <eldr/app/window.hpp>
-#include <eldr/buildinfo.hpp>
-#include <eldr/core/core.hpp>
-#include <eldr/render/camera.hpp>
-#include <eldr/render/mesh.hpp>
-#include <eldr/render/scene.hpp>
-#include <eldr/vulkan/descriptorallocator.hpp>
-#include <eldr/vulkan/descriptorsetlayoutbuilder.hpp>
-#include <eldr/vulkan/descriptorwriter.hpp>
-#include <eldr/vulkan/engine.hpp>
-#include <eldr/vulkan/imgui.hpp>
-#include <eldr/vulkan/material.hpp>
-#include <eldr/vulkan/pipelinebuilder.hpp>
-#include <eldr/vulkan/rendergraph.hpp>
-#include <eldr/vulkan/resourcemanager.hpp>
-#include <eldr/vulkan/vktypes.hpp>
-#include <eldr/vulkan/vulkan.hpp>
-#include <eldr/vulkan/wrappers/buffer.hpp>
-#include <eldr/vulkan/wrappers/commandbuffer.hpp>
-#include <eldr/vulkan/wrappers/debugutilsmessenger.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/instance.hpp>
-#include <eldr/vulkan/wrappers/sampler.hpp>
-#include <eldr/vulkan/wrappers/shader.hpp>
-#include <eldr/vulkan/wrappers/surface.hpp>
-#include <eldr/vulkan/wrappers/swapchain.hpp>
+#include <app/window.hpp>
+#include <buildinfo.hpp>
+#include <core/core.hpp>
+#include <app/camera.hpp>
+#include <render/mesh.hpp>
+#include <render/scene.hpp>
+#include <vulkan/descriptorallocator.hpp>
+#include <vulkan/descriptorsetlayoutbuilder.hpp>
+#include <vulkan/descriptorwriter.hpp>
+#include <vulkan/engine.hpp>
+#include <vulkan/imgui.hpp>
+#include <vulkan/material.hpp>
+#include <vulkan/pipelinebuilder.hpp>
+#include <vulkan/rendergraph.hpp>
+#include <vulkan/resourcemanager.hpp>
+#include <vulkan/vktypes.hpp>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/wrappers/buffer.hpp>
+#include <vulkan/wrappers/commandbuffer.hpp>
+#include <vulkan/wrappers/debugutilsmessenger.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/instance.hpp>
+#include <vulkan/wrappers/sampler.hpp>
+#include <vulkan/wrappers/shader.hpp>
+#include <vulkan/wrappers/surface.hpp>
+#include <vulkan/wrappers/swapchain.hpp>
 
-#include <eldr/math/glm.hpp>
+#include <math/glm.hpp>
 
 #include <imgui.h>
 
-#include <eldr/ext/fastgltf.hpp>
+#include <ext/fastgltf.hpp>
 
 #include <memory>
 #include <string>
@@ -44,7 +44,8 @@ NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
 
 struct GpuVertex {
-  EL_IMPORT_CORE_TYPES_SCALAR()
+  using Float = float;
+  EL_IMPORT_CORE_TYPES()
   Point3f  pos;
   float    uv_x;
   Normal3f normal;
@@ -53,7 +54,8 @@ struct GpuVertex {
   bool     operator==(GpuVertex const&) const = default;
 };
 struct GpuSceneData {
-  EL_IMPORT_CORE_TYPES_SCALAR()
+  using Float = float;
+  EL_IMPORT_CORE_TYPES()
   Transform4f view;
   Transform4f proj;
   Transform4f viewproj;
@@ -369,7 +371,7 @@ void VulkanEngine::updateScene(const Scene* scene)
                                        time * glm::radians<float>(20.0f),
                                        Vector3f{ 0.0f, 0.0f, 1.0f }) };
 
-  const Transform4f view{ camera_->getViewMatrix() };
+  const Transform4f view{ camera_->viewMatrix() };
   Transform4f       proj{ glm::perspective(
     glm::radians(45.0f),
     d_->swapchain.extent().width /

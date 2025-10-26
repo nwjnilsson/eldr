@@ -1,0 +1,36 @@
+#pragma once
+#include <vulkan/vktypes.hpp>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/wrappers/device.hpp>
+
+#include <span>
+
+NAMESPACE_BEGIN(eldr::vk)
+class AllocatedBuffer : public VkAllocatedObject<VkBuffer> {
+  using Base = VkAllocatedObject<VkBuffer>;
+
+public:
+  AllocatedBuffer();
+  AllocatedBuffer(AllocatedBuffer&&) noexcept;
+  virtual ~AllocatedBuffer();
+
+  AllocatedBuffer& operator=(AllocatedBuffer&&);
+
+  /// @brief Returns the size (capacity), in bytes, of the memory allocation.
+  [[nodiscard]] size_t allocSize() const { return alloc_info_.size; }
+
+  /// @brief Returns a VkDeviceAddress for this buffer
+  [[nodiscard]] VkDeviceAddress getDeviceAddress() const;
+
+protected:
+  AllocatedBuffer(std::string_view         name,
+                  const Device&            device,
+                  size_t                   size_bytes,
+                  VkBufferUsageFlags       buffer_usage,
+                  VmaAllocationCreateFlags host_access,
+                  VmaMemoryUsage           mem_usage);
+
+  void uploadData(std::span<const byte_t> src, size_t offset = 0);
+};
+
+NAMESPACE_END(eldr::vk)

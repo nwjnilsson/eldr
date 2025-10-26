@@ -1,5 +1,5 @@
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/semaphore.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/semaphore.hpp>
 
 NAMESPACE_BEGIN(eldr::vk)
 EL_VK_IMPL_DEV_DEFAULTS(Semaphore)

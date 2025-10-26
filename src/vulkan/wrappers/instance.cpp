@@ -1,6 +1,6 @@
-#include <eldr/buildinfo.hpp>
-#include <eldr/vulkan/wrappers/device.hpp>
-#include <eldr/vulkan/wrappers/instance.hpp>
+#include <buildinfo.hpp>
+#include <vulkan/wrappers/device.hpp>
+#include <vulkan/wrappers/instance.hpp>
 
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 

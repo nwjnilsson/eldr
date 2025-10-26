@@ -1,6 +1,6 @@
-#include <eldr/core/logger.hpp>
-#include <eldr/core/util.hpp>
-#include <eldr/eldr.hpp>
+#include <core/logger.hpp>
+#include <core/util.hpp>
+#include <eldr.hpp>
 
 #include <sstream>
 

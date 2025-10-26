@@ -6,7 +6,7 @@ project('Eldr', 'cpp',
   version : '0.0.0.1',
   license : 'MIT',
   default_options : [
-    'cpp_std=c++23',
+    'cpp_std=c++20',
     'buildtype=debug',
     'warning_level=2',    # -Wall -Wextra
     'b_ndebug=if-release'
@@ -111,8 +111,7 @@ rapidobj_dep= cmake.subproject('rapidobj').dependency('rapidobj')
 # ------------------------------------------------------------------------------
 # The rest
 # ------------------------------------------------------------------------------
-eldr_headers = include_directories('include')
+eldr_headers = include_directories('src')
 
 subdir('external')
-subdir('include/eldr')
 subdir('src')
