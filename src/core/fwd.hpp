@@ -1,12 +1,14 @@
 #pragma once
-#include <arrays/traits.hpp>
-#include <eldr.hpp>
-#include <glm/fwd.hpp>
+#include "math/fwd.hpp"
 
 #define EL_VARIANT template <typename Float, typename Spectrum>
 
 using FlagRep = uint32_t;
 using byte_t  = std::byte;
+
+// C++23 has fixed width floats in <stdfloat> but I don't have C++23 yet
+using float32_t = float;
+using float64_t = double;
 
 NAMESPACE_BEGIN(eldr)
 class StopWatch;
@@ -22,14 +24,13 @@ struct MultiThreaded;
 class Sink;
 class Thread;
 
-// template <typename Point> struct Transform;
-// template <typename Value, std::size_t Size_> struct Vector;
-// template <typename Value, std::size_t Size_> struct Normal;
-template <typename Value, std::size_t size> struct Point;
-// template <typename Value, std::size_t Size_> struct Matrix;
-template <typename Value, size_t size> struct Spectrum;
-template <typename Value, size_t channels>
-  requires(channels <= 4)
+template <typename Value, std::size_t Size> struct Vector;
+template <typename Value, std::size_t Size> struct Normal;
+template <typename Value, std::size_t Size> struct Point;
+template <typename Point> struct Transform;
+template <typename Value, size_t Size> struct Spectrum;
+template <typename Value, size_t Channels>
+  requires(Channels <= 4)
 struct Color;
 
 template <typename Point, typename Spectrum> struct Ray;
@@ -37,60 +38,61 @@ template <typename Point, typename Spectrum> struct Ray;
 template <typename _Float> struct CoreAliases {
   using Float = _Float;
 
-  using Int8   = glm::int8_t;
-  using Int32  = glm::int32_t;
-  using UInt32 = glm::uint32_t;
-  using Int64  = glm::int64_t;
-  using UInt64 = glm::uint64_t;
-  // using Float16 = glm::float16_t;
-  using Float32 = glm::float32_t;
-  using Float64 = glm::float64_t;
+  // Scalar, for now
+  using Int8   = std::int8_t;
+  using Int32  = std::int32_t;
+  using UInt32 = std::uint32_t;
+  using Int64  = std::int64_t;
+  using UInt64 = std::uint64_t;
+  // using Float16 = std::float16_t;
+  using Float32 = float32_t;
+  using Float64 = float64_t;
 
-  using Vector2i = glm::vec<2, Int32>;
-  using Vector3i = glm::vec<3, Int32>;
-  using Vector4i = glm::vec<4, Int32>;
+  using Vector2i = Vector<Int32, 2>;
+  using Vector3i = Vector<Int32, 3>;
+  using Vector4i = Vector<Int32, 4>;
 
-  using Vector2u = glm::vec<2, UInt32>;
-  using Vector3u = glm::vec<3, UInt32>;
-  using Vector4u = glm::vec<4, UInt32>;
+  using Vector2u = Vector<UInt32, 2>;
+  using Vector3u = Vector<UInt32, 3>;
+  using Vector4u = Vector<UInt32, 4>;
 
-  using Vector2f = glm::vec<2, Float>;
-  using Vector3f = glm::vec<3, Float>;
-  using Vector4f = glm::vec<4, Float>;
+  using Vector2f = Vector<Float, 2>;
+  using Vector3f = Vector<Float, 3>;
+  using Vector4f = Vector<Float, 4>;
 
-  using Vector2d = glm::vec<2, Float64>;
-  using Vector3d = glm::vec<3, Float64>;
-  using Vector4d = glm::vec<4, Float64>;
+  using Vector2d = Vector<Float64, 2>;
+  using Vector3d = Vector<Float64, 3>;
+  using Vector4d = Vector<Float64, 4>;
 
-  using Normal3f = glm::vec<3, Float>;
-  using Normal3d = glm::vec<3, Float64>;
+  using Normal3f = Vector<Float, 3>;
+  using Normal3d = Vector<Float64, 3>;
 
-  using Point2i = glm::vec<2, Int32>;
-  using Point3i = glm::vec<3, Int32>;
-  using Point4i = glm::vec<4, Int32>;
+  using Point2i = Vector<Int32, 2>;
+  using Point3i = Vector<Int32, 3>;
+  using Point4i = Vector<Int32, 4>;
 
-  using Point2u = glm::vec<2, UInt32>;
-  using Point3u = glm::vec<3, UInt32>;
-  using Point4u = glm::vec<4, UInt32>;
+  using Point2u = Vector<UInt32, 2>;
+  using Point3u = Vector<UInt32, 3>;
+  using Point4u = Vector<UInt32, 4>;
 
-  using Point2f = glm::vec<2, Float>;
-  using Point3f = glm::vec<3, Float>;
-  using Point4f = glm::vec<4, Float>;
+  using Point2f = Vector<Float, 2>;
+  using Point3f = Vector<Float, 3>;
+  using Point4f = Vector<Float, 4>;
 
-  using Point2d = glm::vec<2, Float64>;
-  using Point3d = glm::vec<3, Float64>;
-  using Point4d = glm::vec<4, Float64>;
+  using Point2d = Vector<Float64, 2>;
+  using Point3d = Vector<Float64, 3>;
+  using Point4d = Vector<Float64, 4>;
 
-  using Matrix2f = glm::mat<2, 2, Float>;
-  using Matrix3f = glm::mat<3, 3, Float>;
-  using Matrix4f = glm::mat<4, 4, Float>;
+  using Matrix2f = math::Matrix<Float, 2>;
+  using Matrix3f = math::Matrix<Float, 3>;
+  using Matrix4f = math::Matrix<Float, 4>;
 
-  using Matrix2d = glm::mat<2, 2, Float64>;
-  using Matrix3d = glm::mat<3, 3, Float64>;
-  using Matrix4d = glm::mat<4, 4, Float64>;
+  using Matrix2d = math::Matrix<Float64, 2>;
+  using Matrix3d = math::Matrix<Float64, 3>;
+  using Matrix4d = math::Matrix<Float64, 4>;
 
-  using Quat4f = glm::qua<Float>;
-  using Quat4d = glm::qua<Float64>;
+  using Quat4f = math::Quaternion<Float>;
+  using Quat4d = math::Quaternion<Float64>;
 
   using Color1f = Color<Float, 1>;
   using Color3f = Color<Float, 3>;
@@ -100,10 +102,10 @@ template <typename _Float> struct CoreAliases {
   using Color3d = Color<Float64, 3>;
   using Color4d = Color<Float64, 4>;
 
-  using Transform3f = Matrix3f;
-  using Transform4f = Matrix4f;
-  using Transform3d = Matrix3d;
-  using Transform4d = Matrix4d;
+  using Transform3f = Transform<Point<Float, 3>>;
+  using Transform4f = Transform<Point<Float, 4>>;
+  using Transform3d = Transform<Point<Float64, 3>>;
+  using Transform4d = Transform<Point<Float64, 4>>;
 };
 NAMESPACE_END(eldr)
 
@@ -162,5 +164,5 @@ NAMESPACE_END(eldr)
 #define __EL_USING_MEMBERS_MACRO__(x) using Base::x;
 #define EL_USING_MEMBERS(...) EL_MAP(__EL_USING_MEMBERS_MACRO__, __VA_ARGS__)
 
-// using ScalarFloat = eldr::arr::scalar_t<Float>;
+// using ScalarFloat = eldr::math::scalar_t<Float>;
 #define EL_IMPORT_CORE_TYPES() EL_IMPORT_CORE_TYPES_PREFIX(Float, )

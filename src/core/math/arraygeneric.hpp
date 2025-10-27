@@ -1,8 +1,7 @@
 #pragma once
-#include <arrays/arraystatic.hpp>
-#include <math/glm.hpp>
+#include "arraystatic.hpp"
 
-NAMESPACE_BEGIN(eldr::arr)
+NAMESPACE_BEGIN(eldr::math)
 template <typename _Val, size_t _Size, typename _Derived>
 struct StaticArray
   : StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>> {
@@ -15,11 +14,27 @@ struct StaticArray
 
   using Base::derived;
   using Base::entry;
-  using Base::size;
+  using Base::Size;
 
-  /// Generic constructor forwarding arguments to glm vector
+  template <typename T>
+    requires std::is_scalar_v<T>
+  StaticArray(T v)
+  {
+    for (size_t i{ 0 }; i < Size; ++i) {
+      array[i] = v;
+    }
+  }
+  template <typename T = Value>
+    requires(!std::is_same_v<T, Scalar>)
+  StaticArray(const Value& v)
+  {
+    for (size_t i{ 0 }; i < Size; ++i) {
+      array[i] = v;
+    }
+  }
   template <typename... Ts>
-  StaticArray(Ts&&... ts) : array(std::forward<Ts>(ts)...){};
+    requires(detail::is_components_v<Size, Ts...>)
+  StaticArray(Ts&&... ts) : array{ move_cast_t<Ts, Value>(ts)... } {};
 
   /// Access elements by reference, and without error-checking
   EL_INLINE Value& entry(size_t i) { return array[i]; }
@@ -33,12 +48,12 @@ struct StaticArray
   /// Pointer to the underlying storage (const)
   const Value* data() const { return array; }
 
-  using glm_t = glm::vec<size, Value>;
-  operator glm_t*() const { return array; }
-  operator glm_t*() { return array; }
-  operator glm_t() const { return array; }
-  operator glm_t() { return array; }
+  // operator Value*() const { return array; }
+  // operator Value*() { return array; }
+  // operator Value() const { return array; }
+  // operator Value() { return array; }
 
-  glm_t array;
+private:
+  Value array[Size];
 };
-NAMESPACE_END(eldr::arr)
+NAMESPACE_END(eldr::math)

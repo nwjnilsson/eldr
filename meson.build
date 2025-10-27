@@ -113,5 +113,5 @@ rapidobj_dep= cmake.subproject('rapidobj').dependency('rapidobj')
 # ------------------------------------------------------------------------------
 eldr_headers = include_directories('src')
 
-subdir('external')
+subdir('ext')
 subdir('src')

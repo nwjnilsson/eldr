@@ -41,7 +41,7 @@ void Camera::processInput(const KeyboardMouseInput& input_data)
   }
 
   position_ +=
-    Vector3f{ rotationMatrix() * Vector4f{ velocity * 0.5f, 0.f } };
+    Vector3f{ rotation() * Vector4f{ velocity * 0.5f, 0.f } };
 
   if (input_data.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
     auto diff = input_data.calculateCursorPositionDelta();

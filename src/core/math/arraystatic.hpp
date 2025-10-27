@@ -1,8 +1,8 @@
 #pragma once
-#include <arrays/arraybase.hpp>
+#include "arraybase.hpp"
 #include <utility>
 
-NAMESPACE_BEGIN(eldr::arr)
+NAMESPACE_BEGIN(eldr::math)
 
 template <typename _Val, size_t _Size, typename _Derived>
 struct StaticArrayBase
@@ -16,9 +16,9 @@ struct StaticArrayBase
 
   using Base::derived;
 
-  static constexpr size_t size{ _Size };
+  static constexpr size_t Size{ _Size };
 
-  static constexpr size_t actual_size{ size };
+  static constexpr size_t ActualSize{ Size };
 
   /// Recursive array indexing operator
   template <typename... Indices>
@@ -118,4 +118,4 @@ struct StaticArrayBase
     return derived().entry(3);
   }
 };
-NAMESPACE_END(eldr::arr)
+NAMESPACE_END(eldr::math)

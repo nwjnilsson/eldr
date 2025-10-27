@@ -2,7 +2,7 @@
 #include <eldr.hpp>
 #include <type_traits>
 
-NAMESPACE_BEGIN(eldr::arr)
+NAMESPACE_BEGIN(eldr::math)
 NAMESPACE_BEGIN(detail)
 
 template <typename T> struct is_signed : std::is_floating_point<T> {};
@@ -31,7 +31,7 @@ constexpr bool is_integral_ext_v =
 template <typename T0, typename T1>
 static constexpr bool is_same_v =
   sizeof(T0) == sizeof(T1) &&
-  arr::detail::is_floating_point_v<T0> == detail::is_floating_point_v<T1> &&
+  detail::is_floating_point_v<T0> == detail::is_floating_point_v<T1> &&
   detail::is_signed_v<T0> == detail::is_signed_v<T1> &&
   is_integral_ext_v<T0> == is_integral_ext_v<T1>;
 
@@ -73,7 +73,6 @@ NAMESPACE_BEGIN(detail)
 template <typename T> struct scalar {
   using type = std::decay_t<T>;
 };
-
 template <typename T>
   requires is_array_v<T>
 struct scalar<T> {
@@ -88,10 +87,23 @@ template <typename T>
 struct value<T> {
   using type = typename std::decay_t<T>::Derived::Scalar;
 };
-
 NAMESPACE_END(detail)
 
 template <typename T> using scalar_t = typename detail::scalar<T>::type;
 template <typename T> using value_t  = typename detail::value<T>::type;
 
-NAMESPACE_END(eldr::arr)
+template <typename Source, typename Target>
+using ref_cast_t =
+  std::conditional_t<std::is_same_v<Source, Target>, const Target&, Target>;
+
+template <typename Source, typename Target>
+concept decay_same_as = std::is_same_v<std::decay_t<Source>, Target>;
+
+template <typename Source>
+using preserve_move_t =
+  std::conditional_t<std::is_reference_v<Source>, Source, Source&&>;
+
+template <typename Source, typename Target>
+using move_cast_t = std::
+  conditional_t<decay_same_as<Source, Target>, preserve_move_t<Source>, Target>;
+NAMESPACE_END(eldr::math)

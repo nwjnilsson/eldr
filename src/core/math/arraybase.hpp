@@ -1,8 +1,8 @@
 #pragma once
-#include <arrays/arrayutils.hpp>
-#include <arrays/traits.hpp>
+#include "arrayutils.hpp"
+#include "traits.hpp"
 
-NAMESPACE_BEGIN(eldr::arr)
+NAMESPACE_BEGIN(eldr::math)
 
 #define EL_ARRAY_DEFAULTS(Name)                                                \
   Name(const Name&)            = default;                                      \
@@ -20,9 +20,9 @@ template <typename _Val, typename _Derived> struct ArrayBase {
   using Value   = _Val;
   using Scalar  = scalar_t<Value>;
 
-  static constexpr bool is_array{ true };
+  static constexpr bool IsArray{ true };
 
   Derived&       derived() { return static_cast<Derived>(*this); }
   Derived const& derived() const { return static_cast<Derived>(*this); }
 };
-NAMESPACE_END(eldr::arr)
+NAMESPACE_END(eldr::math)
