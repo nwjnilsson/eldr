@@ -2,7 +2,7 @@
 #include "arrayutils.hpp"
 #include "traits.hpp"
 
-NAMESPACE_BEGIN(eldr::math)
+NAMESPACE_BEGIN(eldr::embr)
 
 #define EL_ARRAY_DEFAULTS(Name)                                                \
   Name(const Name&)            = default;                                      \
@@ -25,4 +25,4 @@ template <typename _Val, typename _Derived> struct ArrayBase {
   Derived&       derived() { return static_cast<Derived>(*this); }
   Derived const& derived() const { return static_cast<Derived>(*this); }
 };
-NAMESPACE_END(eldr::math)
+NAMESPACE_END(eldr::embr)

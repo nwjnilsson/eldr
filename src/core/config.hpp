@@ -1,7 +1,7 @@
 #pragma once
 
 // -----------------------------------------------------------------------------
-// TODO: generate this file
+// TODO: generate this file, deduce SIMD config
 // -----------------------------------------------------------------------------
 
 #include <core/fwd.hpp>
@@ -18,13 +18,15 @@
 #define EL_INSTANTIATE_STRUCT(Name)                                            \
   template struct Name<float, Color<float, 3>>;                                \
   template struct Name<float, Color<float, 4>>;                                \
-  template struct Name<float, Spectrum<float, 4>>;
+  template struct Name<float, Spectrum<float, 4>>;                             \
+//  template struct Name<embr::Packet<float>, Color<embr::Packet<float>, 3>>;
 
 /// Explicitly instantiate all variants of a "class" template
 #define EL_INSTANTIATE_CLASS(Name)                                             \
   template class Name<float, Color<float, 3>>;                                 \
   template class Name<float, Color<float, 4>>;                                 \
   template class Name<float, Spectrum<float, 4>>;
+//  template struct Name<embr::Packet<float>, Color<embr::Packet<float>, 3>>;
 
 /// Call the variant function "func" for a specific variant "variant"
 #define EL_INVOKE_VARIANT(variant, func, ...)                                  \

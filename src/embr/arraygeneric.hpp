@@ -1,7 +1,7 @@
 #pragma once
 #include "arraystatic.hpp"
 
-NAMESPACE_BEGIN(eldr::math)
+NAMESPACE_BEGIN(eldr::embr)
 template <typename _Val, size_t _Size, typename _Derived>
 struct StaticArray
   : StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>> {
@@ -56,4 +56,4 @@ struct StaticArray
 private:
   Value array[Size];
 };
-NAMESPACE_END(eldr::math)
+NAMESPACE_END(eldr::embr)

@@ -2,7 +2,7 @@
 #include "arraybase.hpp"
 #include <utility>
 
-NAMESPACE_BEGIN(eldr::math)
+NAMESPACE_BEGIN(eldr::embr)
 
 template <typename _Val, size_t _Size, typename _Derived>
 struct StaticArrayBase
@@ -41,10 +41,10 @@ struct StaticArrayBase
   {
 #if !defined(NDEBUG) && !defined(EL_DISABLE_RANGE_CHECK)
     if (i >= derived().size())
-      arr_fail("ArrayBase: out of range access (tried to "
-               "access index %zu in an array of size %zu)",
-               i,
-               derived().size());
+      embr_fail("ArrayBase: out of range access (tried to "
+                "access index %zu in an array of size %zu)",
+                i,
+                derived().size());
 #endif
     return derived().entry(i);
   }
@@ -54,10 +54,10 @@ struct StaticArrayBase
   {
 #if !defined(NDEBUG) && !defined(EL_DISABLE_RANGE_CHECK)
     if (i >= derived().size())
-      arr_fail("ArrayBase: out of range access (tried to "
-               "access index %zu in an array of size %zu)",
-               i,
-               derived().size());
+      embr_fail("ArrayBase: out of range access (tried to "
+                "access index %zu in an array of size %zu)",
+                i,
+                derived().size());
 #endif
     return derived().entry(i);
   }
@@ -118,4 +118,4 @@ struct StaticArrayBase
     return derived().entry(3);
   }
 };
-NAMESPACE_END(eldr::math)
+NAMESPACE_END(eldr::embr)

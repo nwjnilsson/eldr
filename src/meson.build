@@ -37,6 +37,7 @@ configure_file(
   configuration: conf_data,
 )
 
+subdir('embr')
 subdir('core')
 subdir('vulkan')
 subdir('render')

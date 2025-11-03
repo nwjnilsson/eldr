@@ -1,14 +1,11 @@
 #pragma once
-#include "math/fwd.hpp"
+#include "embr/fwd.hpp"
+#include "embr/traits.hpp"
 
 #define EL_VARIANT template <typename Float, typename Spectrum>
 
 using FlagRep = uint32_t;
 using byte_t  = std::byte;
-
-// C++23 has fixed width floats in <stdfloat> but I don't have C++23 yet
-using float32_t = float;
-using float64_t = double;
 
 NAMESPACE_BEGIN(eldr)
 class StopWatch;
@@ -24,6 +21,8 @@ struct MultiThreaded;
 class Sink;
 class Thread;
 
+namespace em = embr;
+
 template <typename Value, std::size_t Size> struct Vector;
 template <typename Value, std::size_t Size> struct Normal;
 template <typename Value, std::size_t Size> struct Point;
@@ -38,15 +37,13 @@ template <typename Point, typename Spectrum> struct Ray;
 template <typename _Float> struct CoreAliases {
   using Float = _Float;
 
-  // Scalar, for now
-  using Int8   = std::int8_t;
-  using Int32  = std::int32_t;
-  using UInt32 = std::uint32_t;
-  using Int64  = std::int64_t;
-  using UInt64 = std::uint64_t;
-  // using Float16 = std::float16_t;
-  using Float32 = float32_t;
-  using Float64 = float64_t;
+  using Int8    = em::int8_array_t<Float>;
+  using Int32   = em::int32_array_t<Float>;
+  using UInt32  = em::uint32_array_t<Float>;
+  using Int64   = em::int64_array_t<Float>;
+  using UInt64  = em::uint64_array_t<Float>;
+  using Float32 = em::float32_array_t<Float>;
+  using Float64 = em::float64_array_t<Float>;
 
   using Vector2i = Vector<Int32, 2>;
   using Vector3i = Vector<Int32, 3>;
@@ -83,16 +80,16 @@ template <typename _Float> struct CoreAliases {
   using Point3d = Vector<Float64, 3>;
   using Point4d = Vector<Float64, 4>;
 
-  using Matrix2f = math::Matrix<Float, 2>;
-  using Matrix3f = math::Matrix<Float, 3>;
-  using Matrix4f = math::Matrix<Float, 4>;
+  using Matrix2f = em::Matrix<Float, 2>;
+  using Matrix3f = em::Matrix<Float, 3>;
+  using Matrix4f = em::Matrix<Float, 4>;
 
-  using Matrix2d = math::Matrix<Float64, 2>;
-  using Matrix3d = math::Matrix<Float64, 3>;
-  using Matrix4d = math::Matrix<Float64, 4>;
+  using Matrix2d = em::Matrix<Float64, 2>;
+  using Matrix3d = em::Matrix<Float64, 3>;
+  using Matrix4d = em::Matrix<Float64, 4>;
 
-  using Quat4f = math::Quaternion<Float>;
-  using Quat4d = math::Quaternion<Float64>;
+  using Quat4f = em::Quaternion<Float>;
+  using Quat4d = em::Quaternion<Float64>;
 
   using Color1f = Color<Float, 1>;
   using Color3f = Color<Float, 3>;

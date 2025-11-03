@@ -12,8 +12,8 @@ src = [ 'bitmap.cpp',
         'util.cpp',
         ]
 
-# All libs can probably be just static but if anything should be shared, it's
-# probably the core types
+
+
 lib_core = library(
   'lib-core',
   sources : src,
