@@ -7,7 +7,7 @@ src = [
 lib_render = static_library(
   'lib-render',
   sources : src,
-  include_directories : [eldr_headers, tinyobjloader_headers],
+  include_directories : [eldr_include, tinyobjloader_headers],
   dependencies : [
     glfw_dep,
     vulkan_dep,

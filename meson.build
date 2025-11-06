@@ -5,8 +5,9 @@
 project('Eldr', 'cpp',
   version : '0.0.0.1',
   license : 'MIT',
+  meson_version : '>=1.1.0',
   default_options : [
-    'cpp_std=c++20',
+    'cpp_std=c++23',
     'buildtype=debug',
     'warning_level=2',    # -Wall -Wextra
     'b_ndebug=if-release'
@@ -14,10 +15,6 @@ project('Eldr', 'cpp',
   )
 
 add_global_arguments(
-  # I experimented with modules in GCC but it seems like the tools I use are
-  # still not mature enough to properly deal with modules. And I don't want to
-  # switch to MSVC, which seems like the only option right now if you want to
-  # use modules, so I'm just going to stick with regular hpp/cpp files
   #'-fmodules-ts',
     language : 'cpp'
     )
@@ -80,9 +77,6 @@ glm_dep          = dependency('glm',
 cxxopts_dep      = dependency('cxxopts',
   default_options: 'warning_level=0')
 
-# xkbcommon_dep = dependency('xkbcommon',
-#   default_options: 'warning_level=0')
-
 # fastgltf and rapidobj use CMake and there are no meson.build patch files for
 # these projects. The workaround is to write one's own patch file and store it
 # somewhere, or use the CMake module in Meson like I do below. This practically
@@ -100,7 +94,7 @@ rapidobj_dep= cmake.subproject('rapidobj').dependency('rapidobj')
 # ------------------------------------------------------------------------------
 # The rest
 # ------------------------------------------------------------------------------
-eldr_headers = include_directories('src')
+eldr_include = include_directories('src')
 
 subdir('ext')
 subdir('src')

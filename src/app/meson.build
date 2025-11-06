@@ -8,7 +8,7 @@ src = [
 
 lib_app = static_library('lib-app',
   sources : src,
-  include_directories : [eldr_headers],
+  include_directories : [eldr_include],
   dependencies : [
     glfw_dep,
     imgui_dep,

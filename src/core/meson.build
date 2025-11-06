@@ -17,7 +17,7 @@ src = [ 'bitmap.cpp',
 lib_core = library(
   'lib-core',
   sources : src,
-  include_directories : [eldr_headers],
+  include_directories : [eldr_include],
   dependencies : [
           fmt_dep,
           libjpeg_dep,

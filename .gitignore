@@ -44,3 +44,5 @@ subprojects/*
 # Certain assets
 assets/textures/
 assets/models/
+
+.envrc

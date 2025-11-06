@@ -12,7 +12,7 @@ swapping out components and trying new rendering techniques.
 
 I will try to keep cross platform compatibility in mind while developing Eldr,
 but it is not a priority in the beginning. I will be developing on Linux and the
-build instructions etc. will therefore be Linux(debian)-oriented to begin with.
+build instructions etc. will therefore be Linux-oriented to begin with.
 
 ## Current status
 Eldr is in early stage development and I am still working on the Vulkan backend.
@@ -20,18 +20,9 @@ I knew Vulkan would be overkill for a project like this but I want to learn it
 so it will take the time it takes.
 
 ## Requirements
-A possibly out-of-date list of required software:
-```
-$ sudo apt-get install build-essential ninja-build meson pkg-config python3 \
-    python3-pip python3-setuptools python3-wheel libvulkan-dev xcb libxcb-xkb-dev \
-    wayland-protocols
-```
-Meson provides additional dependencies such as libpng, glfw etc.
-
-For debugging:
-```
-sudo apt-get install vulkan-validationlayers-dev spirv-tools
-```
+For the most up-to-date list of required dependencies, see `shell.nix` in the
+project root. Many dependencies are provided via Meson wraps, but build tools
+and certain libraries are expected to be installed in advance.
 
 Some other notes:
 - For initial testing, I've been using the [Viking room](https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)
