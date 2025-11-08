@@ -21,7 +21,7 @@ so it will take the time it takes.
 
 ## Requirements
 For the most up-to-date list of required dependencies, see `shell.nix` in the
-project root. Many dependencies are provided via Meson wraps, but build tools
+project root. Most dependencies are provided via Meson wraps, but build tools
 and certain libraries are expected to be installed in advance.
 
 Some other notes:
