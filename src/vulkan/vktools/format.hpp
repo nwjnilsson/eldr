@@ -5,7 +5,7 @@ template <typename T> std::string toString(const T& arg);
 NAMESPACE_END(eldr::vk::tools)
 
 #define EL_IMPL_VK_FMT(type, str_func)                                         \
-  template <> struct fmt::formatter<type> {                                    \
+  template <> struct std::formatter<type> {                                    \
     constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }    \
     template <typename FormatContext>                                          \
     constexpr auto format(const type& arg, FormatContext& ctx) const           \

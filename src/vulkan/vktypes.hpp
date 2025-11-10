@@ -1,6 +1,5 @@
 #pragma once
-#include <core/fwd.hpp>
-#include <math/glm.hpp>
+#include <core/transform.hpp>
 #include <vulkan/vulkan.hpp>
 
 // Misc Vulkan types

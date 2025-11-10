@@ -19,7 +19,6 @@ lib_core = library(
   sources : src,
   include_directories : [eldr_include],
   dependencies : [
-          fmt_dep,
           libjpeg_dep,
           libpng_dep,
           rapidobj_dep

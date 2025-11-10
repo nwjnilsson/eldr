@@ -4,6 +4,8 @@
 #include <core/util.hpp>
 
 #include <chrono>
+#include <cstring>
+#include <cmath>
 
 NAMESPACE_BEGIN(eldr)
 ProgressReporter::ProgressReporter(std::string_view label, void* payload)

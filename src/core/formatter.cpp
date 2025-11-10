@@ -1,8 +1,4 @@
-#include <core/formatter.hpp>
 #include <core/logger.hpp>
-
-#include <fmt/args.h>
-#include <fmt/format.h>
 
 #include <chrono>
 #include <filesystem>

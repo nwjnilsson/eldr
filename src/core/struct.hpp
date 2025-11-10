@@ -5,7 +5,8 @@
 #include <core/flags.hpp>
 #include <core/fwd.hpp>
 
-#include <fmt/ostream.h>
+#include <format>
+#include <sstream>
 
 #include <string>
 #include <vector>
@@ -273,4 +274,13 @@ extern std::ostream& operator<<(std::ostream& os, const StructType& type);
 
 NAMESPACE_END(eldr)
 
-template <> struct fmt::formatter<eldr::StructType> : fmt::ostream_formatter {};
+template <> struct std::formatter<eldr::StructType> {
+  constexpr auto parse(std::format_parse_context& ctx) { return ctx.begin(); }
+
+  auto format(const eldr::StructType& obj, std::format_context& ctx) const
+  {
+    std::ostringstream oss;
+    oss << obj;
+    return std::format_to(ctx.out(), "{}", oss.str());
+  }
+};

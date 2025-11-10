@@ -163,3 +163,5 @@ NAMESPACE_END(eldr)
 
 // using ScalarFloat = eldr::math::scalar_t<Float>;
 #define EL_IMPORT_CORE_TYPES() EL_IMPORT_CORE_TYPES_PREFIX(Float, )
+
+#include "formatter.hpp"

@@ -4,6 +4,7 @@
 
 #include <thread>
 #include <unordered_map>
+#include <cassert>
 
 NAMESPACE_BEGIN(eldr)
 
@@ -23,7 +24,7 @@ public:
 
 class WorkerThread : public Thread {
   WorkerThread(const std::string& prefix)
-    : Thread(fmt::format("{}{}", prefix, counter_++)) {};
+    : Thread(std::format("{}{}", prefix, counter_++)) {};
 
   virtual void run() override
   {

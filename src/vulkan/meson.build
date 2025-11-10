@@ -34,6 +34,6 @@ lib_engine = static_library(
   'lib-engine',
   sources : src,
   include_directories : [eldr_include],
-  dependencies : [fmt_dep, glfw_dep, vulkan_dep, vma_dep, imgui_dep, fastgltf_dep],
+  dependencies : [glfw_dep, vulkan_dep, vma_dep, imgui_dep, fastgltf_dep],
   link_with : [lib_core])
   

@@ -1,7 +1,7 @@
-#include <core/formatter.hpp>
 #include <core/logger.hpp>
 #include <core/sink.hpp>
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <vector>

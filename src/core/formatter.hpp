@@ -1,11 +1,9 @@
 #pragma once
-#include <core/fwd.hpp>
-
 #include <string>
 
 NAMESPACE_BEGIN(eldr)
 class Formatter {
-  friend Logger;
+  friend class Logger;
 
 protected:
   Formatter() = default;
@@ -63,3 +61,25 @@ protected:
   ClassFuncFormat class_func_format_{ ClassFuncFormat::ClassOrFunc };
 };
 NAMESPACE_END(eldr)
+
+/// Specialize a simple formatter, without format specifiers and based on
+/// util::toString()
+#define EL_SPECIALIZE_FORMATTER(Type)                                          \
+  template <> struct std::formatter<Type> {                                    \
+    constexpr auto parse(std::format_parse_context& ctx)                       \
+    {                                                                          \
+      return ctx.begin();                                                      \
+    }                                                                          \
+    EL_INLINE auto format(const Type& v, std::format_context& ctx) const       \
+    {                                                                          \
+      return std::format_to(ctx.out(), "{}", eldr::util::toString(v));         \
+    }                                                                          \
+  };
+
+/// Define ostream operator based on util::toString
+#define EL_DEFINE_OSTR(Type)                                                   \
+  EL_INLINE std::ostream& operator<<(std::ostream& os, const Type& v)          \
+  {                                                                            \
+    os << util::toString(v);                                                   \
+    return os;                                                                 \
+  }

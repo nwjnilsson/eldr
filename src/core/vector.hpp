@@ -1,5 +1,5 @@
 #pragma once
-#include "embr/arraygeneric.hpp"
+#include <embr/arraygeneric.hpp>
 
 NAMESPACE_BEGIN(eldr)
 template <typename _Val, size_t _Size>

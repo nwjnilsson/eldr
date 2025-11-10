@@ -130,7 +130,7 @@ public:
     return copyBuffer(
       dst,
       createStagingBuffer(
-        fmt::format("Staging buffer #{}", staging_buffers_.size() + 1),
+        std::format("Staging buffer #{}", staging_buffers_.size() + 1),
         std::as_bytes(src)),
       copy_regions);
   }

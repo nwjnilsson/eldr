@@ -1,11 +1,9 @@
 #pragma once
-#include <core/formatter.hpp>
 #include <core/fwd.hpp>
 #include <core/thread.hpp>
 #include <eldr.hpp>
 
-#include <fmt/format.h>
-
+#include <format>
 #include <memory>
 
 NAMESPACE_BEGIN(eldr)
@@ -17,7 +15,7 @@ enum LogLevel : int {
   Warn,     /// Warning message
   Error,    /// Error message
   Critical, /// Critical, causes an exception to be thrown
-  n_levels
+  Count
 };
 
 class Logger {
@@ -101,7 +99,7 @@ static void Log(LogLevel                    level,
                 const char*                 function,
                 const char*                 file,
                 int                         line,
-                fmt::format_string<Args...> fmt,
+                std::format_string<Args...> fmt,
                 Args&&... args)
 {
   Logger* logger{ eldr::Thread::thread()->logger() };
@@ -111,7 +109,7 @@ static void Log(LogLevel                    level,
                 function,
                 file,
                 line,
-                fmt::format(fmt, std::forward<Args>(args)...));
+                std::format(fmt, std::forward<Args>(args)...));
   }
 }
 NAMESPACE_END(detail)
@@ -131,14 +129,14 @@ NAMESPACE_END(eldr)
 
 #define Log(level, ...)                                                        \
   do {                                                                         \
-    eldr::detail::Log(                                                   \
+    eldr::detail::Log(                                                         \
       level, EL_CLASS, __func__, __FILE__, __LINE__, ##__VA_ARGS__);           \
   } while (0)
 
 #define Throw(...)                                                             \
   do {                                                                         \
-    eldr::detail::Throw(                                                 \
-      EL_CLASS, __func__, __FILE__, __LINE__, fmt::format(__VA_ARGS__));       \
+    eldr::detail::Throw(                                                       \
+      EL_CLASS, __func__, __FILE__, __LINE__, std::format(__VA_ARGS__));       \
   } while (0)
 
 #ifndef NDEBUG

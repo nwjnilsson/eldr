@@ -2,8 +2,6 @@
 #include <app/fwd.hpp>
 #include <render/sensor.hpp>
 
-#include <math/glm.hpp>
-
 NAMESPACE_BEGIN(eldr)
 
 EL_VARIANT class ICamera {
@@ -16,7 +14,6 @@ EL_VARIANT class ICamera {
 EL_VARIANT class IProjectiveCamera : public virtual ICamera<Float, Spectrum> {
   virtual CoreAliases<Float>::Transform4f view() const = 0;
 };
-
 
 EL_VARIANT class ProjectiveCamera : public Sensor<Float, Spectrum>,
                                     public virtual ICamera<Float, Spectrum> {

@@ -1,10 +1,12 @@
+#pragma once
+
+#include "embr/matrix.hpp"
 #include "fwd.hpp"
-#include "math/matrix.hpp"
 #include "vector.hpp"
 
 NAMESPACE_BEGIN(eldr)
 template <typename _Point> struct Transform {
-  using Float = math::value_t<_Point>;
+  using Float = em::value_t<_Point>;
   EL_IMPORT_CORE_TYPES();
   static constexpr size_t Size{ _Point::Size };
 
@@ -17,7 +19,7 @@ template <typename _Point> struct Transform {
     const Vector3f s(normalize(cross(up, f)));
     const Vector3f u(cross(f, s));
 
-    math::Matrix<Float, 4> result{ 1 };
+    em::Matrix<Float, 4> result{ 1 };
     result[0][0] = s.x;
     result[1][0] = s.y;
     result[2][0] = s.z;
@@ -34,6 +36,6 @@ template <typename _Point> struct Transform {
   }
 
 private:
-  math::Matrix<Float, Size> transform;
+  em::Matrix<Float, Size> transform;
 };
 NAMESPACE_END(eldr)

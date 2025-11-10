@@ -5,6 +5,7 @@
 #include <core/logger.hpp>
 #include <core/struct.hpp>
 
+#include <cmath>
 #include <sstream>
 
 NAMESPACE_BEGIN(eldr)

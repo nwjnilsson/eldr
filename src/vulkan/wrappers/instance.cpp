@@ -2,6 +2,8 @@
 #include <vulkan/wrappers/device.hpp>
 #include <vulkan/wrappers/instance.hpp>
 
+#include <cstring>
+
 #define VK_EXT_DEBUG_UTILS_NAME "VK_EXT_debug_utils"
 
 NAMESPACE_BEGIN(eldr::vk)
@@ -120,7 +122,7 @@ Instance::Instance(std::string_view           name,
           VK_API_VERSION_MAJOR(available_api_version) &&
         VK_API_VERSION_MINOR(required_vk_api_version) >
           VK_API_VERSION_MINOR(available_api_version)))) {
-    const std::string exception_message{ fmt::format(
+    const std::string exception_message{ std::format(
       "Your system does not support the required version of the Vulkan API. "
       "Required version: {}.{}.{}.{}. Available "
       "Vulkan API version on this machine: {}.{}.{}.{}. Please update your "

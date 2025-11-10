@@ -147,7 +147,7 @@ void App::updateImGui()
   io.MouseDown[1] = input_data_.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
   io.MouseDown[2] = input_data_.isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
 
-  window_.setTitle(fmt::format(
+  window_.setTitle(std::format(
     "Eldr - {} - {} fps", vk_engine_->deviceName(), std::round(io.Framerate)));
   static bool show_demo_window = true;
   vk_engine_->updateImGui([&]() {

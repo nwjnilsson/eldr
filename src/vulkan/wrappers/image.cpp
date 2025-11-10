@@ -3,6 +3,8 @@
 #include <vulkan/wrappers/commandbuffer.hpp>
 #include <vulkan/wrappers/image.hpp>
 
+#include <cmath>
+
 NAMESPACE_BEGIN(eldr::vk)
 
 NAMESPACE_BEGIN()

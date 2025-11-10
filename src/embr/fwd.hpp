@@ -1,3 +1,4 @@
+#pragma once
 #include <eldr.hpp>
 NAMESPACE_BEGIN(eldr::embr)
 

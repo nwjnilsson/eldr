@@ -532,7 +532,7 @@ const CommandBuffer& CommandBuffer::copyDataToImage(
   return copyBufferToImage(
     dst,
     createStagingBuffer(
-      fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src),
+      std::format("Staging buffer #{}", staging_buffers_.size() + 1), src),
     copy_regions);
 }
 
@@ -549,7 +549,7 @@ CommandBuffer::copyDataToBuffer(AllocatedBuffer&        dst,
   } };
 
   auto& staging{ createStagingBuffer(
-    fmt::format("Staging buffer #{}", staging_buffers_.size() + 1), src) };
+    std::format("Staging buffer #{}", staging_buffers_.size() + 1), src) };
 
   const VkCopyBufferInfo2 copy_info{
     .sType       = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,

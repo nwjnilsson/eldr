@@ -1,4 +1,5 @@
 #pragma once
+#include <eldr.hpp>
 
 #include <cstring>
 

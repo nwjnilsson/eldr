@@ -98,7 +98,7 @@ void Bitmap::rebuildStruct(size_t                          channel_count,
       // case PixelFormat::MultiChannel:
       // if (channel_names.size() == 0) {
       //   for (size_t i = 0; i < channel_count; ++i)
-      //     channels.push_back(fmt::format("ch%i", i));
+      //     channels.push_back(std::format("ch%i", i));
       // }
       // else {
       //   std::vector<std::string> channels_sorted{ channel_names };
@@ -656,7 +656,7 @@ void Bitmap::readPng(Stream* stream)
 
   rows             = new png_bytep[height_];
   size_t row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-  assert(row_bytes == size / height_);
+  Assert(row_bytes == size / height_);
 
   for (size_t i = 0; i < height_; i++)
     rows[i] = reinterpret_cast<png_byte*>(data()) + i * row_bytes;
@@ -749,70 +749,55 @@ Bitmap Bitmap::createDefaultWhite()
   return default_white;
 }
 
-std::ostream& operator<<(std::ostream& os, const Bitmap::PixelFormat& value)
+NAMESPACE_BEGIN(util)
+std::string toString(const Bitmap::PixelFormat& v)
 {
-  switch (value) {
+  switch (v) {
     case Bitmap::PixelFormat::Y:
-      os << "y";
-      break;
+      return "y";
     case Bitmap::PixelFormat::YA:
-      os << "ya";
-      break;
+      return "ya";
     case Bitmap::PixelFormat::RGB:
-      os << "rgb";
-      break;
+      return "rgb";
     case Bitmap::PixelFormat::RGBA:
-      os << "rgba";
-      break;
+      return "rgba";
     case Bitmap::PixelFormat::RGBW:
-      os << "rgbw";
-      break;
+      return "rgbw";
     case Bitmap::PixelFormat::RGBAW:
-      os << "rgbaw";
-      break;
+      return "rgbaw";
     case Bitmap::PixelFormat::XYZ:
-      os << "xyz";
-      break;
+      return "xyz";
     case Bitmap::PixelFormat::XYZA:
-      os << "xyza";
-      break;
+      return "xyza";
     case Bitmap::PixelFormat::MultiChannel:
-      os << "multichannel";
-      break;
+      return "multichannel";
+    default:
+      Throw("Unknown pixel format!");
   }
-  return os;
 }
-
-std::ostream& operator<<(std::ostream& os, const Bitmap::FileFormat& value)
+std::string toString(const Bitmap::FileFormat& v)
 {
-  switch (value) {
+  switch (v) {
     case Bitmap::FileFormat::PNG:
-      os << "PNG";
-      break;
+      return "PNG";
     case Bitmap::FileFormat::OpenEXR:
-      os << "OpenEXR";
-      break;
+      return "OpenEXR";
     case Bitmap::FileFormat::JPEG:
-      os << "JPEG";
-      break;
+      return "JPEG";
     case Bitmap::FileFormat::BMP:
-      os << "BMP";
-      break;
+      return "BMP";
     case Bitmap::FileFormat::PFM:
-      os << "PFM";
-      break;
+      return "PFM";
     case Bitmap::FileFormat::PPM:
-      os << "PPM";
-      break;
+      return "PPM";
     case Bitmap::FileFormat::RGBE:
-      os << "RGBE";
-      break;
+      return "RGBE";
     case Bitmap::FileFormat::Auto:
-      os << "Auto";
-      break;
+      return "Auto";
     default:
       Throw("Unknown file format!");
   }
-  return os;
 }
+NAMESPACE_END(util)
+
 NAMESPACE_END(eldr)

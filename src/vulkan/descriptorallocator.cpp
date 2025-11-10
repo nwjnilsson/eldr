@@ -40,7 +40,7 @@ DescriptorPool DescriptorAllocator::createPool(const Device& device)
                              ratio.ratio * sets_per_pool_) });
   }
 
-  DescriptorPool pool{ fmt::format("Allocator pool #{}",
+  DescriptorPool pool{ std::format("Allocator pool #{}",
                                        1 + full_pools_.size() +
                                          ready_pools_.size()),
                            device,

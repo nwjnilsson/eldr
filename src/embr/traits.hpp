@@ -4,7 +4,6 @@
 
 NAMESPACE_BEGIN(eldr::embr)
 NAMESPACE_BEGIN(detail)
-
 template <typename T> struct is_signed : std::is_floating_point<T> {};
 template <typename T> constexpr bool is_signed_v{ is_signed<T>::value };
 template <typename T> struct is_floating_point : std::is_floating_point<T> {};
@@ -173,15 +172,14 @@ template <typename T>
 using float_array_t =
   replace_scalar_t<T, typename detail::sized_types<sizeof(scalar_t<T>)>::Float>;
 
-template <typename T> using int8_array_t   = replace_scalar_t<T, int8_t>;
-template <typename T> using uint8_array_t  = replace_scalar_t<T, uint8_t>;
-template <typename T> using int16_array_t  = replace_scalar_t<T, int16_t>;
-template <typename T> using uint16_array_t = replace_scalar_t<T, uint16_t>;
-template <typename T> using int32_array_t  = replace_scalar_t<T, int32_t>;
-template <typename T> using uint32_array_t = replace_scalar_t<T, uint32_t>;
-template <typename T> using int64_array_t  = replace_scalar_t<T, int64_t>;
-template <typename T> using uint64_array_t = replace_scalar_t<T, uint64_t>;
-// TODO: C++23 will provide float32_t and float64_t in <stdfloat>
+template <typename T> using int8_array_t    = replace_scalar_t<T, int8_t>;
+template <typename T> using uint8_array_t   = replace_scalar_t<T, uint8_t>;
+template <typename T> using int16_array_t   = replace_scalar_t<T, int16_t>;
+template <typename T> using uint16_array_t  = replace_scalar_t<T, uint16_t>;
+template <typename T> using int32_array_t   = replace_scalar_t<T, int32_t>;
+template <typename T> using uint32_array_t  = replace_scalar_t<T, uint32_t>;
+template <typename T> using int64_array_t   = replace_scalar_t<T, int64_t>;
+template <typename T> using uint64_array_t  = replace_scalar_t<T, uint64_t>;
 template <typename T> using float32_array_t = replace_scalar_t<T, float>;
 template <typename T> using float64_array_t = replace_scalar_t<T, double>;
 template <typename T> using bool_array_t    = replace_scalar_t<T, bool>;

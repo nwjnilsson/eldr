@@ -64,7 +64,7 @@ const CommandBuffer& CommandPool::requestCommandBuffer()
   // We need to create a new command buffer because no free one was found
   // Note that there is currently no method for shrinking command_buffers_, but
   // this should not be a problem
-  const std::string name{ fmt::format("command buffer #{}",
+  const std::string name{ std::format("command buffer #{}",
                                       command_buffers_.size() + 1) };
   Log(Trace, "Creating {}", name);
   command_buffers_.emplace_back(name, device(), *this);

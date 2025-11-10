@@ -51,7 +51,7 @@ void FileStream::read(void* p, size_t size)
     file_->clear();
     if (eof)
       throw EOFException(
-        fmt::format(
+        std::format(
           "\"%s\": read %zu out of %zu bytes", path_.string(), gcount, size),
         gcount);
     else

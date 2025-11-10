@@ -1,6 +1,8 @@
 #include "camera.hpp"
 #include "keyboardmouseinput.hpp"
 
+#include <core/vector.hpp>
+
 #include <GLFW/glfw3.h>
 
 NAMESPACE_BEGIN(eldr)
@@ -40,8 +42,7 @@ void Camera::processInput(const KeyboardMouseInput& input_data)
     velocity.z = 0;
   }
 
-  position_ +=
-    Vector3f{ rotation() * Vector4f{ velocity * 0.5f, 0.f } };
+  position_ += Vector3f{ rotation() * Vector4f{ velocity * 0.5f, 0.f } };
 
   if (input_data.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
     auto diff = input_data.calculateCursorPositionDelta();

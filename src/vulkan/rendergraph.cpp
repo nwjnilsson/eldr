@@ -538,7 +538,7 @@ void RenderGraph::compile()
     }
 
     const ImageCreateInfo texture_info{
-      .name         = fmt::format("{} image", texture->name_),
+      .name         = std::format("{} image", texture->name_),
       .extent       = swapchain_.extent(),
       .format       = texture->format_,
       .tiling       = VK_IMAGE_TILING_OPTIMAL,

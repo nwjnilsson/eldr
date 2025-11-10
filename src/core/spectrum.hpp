@@ -1,10 +1,12 @@
 #pragma once
-#include <arrays/arraygeneric.hpp>
 #include <eldr.hpp>
+#include <embr/arraygeneric.hpp>
+
 NAMESPACE_BEGIN(eldr)
 /// Spectrum base type
-template <typename _Val, size_t _size> struct Spectrum : glm::vec<_size, _Val> {
-  using Base = glm::vec<_size, _Val>;
+template <typename _Val, size_t _Size>
+struct Spectrum : embr::StaticArray<_Val, _Size, Spectrum<_Val, _Size>> {
+  using Base = embr::StaticArray<_Val, _Size, Spectrum<_Val, _Size>>;
   EL_ARRAY_DEFAULTS(Spectrum)
   template <typename... Ts> Spectrum(Ts&&... ts) : Base(std::forward<Ts>(ts)...)
   {
@@ -12,24 +14,24 @@ template <typename _Val, size_t _size> struct Spectrum : glm::vec<_size, _Val> {
 };
 
 /// RGB style color, used for Y, YA, RGB, RGBA
-template <typename _Val, size_t _channels>
-  requires(_channels <= 4)
-struct Color : Spectrum<_Val, _channels> {
-  using Base = Spectrum<_Val, _channels>;
+template <typename _Val, size_t _Channels>
+  requires(_Channels <= 4)
+struct Color : Spectrum<_Val, _Channels> {
+  using Base = Spectrum<_Val, _Channels>;
   EL_ARRAY_IMPORT(Color, Base)
 };
 
 /// SPD represented by a number of coefficients
-template <typename _Val, size_t _size>
-struct CoefficientSpectrum : Spectrum<_Val, _size> {
-  using Base = Spectrum<_Val, _size>;
+template <typename _Val, size_t _Size>
+struct CoefficientSpectrum : Spectrum<_Val, _Size> {
+  using Base = Spectrum<_Val, _Size>;
   EL_ARRAY_IMPORT(CoefficientSpectrum, Base)
 };
 
 /// SPD represented by a number of evenly distributed samples
-template <typename _Val, size_t _samples>
-struct SampledSpectrum : CoefficientSpectrum<_Val, _samples> {
-  using Base = CoefficientSpectrum<_Val, _samples>;
+template <typename _Val, size_t _Samples>
+struct SampledSpectrum : CoefficientSpectrum<_Val, _Samples> {
+  using Base = CoefficientSpectrum<_Val, _Samples>;
   EL_ARRAY_IMPORT(SampledSpectrum, Base)
 };
 

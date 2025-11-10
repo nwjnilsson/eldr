@@ -14,8 +14,9 @@
 #define NAMESPACE_BEGIN(Name) namespace Name {
 #define NAMESPACE_END(Name) }
 
+#include <buildinfo.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <buildinfo.hpp>
+#include <stdfloat>
 // #include <gitinfo.hpp>
 #include <core/platform.hpp>

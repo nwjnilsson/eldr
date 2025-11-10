@@ -192,7 +192,7 @@ void Swapchain::setupSwapchain(const Device&  device,
 
   for (size_t i{ 0 }; i < images.size(); ++i) {
     images_.push_back(
-      Image::createSwapchainImage(fmt::format("Swapchain image {}", i),
+      Image::createSwapchainImage(std::format("Swapchain image {}", i),
                                   device,
                                   images[i],
                                   extent_,

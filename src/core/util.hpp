@@ -4,7 +4,6 @@
 #include <string>
 
 NAMESPACE_BEGIN(eldr::util)
-
 int terminalWidth();
 
 std::string infoCopyright();

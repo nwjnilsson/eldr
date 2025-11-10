@@ -74,7 +74,7 @@ ImGuiOverlay::ImGuiOverlay(const Device&    device,
   constexpr const char* font      = "Cabin/Cabin-Bold.ttf";
   constexpr float       font_size = 18.0f;
   std::string           font_file_path =
-    fmt::format("{}/assets/fonts/{}", std::string(env_p), font);
+    std::format("{}/assets/fonts/{}", std::string(env_p), font);
 
   Log(Trace, "Loading font {}", font_file_path);
 

@@ -29,7 +29,7 @@ public:
     MultiChannel
   };
 
-  // friend struct fmt::formatter<PixelFormat>;
+  // friend struct std::formatter<PixelFormat>;
 
   enum class FileFormat {
     PNG,
@@ -177,12 +177,15 @@ private:
   bool                      owns_data_{ false };
 };
 
-extern std::ostream& operator<<(std::ostream&              os,
-                                const Bitmap::PixelFormat& value);
-extern std::ostream& operator<<(std::ostream&             os,
-                                const Bitmap::FileFormat& value);
+NAMESPACE_BEGIN(util)
+[[nodiscard]] std::string toString(const Bitmap::PixelFormat&);
+[[nodiscard]] std::string toString(const Bitmap::FileFormat&);
+NAMESPACE_END(util)
+
+EL_DEFINE_OSTR(Bitmap::PixelFormat)
+EL_DEFINE_OSTR(Bitmap::FileFormat)
+
 NAMESPACE_END(eldr)
-template <>
-struct fmt::formatter<eldr::Bitmap::PixelFormat> : fmt::ostream_formatter {};
-template <>
-struct fmt::formatter<eldr::Bitmap::FileFormat> : fmt::ostream_formatter {};
+
+EL_SPECIALIZE_FORMATTER(eldr::Bitmap::PixelFormat)
+EL_SPECIALIZE_FORMATTER(eldr::Bitmap::FileFormat)

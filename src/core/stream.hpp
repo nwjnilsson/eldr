@@ -17,7 +17,7 @@
 #include <core/fwd.hpp>
 #include <core/platform.hpp>
 
-#include <core/arrayutils.hpp>
+#include <core/arrayutils.hpp> // memcpy_cast
 
 #include <memory>
 #include <set>
