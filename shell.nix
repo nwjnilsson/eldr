@@ -18,6 +18,5 @@ pkgs.stdenv.mkDerivation {
     vulkan-utility-libraries
     libGL
     glfw
-    glm
   ];
 }

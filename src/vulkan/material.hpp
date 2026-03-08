@@ -10,9 +10,9 @@ enum class MaterialPass : uint8_t { MainColor, Transparent, Other };
 NAMESPACE_BEGIN(eldr)
 
 struct MaterialInstance {
-  vk::Pipeline* pipeline;
-  VkDescriptorSet   descriptor_set;
-  MaterialPass      pass_type;
+  vk::Pipeline*   pipeline;
+  VkDescriptorSet descriptor_set;
+  MaterialPass    pass_type;
 };
 
 // I was thinking that textures, samplers etc should somehow be reference
@@ -38,7 +38,7 @@ struct GltfMetallicRoughness {
   vk::DescriptorSetLayout material_layout;
 
   // Just an estimate of what will be needed
-  static constexpr vk::PoolSizeRatio sizes[3]{
+  static constexpr vk::PoolSizeRatio kSizes[3]{
     { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3 },
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
@@ -57,11 +57,11 @@ struct GltfMetallicRoughness {
     const vk::Image*                     metal_rough_texture;
     const vk::Sampler*                   metal_rough_sampler;
     const vk::Buffer<MaterialConstants>* data_buffer;
-    size_t                                   data_index;
+    size_t                               data_index;
   };
 
   MaterialInstance
-  writeMaterial(const vk::Device&                   device,
+  writeMaterial(const vk::Device&                       device,
                 MaterialPass                            pass,
                 const GltfMetallicRoughness::Resources& resources,
                 vk::DescriptorAllocator&                descriptor_allocator);

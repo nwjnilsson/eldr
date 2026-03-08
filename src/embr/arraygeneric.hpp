@@ -2,10 +2,9 @@
 #include "arraystatic.hpp"
 
 NAMESPACE_BEGIN(eldr::embr)
-template <typename _Val, size_t _Size, typename _Derived>
-struct StaticArray
-  : StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>> {
-  using Base = StaticArrayBase<_Val, _Size, StaticArray<_Val, _Size, _Derived>>;
+template <typename _Val, size_t _Sz, bool _IsMask, typename _Derived>
+struct StaticArray : StaticArrayBase<_Val, _Sz, _IsMask, _Derived> {
+  using Base = StaticArrayBase<_Val, _Sz, _IsMask, _Derived>;
   EL_ARRAY_IMPORT(StaticArray, Base)
 
   using typename Base::Derived;
@@ -14,26 +13,49 @@ struct StaticArray
 
   using Base::derived;
   using Base::entry;
-  using Base::Size;
+  using Base::kSize;
 
+  /// Construct from any other array type of matching size
+  template <typename Value2, typename D2, typename D = _Derived>
+    requires(D::kSize != D2::kSize || D::kDepth != D2::kDepth)
+  StaticArray(const ArrayBase<Value2, _IsMask, D2>& v, detail::reinterpret_flag)
+  {
+    if constexpr (D::Size == D2::Size && D2::kBroadcastOuter) {
+      static_assert(
+        std::is_constructible_v<Value, value_t<D2>, detail::reinterpret_flag>);
+      for (size_t i = 0; i < derived().size(); ++i)
+        derived().entry(i) = reinterpret_array<Value>(v.derived().entry(i));
+    }
+    else {
+      static_assert(
+        std::is_constructible_v<Value, D2, detail::reinterpret_flag>);
+      for (size_t i = 0; i < derived().size(); ++i)
+        derived().entry(i) = reinterpret_array<Value>(v.derived());
+    }
+  }
+
+  /// Scalar broadcast
   template <typename T>
     requires std::is_scalar_v<T>
   StaticArray(T v)
   {
-    for (size_t i{ 0 }; i < Size; ++i) {
+    for (size_t i{ 0 }; i < kSize; ++i) {
       array[i] = v;
     }
   }
+
   template <typename T = Value>
     requires(!std::is_same_v<T, Scalar>)
   StaticArray(const Value& v)
   {
-    for (size_t i{ 0 }; i < Size; ++i) {
+    for (size_t i{ 0 }; i < kSize; ++i) {
       array[i] = v;
     }
   }
+
+  /// Construct from components
   template <typename... Ts>
-    requires(detail::is_components_v<Size, Ts...>)
+    requires(detail::is_components_v<kSize, Ts...>)
   StaticArray(Ts&&... ts) : array{ move_cast_t<Ts, Value>(ts)... } {};
 
   /// Access elements by reference, and without error-checking
@@ -54,6 +76,6 @@ struct StaticArray
   // operator Value() { return array; }
 
 private:
-  Value array[Size];
+  Value array[kSize];
 };
 NAMESPACE_END(eldr::embr)

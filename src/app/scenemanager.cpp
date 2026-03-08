@@ -12,17 +12,18 @@
 // #define TINYOBJLOADER_IMPLEMENTATION
 // #include <tiny_obj_loader.h>
 
-// Specialize vector types for use with fastgltf. Just simple Vector<float, s>
-#define EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(Name, Size)                     \
-  template <>                                                                  \
-  struct ElementTraits<Name<float, Size>>                                      \
-    : ElementTraitsBase<Name<float, Size>, AccessorType::Vec##Size, float> {};
+// Specialize vector types for use with fastgltf.
+// Point, Normal are aliases to Vector, so only Vector specializations needed.
 NAMESPACE_BEGIN(fastgltf)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 2)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Point, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Vector, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Normal, 3)
-EL_DECLARE_FASTGLTF_ELEMENT_TRAIT_SPEC(eldr::Color, 4)
+template <>
+struct ElementTraits<eldr::Vector<float, 2>>
+  : ElementTraitsBase<eldr::Vector<float, 2>, AccessorType::Vec2, float> {};
+template <>
+struct ElementTraits<eldr::Vector<float, 3>>
+  : ElementTraitsBase<eldr::Vector<float, 3>, AccessorType::Vec3, float> {};
+template <>
+struct ElementTraits<eldr::Color<float, 4>>
+  : ElementTraitsBase<eldr::Color<float, 4>, AccessorType::Vec4, float> {};
 NAMESPACE_END(fastgltf)
 
 NAMESPACE_BEGIN(eldr)
@@ -30,7 +31,7 @@ NAMESPACE_BEGIN(eldr)
 SceneManager::SceneManager()
 {
   scenes_["Default"] = Scene{};
-  active_scene_      = &scenes_["Default"];
+  active_scene_ = &scenes_["Default"];
 }
 
 bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
@@ -175,9 +176,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
         fg::iterateAccessorWithIndex<Point2f>(
           gltf,
           gltf.accessors[attr_uv->accessorIndex],
-          [&](Point2f p, size_t index) {
-            texcoords[initial_vtx + index] = { p.x, p.y };
-          });
+          [&](Point2f p, size_t index) { texcoords[initial_vtx + index] = p; });
       }
       // load vertex colors
       auto attr_colors{ p.findAttribute("COLOR_0") };
@@ -226,9 +225,9 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   for (fg::Node& node : gltf.nodes) {
     std::shared_ptr<SceneNode> scene_node;
     if (node.meshIndex.has_value()) {
-      auto p_mesh  = std::make_shared<MeshNode<Float, Spectrum>>();
+      auto p_mesh = std::make_shared<MeshNode<Float, Spectrum>>();
       p_mesh->mesh = meshes[*node.meshIndex];
-      scene_node   = std::move(p_mesh);
+      scene_node = std::move(p_mesh);
     }
     else {
       scene_node = std::make_shared<SceneNode>();
@@ -244,7 +243,8 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
       fg::visitor{ [&](fg::math::fmat4x4 matrix) {
                     for (size_t i = 0; i < matrix.rows(); ++i) {
                       for (size_t j = 0; i < matrix.columns(); ++j) {
-                        scene_node->local_transform[i][j] = matrix[i][j];
+                        scene_node->local_transform.matrix(i, j) = matrix[i][j];
+                        scene_node->local_transform.update();
                       }
                     }
                   },
@@ -252,19 +252,20 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
                      Vector3f tl{ transform.translation[0],
                                   transform.translation[1],
                                   transform.translation[2] };
-                     Quat4f   rot{ transform.rotation[3],
-                                 transform.rotation[0],
-                                 transform.rotation[1],
-                                 transform.rotation[2] };
+                     QuatF    rot{ transform.rotation[3],
+                                transform.rotation[0],
+                                transform.rotation[1],
+                                transform.rotation[2] };
                      Vector3f sc{ transform.scale[0],
                                   transform.scale[1],
                                   transform.scale[2] };
 
-                     Transform4f tm{ glm::translate(Matrix4f{ 1.f }, tl) };
-                     Transform4f rm{ glm::toMat4(rot) };
-                     Transform4f sm{ glm::scale(Matrix4f{ 1.f }, sc) };
-
-                     scene_node->local_transform = tm * rm * sm;
+                     AffineTransform4f trs{ em::transformCompose<Matrix4f>(
+                       em::diag(sc), rot, tl) };
+                     // auto              tm{ AffineTransform4f::translate(tl)
+                     // }; AffineTransform4f rm{ em::quatToMatrix<Matrix4f>(rot)
+                     // }; auto              sm{ AffineTransform4f::scale(sc) };
+                     // scene_node->local_transform = tm * rm * sm;
                    } },
       node.transform);
   }
@@ -284,7 +285,7 @@ bool SceneManager::loadGltf(const vk::VulkanEngine& engine,
   for (auto& node : nodes) {
     if (node->parent.lock() == nullptr) {
       active_scene_->top_nodes_.push_back(node);
-      node->refreshTransform(Transform4f{ 1.f });
+      node->refreshTransform(AffineTransform4f{});
     }
   }
   Log(Trace,

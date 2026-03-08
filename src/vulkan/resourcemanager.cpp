@@ -54,27 +54,27 @@ VkSamplerMipmapMode extractMipmapMode(fg::Filter filter)
 
 NAMESPACE_END()
 
-ResourceManager::ResourceManager()                             = default;
-ResourceManager::ResourceManager(ResourceManager&&) noexcept   = default;
+ResourceManager::ResourceManager() = default;
+ResourceManager::ResourceManager(ResourceManager&&) noexcept = default;
 ResourceManager& ResourceManager::operator=(ResourceManager&&) = default;
 
 struct ResourceManager::Resources {
   // Default data --------------------------------------------------------------
   GltfMetallicRoughness default_metal_rough_material;
-  Sampler           default_sampler_linear;
-  Image             white_image;
-  Image             error_image;
+  Sampler               default_sampler_linear;
+  Image                 white_image;
+  Image                 error_image;
   // ---------------------------------------------------------------------------
-  DescriptorAllocator     material_descriptors; // resize for each file loaded
-  std::deque<Material>    materials;
-  std::deque<Sampler> samplers;
-  std::deque<Image>   images;
+  DescriptorAllocator  material_descriptors; // resize for each file loaded
+  std::deque<Material> materials;
+  std::deque<Sampler>  samplers;
+  std::deque<Image>    images;
   vk::Buffer<GltfMetallicRoughness::MaterialConstants> material_buffer;
 };
 
 ResourceManager::~ResourceManager() = default;
 
-ResourceManager::ResourceManager(const Device&       device,
+ResourceManager::ResourceManager(const Device&           device,
                                  GltfMetallicRoughness&& default_material)
   : device_(&device), d_(std::make_unique<Resources>())
 {
@@ -94,7 +94,7 @@ ResourceManager::ResourceManager(const Device&       device,
                                         d_->white_image.mipLevels() };
 
   d_->material_descriptors =
-    vk::DescriptorAllocator{ initial_pool_size, GltfMetallicRoughness::sizes };
+    vk::DescriptorAllocator{ initial_pool_size, GltfMetallicRoughness::kSizes };
 }
 
 const Image& ResourceManager::errorImage() const { return d_->error_image; }
@@ -132,7 +132,7 @@ std::optional<const Image*> ResourceManager::loadImage(
       },
       [&](fg::sources::BufferView& view) {
         auto& bufferView = asset.bufferViews[view.bufferViewIndex];
-        auto& buffer     = asset.buffers[bufferView.bufferIndex];
+        auto& buffer = asset.buffers[bufferView.bufferIndex];
 
         std::visit(
           fg::visitor{ // We only care about VectorWithMime here, because we
@@ -190,7 +190,7 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
   // Load textures
   //----------------------------------------------------------------------------
   std::vector<const Image*> images;
-  std::vector<size_t>           image_indices;
+  std::vector<size_t>       image_indices;
   images.reserve(gltf.images.size() + 1);
   images.push_back(&d_->error_image);
   for (fg::Image& image : gltf.images) {
@@ -226,11 +226,11 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
     else {
       // Old data exists, copy it
       const VkBufferCopy2 regions[]{ VkBufferCopy2{
-        .sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
-        .pNext     = {},
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+        .pNext = {},
         .srcOffset = {},
         .dstOffset = {},
-        .size      = d_->material_buffer.sizeBytes() } };
+        .size = d_->material_buffer.sizeBytes() } };
 
       device_->execute([&](const CommandBuffer& cb) {
         cb.copyBuffer(new_buffer, d_->material_buffer, regions);
@@ -248,13 +248,13 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
   for (const fg::Material& mat : gltf.materials) {
     // TODO: somehow add materials
     GltfMetallicRoughness::MaterialConstants constants;
-    constants.color_factors.x = mat.pbrData.baseColorFactor[0];
-    constants.color_factors.y = mat.pbrData.baseColorFactor[1];
-    constants.color_factors.z = mat.pbrData.baseColorFactor[2];
-    constants.color_factors.w = mat.pbrData.baseColorFactor[3];
+    constants.color_factors.x() = mat.pbrData.baseColorFactor[0];
+    constants.color_factors.y() = mat.pbrData.baseColorFactor[1];
+    constants.color_factors.z() = mat.pbrData.baseColorFactor[2];
+    constants.color_factors.w() = mat.pbrData.baseColorFactor[3];
 
-    constants.metal_rough_factors.x = mat.pbrData.metallicFactor;
-    constants.metal_rough_factors.y = mat.pbrData.roughnessFactor;
+    constants.metal_rough_factors.x() = mat.pbrData.metallicFactor;
+    constants.metal_rough_factors.y() = mat.pbrData.roughnessFactor;
 
     // write material parameters to buffer
     gltf_material_constants.push_back(constants);
@@ -266,12 +266,12 @@ std::vector<const Material*> ResourceManager::load(fg::Asset& gltf)
 
     // default the material textures
     GltfMetallicRoughness::Resources material_resources{
-      .color_texture       = &d_->white_image,
-      .color_sampler       = &d_->default_sampler_linear,
+      .color_texture = &d_->white_image,
+      .color_sampler = &d_->default_sampler_linear,
       .metal_rough_texture = &d_->white_image,
       .metal_rough_sampler = &d_->default_sampler_linear,
-      .data_buffer         = &d_->material_buffer,
-      .data_index          = data_index
+      .data_buffer = &d_->material_buffer,
+      .data_index = data_index
     };
     // -------------------------------------------------------------------------
     // Color textures

@@ -1,6 +1,7 @@
 option('build_year', type: 'integer', value: 2025, description: 'Year for copyright')
 option('engine_version', type: 'string', value: '0.0.0.1', description: 'Vulkan renderer version')
 option('log_level', type: 'string', value: 'trace', description: 'Default log level')
+option('disable_simd', type: 'boolean', value: false, description: 'Disable SIMD vectorization')
 
 # Other stuff
 #option('tests', type : 'boolean', value : 'true')

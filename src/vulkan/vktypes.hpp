@@ -5,10 +5,10 @@
 // Misc Vulkan types
 NAMESPACE_BEGIN(eldr::vk)
 struct GpuDrawPushConstants {
-  using Transform4f = CoreAliases<float>::Transform4f;
-  Transform4f     world_transform;
-  Transform4f     model_transform;
-  VkDeviceAddress vertex_buffer;
+  using AffineTransform4f = CoreAliases<float>::AffineTransform4f;
+  AffineTransform4f world_transform;
+  AffineTransform4f model_transform;
+  VkDeviceAddress   vertex_buffer;
 };
 
 NAMESPACE_END(eldr::vk)

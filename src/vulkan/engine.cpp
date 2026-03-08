@@ -1,9 +1,9 @@
 // Ensure that vma implementation is included
 #define VMA_IMPLEMENTATION
+#include <app/camera.hpp>
 #include <app/window.hpp>
 #include <buildinfo.hpp>
 #include <core/core.hpp>
-#include <app/camera.hpp>
 #include <render/mesh.hpp>
 #include <render/scene.hpp>
 #include <vulkan/descriptorallocator.hpp>
@@ -27,7 +27,7 @@
 #include <vulkan/wrappers/surface.hpp>
 #include <vulkan/wrappers/swapchain.hpp>
 
-#include <math/glm.hpp>
+#include <embr/sphere.hpp>
 
 #include <imgui.h>
 
@@ -44,24 +44,28 @@ NAMESPACE_BEGIN(eldr::vk)
 // -----------------------------------------------------------------------------
 
 struct GpuVertex {
-  using Float = float;
-  EL_IMPORT_CORE_TYPES()
+  EL_IMPORT_CORE_TYPES_SCALARF()
   Point3f  pos;
   float    uv_x;
   Normal3f normal;
   float    uv_y;
   Color4f  color;
-  bool     operator==(GpuVertex const&) const = default;
+  bool operator==(const GpuVertex& o) const
+  {
+    return em::all(pos == o.pos) && uv_x == o.uv_x &&
+           em::all(normal == o.normal) && uv_y == o.uv_y &&
+           em::all(color == o.color);
+  }
 };
+
 struct GpuSceneData {
-  using Float = float;
-  EL_IMPORT_CORE_TYPES()
-  Transform4f view;
-  Transform4f proj;
-  Transform4f viewproj;
-  Vector4f    ambient_color;
-  Vector4f    sunlight_direction;
-  Vector4f    sunlight_color;
+  EL_IMPORT_CORE_TYPES_SCALARF()
+  AffineTransform4f     view;
+  ProjectiveTransform4f proj;
+  ProjectiveTransform4f viewproj;
+  Vector4f              ambient_color;
+  Vector4f              sunlight_direction;
+  Vector4f              sunlight_color;
 };
 
 struct FrameData {
@@ -115,17 +119,17 @@ VulkanEngine::VulkanEngine(const Window& window)
   // Create instance
   // ---------------------------------------------------------------------------
   const VkApplicationInfo app_info{
-    .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    .pNext              = {},
-    .pApplicationName   = EL_NAME,
+    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pNext = {},
+    .pApplicationName = EL_NAME,
     .applicationVersion = VK_MAKE_API_VERSION(
       EL_VER_VARIANT, EL_VER_MAJOR, EL_VER_MINOR, EL_VER_PATCH),
-    .pEngineName   = EL_ENGINE_NAME,
+    .pEngineName = EL_ENGINE_NAME,
     .engineVersion = VK_MAKE_API_VERSION(EL_ENGINE_VER_VARIANT,
                                          EL_ENGINE_VER_MAJOR,
                                          EL_ENGINE_VER_MINOR,
                                          EL_ENGINE_VER_PATCH),
-    .apiVersion    = VK_API_VERSION_1_3,
+    .apiVersion = VK_API_VERSION_1_3,
   };
 
   d_->instance =
@@ -240,13 +244,13 @@ void VulkanEngine::setupFrameData()
 
     constexpr size_t elem_count{ 1 };
     d_->frames_in_flight.push_back({
-      .descriptors       = DescriptorAllocator{ 1000, frame_sizes },
+      .descriptors = DescriptorAllocator{ 1000, frame_sizes },
       .scene_data_buffer = { "Scene data uniform buffer",
                              d_->device,
                              elem_count,
                              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT },
-      .cmd_buf           = nullptr, // Set later when drawing frames
+      .cmd_buf = nullptr, // Set later when drawing frames
     });
   }
 }
@@ -282,8 +286,8 @@ void VulkanEngine::updateBuffers(const Scene* scene)
       const size_t vtx_count{ mesh->vtxPositions().size() };
       total_vtx_count += vtx_count;
       for (uint32_t i = 0; i < vtx_count; ++i) {
-        const float     uv_x{ mesh->vtxTexCoords()[i].x };
-        const float     uv_y{ mesh->vtxTexCoords()[i].y };
+        const float     uv_x{ mesh->vtxTexCoords()[i].x() };
+        const float     uv_y{ mesh->vtxTexCoords()[i].y() };
         const GpuVertex v{ mesh->vtxPositions()[i],
                            uv_x,
                            mesh->vtxNormals()[i],
@@ -367,28 +371,25 @@ void VulkanEngine::updateScene(const Scene* scene)
   static StopWatch stop_watch;
   const float      time{ stop_watch.seconds<float>(false) };
 
-  const Transform4f model{ glm::rotate(Matrix4f{ 1.0 },
-                                       time * glm::radians<float>(20.0f),
-                                       Vector3f{ 0.0f, 0.0f, 1.0f }) };
+  const auto model = AffineTransform4f::rotate(Vector3f(0.0f, 0.0f, 1.0f),
+                                               time * em::degToRad(20.0f));
 
-  const Transform4f view{ camera_->viewMatrix() };
-  Transform4f       proj{ glm::perspective(
-    glm::radians(45.0f),
-    d_->swapchain.extent().width /
-      static_cast<float>(d_->swapchain.extent().height),
-    camera_->nearClip(),
-    camera_->farClip()) };
-  proj[1][1] *= -1;
+  const auto view = camera_->view();
+  auto       proj = ProjectiveTransform4f::perspective(em::degToRad(45.0f),
+                                                 d_->swapchain.aspectRatio(),
+                                                 camera_->nearClip(),
+                                                 camera_->farClip());
+  proj.matrix(1, 1) *= -1;
 
   scene->nodes_.at("Suzanne")->refreshTransform(model);
 
   const GpuSceneData scene_data[]{ {
-    .view               = view,
-    .proj               = proj,
-    .viewproj           = proj * view,
-    .ambient_color      = Vector4f{ .05f },
+    .view = view,
+    .proj = proj,
+    .viewproj = proj * view,
+    .ambient_color = Vector4f{ .05f },
     .sunlight_direction = Vector4f{ 0, 1, 0.5, 1.f },
-    .sunlight_color     = Vector4f{ 1, 1, 1, 1.f },
+    .sunlight_color = Vector4f{ 1, 1, 1, 1.f },
   } };
   d_->frames_in_flight[frame_index_].scene_data_buffer.uploadData(scene_data);
 }
@@ -431,9 +432,9 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
     cb.bindPipeline(*draw.material->data.pipeline);
 
     GpuDrawPushConstants push_constants{
-      .world_transform = Transform4f{ 1.0f },
+      .world_transform = AffineTransform4f{},
       .model_transform = draw.transform,
-      .vertex_buffer   = d_->vertex_buffer.getDeviceAddress(),
+      .vertex_buffer = d_->vertex_buffer.getDeviceAddress(),
     };
     cb.pushConstant(draw.material->data.pipeline->layout(),
                     push_constants,
@@ -446,10 +447,10 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
                           draw.material->data.pipeline->layout());
 
     const VkViewport viewports[] = { {
-      .x        = 0.0f,
-      .y        = 0.0f,
-      .width    = static_cast<float>(swapchain.extent().width),
-      .height   = static_cast<float>(swapchain.extent().height),
+      .x = 0.0f,
+      .y = 0.0f,
+      .width = static_cast<float>(swapchain.extent().width),
+      .height = static_cast<float>(swapchain.extent().height),
       .minDepth = 0.0f,
       .maxDepth = 1.0f,
     } };
@@ -473,7 +474,7 @@ void VulkanEngine::drawGeometry(const CommandBuffer& cb)
 
 void VulkanEngine::updateImGui(std::function<void()> const& lambda)
 {
-  ImGuiIO& io    = ImGui::GetIO();
+  ImGuiIO& io = ImGui::GetIO();
   io.DisplaySize = ImVec2(static_cast<float>(d_->swapchain.extent().width),
                           static_cast<float>(d_->swapchain.extent().height));
   io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
@@ -554,7 +555,7 @@ void VulkanEngine::drawFrame(const Scene* scene)
   }
 
   const auto& cb = device.requestCommandBuffer();
-  frame.cmd_buf  = &cb;
+  frame.cmd_buf = &cb;
 
   cb.transitionImageLayout(swapchain.image(image_index),
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -567,29 +568,29 @@ void VulkanEngine::drawFrame(const Scene* scene)
   };
 
   const VkSubmitInfo submit_info{
-    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .pNext                = {},
-    .waitSemaphoreCount   = 1,
-    .pWaitSemaphores      = swapchain.imageAvailableSemaphore(frame_index_),
-    .pWaitDstStageMask    = wait_stages,
-    .commandBufferCount   = 1,
-    .pCommandBuffers      = &cb.vk(),
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext = {},
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = swapchain.imageAvailableSemaphore(frame_index_),
+    .pWaitDstStageMask = wait_stages,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &cb.vk(),
     .signalSemaphoreCount = 1,
-    .pSignalSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
+    .pSignalSemaphores = swapchain.renderFinishedSemaphore(frame_index_),
   };
 
   // Submit without waiting (we wait at the beginning of this function)
   cb.submit(submit_info);
 
   const VkPresentInfoKHR present_info{
-    .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-    .pNext              = {},
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .pNext = {},
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores    = swapchain.renderFinishedSemaphore(frame_index_),
-    .swapchainCount     = 1,
-    .pSwapchains        = &swapchain.vk(),
-    .pImageIndices      = &image_index,
-    .pResults           = {},
+    .pWaitSemaphores = swapchain.renderFinishedSemaphore(frame_index_),
+    .swapchainCount = 1,
+    .pSwapchains = &swapchain.vk(),
+    .pImageIndices = &image_index,
+    .pResults = {},
   };
 
   swapchain.present(present_info, swapchain_invalidated_);
@@ -609,8 +610,8 @@ void VulkanEngine::buildMaterialPipelines(GltfMetallicRoughness& material)
   const auto&               device{ d_->device };
   const VkPushConstantRange matrix_range{
     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    .offset     = 0,
-    .size       = sizeof(GpuDrawPushConstants),
+    .offset = 0,
+    .size = sizeof(GpuDrawPushConstants),
   };
 
   DescriptorSetLayoutBuilder layout_builder;
@@ -673,6 +674,6 @@ size_t std::hash<eldr::vk::GpuVertex>::operator()(
   value = eldr::hashCombine(value, hash<float>()(vertex.uv_x));
   value = eldr::hashCombine(value, hash<Normal3f>()(vertex.normal));
   value = eldr::hashCombine(value, hash<float>()(vertex.uv_y));
-  value = eldr::hashCombine(value, hash<Vector4f>()(vertex.color));
+  value = eldr::hashCombine(value, hash<Color4f>()(vertex.color));
   return value;
 };

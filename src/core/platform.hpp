@@ -24,8 +24,8 @@
 #endif
 
 #if defined(_MSC_VER)
-#  define MI_NOINLINE __declspec(noinline)
-#  define MI_INLINE __forceinline
+#  define EL_NOINLINE __declspec(noinline)
+#  define EL_INLINE __forceinline
 #else
 #  define EL_NOINLINE __attribute__((noinline))
 #  define EL_INLINE __attribute__((always_inline)) inline

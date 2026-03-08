@@ -16,6 +16,7 @@ void help(std::string_view help)
 {
   std::cout << util::infoBuild(1) << "\n";
   std::cout << util::infoCopyright() << "\n";
+  std::cout << util::infoFeatures() << "\n";
   std::cout << help << "\n";
 }
 NAMESPACE_END()

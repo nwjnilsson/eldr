@@ -6,28 +6,28 @@
 #include <render/camera.hpp>
 
 NAMESPACE_BEGIN(eldr)
-using Matrix4f = CoreAliases<float>::Matrix4f;
+namespace em = embr;
 
 EL_VARIANT ProjectiveCamera<Float, Spectrum>::ProjectiveCamera() {}
 
-EL_VARIANT CoreAliases<Float>::Transform4f
+EL_VARIANT CoreAliases<Float>::AffineTransform4f
            ProjectiveCamera<Float, Spectrum>::rotation() const
 {
-  Quat4f pitch_rot{ glm::angleAxis(pitch_, Vector3f{ 1.f, 0.f, 0.f }) };
-  Quat4f yaw_rot{ glm::angleAxis(yaw_, Vector3f{ 0.f, -1.f, 0.f }) };
-  return Transform4f{ glm::toMat4(yaw_rot) * glm::toMat4(pitch_rot) };
+  QuatF    pitch_rot = em::rotate(Vector3f(1.f, 0.f, 0.f), pitch_);
+  QuatF    yaw_rot = em::rotate(Vector3f(0.f, -1.f, 0.f), yaw_);
+  Matrix4f rot_mat =
+    em::quatToMatrix<Matrix4f>(yaw_rot) * em::quatToMatrix<Matrix4f>(pitch_rot);
+  return AffineTransform4f(rot_mat, rot_mat);
 }
 
 EL_VARIANT PerspectiveCamera<Float, Spectrum>::PerspectiveCamera() = default;
 
-EL_VARIANT CoreAliases<Float>::Transform4f
+EL_VARIANT CoreAliases<Float>::ProjectiveTransform4f
            PerspectiveCamera<Float, Spectrum>::view() const
 {
-  Transform4f translation{ glm::translate(Matrix4f{ 1.f }, this->position_) };
-  return glm::inverse(translation * this->rotation());
-  // return glm::lookAt(Point3f{ 2.0f, 2.0f, 2.0f },
-  //                    Point3f{ 0.0f, 0.0f, 0.0f },
-  //                    Vector3f{ 0.0f, 0.0f, 1.0f });
+  auto translation = AffineTransform4f::translate(Vector3f(this->position_));
+  auto combined = translation * this->rotation();
+  return combined.inverse();
 }
 EL_INSTANTIATE_CLASS(PerspectiveCamera)
 

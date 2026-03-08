@@ -13,6 +13,11 @@ public:
   Swapchain(std::string_view name, const Device&, const Surface&, VkExtent2D);
 
   [[nodiscard]] const VkExtent2D& extent() const { return extent_; }
+  [[nodiscard]] float             aspectRatio() const
+  {
+    return static_cast<float>(extent_.width) /
+           static_cast<float>(extent_.height);
+  }
   //[[nodiscard]] uint32_t minImageCount() const { return min_image_count_; }
   [[nodiscard]] const Image& image(size_t index) const;
   [[nodiscard]] Image&       image(size_t index);

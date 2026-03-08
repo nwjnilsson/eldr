@@ -1,12 +1,13 @@
+#include <core/config.hpp>
 #include <render/mesh.hpp>
 #include <render/scene.hpp>
-#include <core/config.hpp>
 
 NAMESPACE_BEGIN(eldr)
-//------------------------------------------------------------------------------
+//==============================================================================
 // Scene node
-//------------------------------------------------------------------------------
-void SceneNode::refreshTransform(const Transform4f& parent_transform)
+//==============================================================================
+void SceneNode::refreshTransform(
+  const ScalarAffineTransform4f& parent_transform)
 {
   world_transform = parent_transform * local_transform;
   for (auto c : children) {
@@ -14,8 +15,8 @@ void SceneNode::refreshTransform(const Transform4f& parent_transform)
   }
 }
 
-void SceneNode::draw(const RenderObject::Transform4f& top_matrix,
-                     DrawContext&                     ctx) const
+void SceneNode::draw(const ScalarAffineTransform4f& top_matrix,
+                     DrawContext&                   ctx) const
 {
   for (auto& c : children)
     c->draw(top_matrix, ctx);
@@ -28,20 +29,21 @@ void SceneNode::map(std::function<void(SceneNode*)> func)
     c->map(func);
 }
 
-//------------------------------------------------------------------------------
+//==============================================================================
 // Mesh node
-//------------------------------------------------------------------------------
-EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
-                                                DrawContext&       ctx) const
+//==============================================================================
+EL_VARIANT void
+MeshNode<Float, Spectrum>::draw(const ScalarAffineTransform4f& top_matrix,
+                                DrawContext&                   ctx) const
 {
-  const Transform4f node_transform{ top_matrix * world_transform };
+  const ScalarAffineTransform4f node_transform{ top_matrix * world_transform };
 
   for (const auto& s : mesh->surfaces()) {
     const RenderObject obj{
       .index_count = s.count,
       .first_index = s.start_index,
-      .material    = s.material,
-      .transform   = node_transform,
+      .material = s.material,
+      .transform = node_transform,
     };
     ctx.opaque_surfaces.push_back(obj);
   }
@@ -55,7 +57,7 @@ EL_VARIANT void MeshNode<Float, Spectrum>::draw(const Transform4f& top_matrix,
 EL_VARIANT void Scene<Float, Spectrum>::draw(DrawContext& ctx) const
 {
   ctx.opaque_surfaces.clear();
-  const Transform4f top_matrix{ 1.f };
+  const ScalarAffineTransform4f top_matrix;
   for (auto& n : top_nodes_) {
     n->draw(top_matrix, ctx);
   }

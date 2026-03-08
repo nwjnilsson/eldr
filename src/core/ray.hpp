@@ -1,21 +1,23 @@
 #pragma once
+#include <core/fwd.hpp>
 #include <core/vector.hpp>
+#include <embr/constants.hpp>
 
 NAMESPACE_BEGIN(eldr)
 
-template <typename Point_ /*, Spectrum_*/> struct Ray {
+template <typename _Point, typename Spectrum> struct Ray {
 
-  using Point = Point_;
-  using Float = arr::value_t<Point>;
-  static constexpr size_t Size{ arr::size_v<Point_> };
-  using Vector = eldr::Vector<Float, Size>;
+  using Point = _Point;
+  using Float = em::value_t<Point>;
+  static constexpr size_t kSize{ em::size_v<Point> };
+  using Vector = eldr::Vector<Float, kSize>;
 
   /// Ray origin
   Point o;
   /// Ray direction
   Vector d;
   /// Maximum position on the ray segment
-  Float maxt = arr::Largest<Float>;
+  Float maxt = em::kLargest<Float>;
   /// Time value associated with this ray
   Float time = 0.f;
   /// Wavelength associated with the ray
@@ -58,8 +60,8 @@ template <typename Point_ /*, Spectrum_*/> struct Ray {
   Ray reverse() const
   {
     Ray result;
-    result.o    = o;
-    result.d    = -d;
+    result.o = o;
+    result.d = -d;
     result.maxt = maxt;
     result.time = time;
     // result.wavelengths = wavelengths;

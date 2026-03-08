@@ -1,28 +1,376 @@
 #pragma once
 #include "arrayutils.hpp"
 #include "traits.hpp"
+#include <utility>
 
 NAMESPACE_BEGIN(eldr::embr)
 
 #define EL_ARRAY_DEFAULTS(Name)                                                \
-  Name(const Name&)            = default;                                      \
-  Name(Name&&)                 = default;                                      \
+  Name(const Name&) = default;                                                 \
+  Name(Name&&) = default;                                                      \
   Name& operator=(const Name&) = default;                                      \
-  Name& operator=(Name&&)      = default;
+  Name& operator=(Name&&) = default;
 
 #define EL_ARRAY_IMPORT(Name, Base)                                            \
   Name() = default;                                                            \
   EL_ARRAY_DEFAULTS(Name)                                                      \
   using Base::Base;
 
-template <typename _Val, typename _Derived> struct ArrayBase {
+template <typename _Val, bool _IsMask, typename _Derived> struct ArrayBase {
   using Derived = _Derived;
-  using Value   = _Val;
-  using Scalar  = scalar_t<Value>;
+  using Value = _Val;
+  using Scalar = scalar_t<Value>;
 
-  static constexpr bool IsArray{ true };
+  static constexpr bool   kIsArray{ true };
+  static constexpr size_t kDepth = 1 + depth_v<Value>;
 
-  Derived&       derived() { return static_cast<Derived>(*this); }
-  Derived const& derived() const { return static_cast<Derived>(*this); }
+  /// Is this a mask array?
+  static constexpr bool kIsMask = _IsMask;
+
+  /// Is this an array of values that can be added, multiplied, etc.?
+  static constexpr bool kIsArithmetic = is_arithmetic_v<Scalar> && !kIsMask;
+
+  /// Is this an array of signed or unsigned integer values?
+  static constexpr bool kIsIntegral = is_integral_v<Scalar> && !kIsMask;
+
+  /// Is this an array of floating point values?
+  static constexpr bool kIsFloat = is_floating_point_v<Scalar> && !kIsMask;
+
+  /// Does this array map operations onto packed vector instructions?
+  static constexpr bool kIsPacked = false;
+
+  /// Is this an AVX512-style 'k' mask register?
+  static constexpr bool kIsKMask = false;
+
+  /// Is the storage representation of this array implemented recursively?
+  static constexpr bool kIsRecursive = false;
+
+  /// Always prefer broadcasting to the outer dimensions of a N-D array
+  static constexpr bool kBroadcastOuter = true;
+
+  /// Does this array represent a fixed size vector?
+  static constexpr bool kIsVector = false;
+
+  /// Does this array represent a complex number?
+  static constexpr bool kIsComplex = false;
+
+  /// Does this array represent a quaternion?
+  static constexpr bool kIsQuaternion = false;
+
+  /// Does this array represent a matrix?
+  static constexpr bool kIsMatrix = false;
+
+  /// Does this array represent a tensorial wrapper?
+  static constexpr bool kIsTensor = false;
+
+  /// Does this array represent the result of a 'masked(...)' expression?
+  static constexpr bool kIsMaskedArray = false;
+
+  /// Is this a special array type (matrix, quaternion, complex)?
+  static constexpr bool kIsSpecial = false;
+
+  /// Does this array store pointers to class instances?
+  static constexpr bool kIsClass = false;
+
+  Derived&       derived() { return static_cast<Derived&>(*this); }
+  Derived const& derived() const { return static_cast<Derived const&>(*this); }
+
+  /// Recursive array indexing operator
+  template <typename... Indices>
+    requires(sizeof...(Indices) >= 1)
+  EL_INLINE decltype(auto) entry(size_t i0, Indices... indices)
+  {
+    return derived().entry(i0).entry(indices...);
+  }
+
+  /// Recursive array indexing operator (const)
+  template <typename... Indices>
+    requires(sizeof...(Indices) >= 1)
+  EL_INLINE decltype(auto) entry(size_t i0, Indices... indices) const
+  {
+    return derived().entry(i0).entry(indices...);
+  }
+
+  template <typename T> EL_INLINE void setEntry(size_t i, T&& value)
+  {
+    derived().entry(i) = static_cast<Value>(std::forward<T>(value));
+  }
+
+  /// Array indexing operator with bounds checks in debug mode
+  EL_INLINE decltype(auto) operator[](size_t i)
+  {
+#if !defined(NDEBUG) && !defined(EL_DISABLE_RANGE_CHECK)
+    if (i >= derived().size())
+      embr_fail("ArrayBase: out of range access (tried to "
+                "access index %zu in an array of size %zu)",
+                i,
+                derived().size());
+#endif
+    return derived().entry(i);
+  }
+
+  /// Array indexing operator with bounds checks in debug mode, const version
+  EL_INLINE decltype(auto) operator[](size_t i) const
+  {
+#if !defined(NDEBUG) && !defined(EL_DISABLE_RANGE_CHECK)
+    if (i >= derived().size())
+      embr_fail("ArrayBase: out of range access (tried to "
+                "access index %zu in an array of size %zu)",
+                i,
+                derived().size());
+#endif
+    return derived().entry(i);
+  }
+
+  EL_INLINE bool empty() const { return derived().size() == 0; }
+
+  // ---------------------------------------------------------------------------
+  // Comparison member functions (generated by macros, called by router)
+  // These perform element-wise comparison, recursively calling operator== etc
+  // ---------------------------------------------------------------------------
+
+  /// Macro to implement binary comparison/mask operations
+#define EL_IMPLEMENT_BINARY_MASK(name, op)                                     \
+  EL_INLINE auto name##_(const Derived& v) const                               \
+  {                                                                            \
+    mask_t<Derived> result;                                                    \
+    for (size_t i = 0; i < derived().size(); ++i) {                            \
+      const Value& a = derived().entry(i);                                     \
+      const Value& b = v.entry(i);                                             \
+      result.entry(i) = op;                                                    \
+    }                                                                          \
+    return result;                                                             \
+  }
+
+  EL_IMPLEMENT_BINARY_MASK(eq, a == b)
+  EL_IMPLEMENT_BINARY_MASK(neq, a != b)
+  EL_IMPLEMENT_BINARY_MASK(lt, a < b)
+  EL_IMPLEMENT_BINARY_MASK(le, a <= b)
+  EL_IMPLEMENT_BINARY_MASK(gt, a > b)
+  EL_IMPLEMENT_BINARY_MASK(ge, a >= b)
+
+#undef EL_IMPLEMENT_BINARY_MASK
+
+  // ---------------------------------------------------------------------------
+  // Math member functions (generated by macros, called by router)
+  // These loop over elements and recursively call the free function
+  // ---------------------------------------------------------------------------
+
+#define EL_IMPLEMENT_UNARY(name, op, cond)                                    \
+  EL_INLINE Derived name##_() const                                            \
+  {                                                                            \
+    if constexpr (cond) {                                                      \
+      Derived result;                                                          \
+      for (size_t i = 0; i < derived().size(); ++i) {                          \
+        const Value& a = derived().entry(i);                                   \
+        result.entry(i) = op;                                                  \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
+    else {                                                                     \
+      embr_fail(#name "_(): invalid operand type!");                           \
+    }                                                                          \
+  }
+
+  EL_IMPLEMENT_UNARY(sqrt, sqrt(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(abs, abs(a), kIsArithmetic)
+  EL_IMPLEMENT_UNARY(rcp, rcp(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(rsqrt, rsqrt(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(floor, floor(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(ceil, ceil(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(trunc, trunc(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(round, round(a), kIsFloat)
+  EL_IMPLEMENT_UNARY(neg, -a, kIsArithmetic)
+
+#undef EL_IMPLEMENT_UNARY
+
+#define EL_IMPLEMENT_BINARY(name, op, cond)                                    \
+  EL_INLINE Derived name##_(const Derived& v) const                            \
+  {                                                                            \
+    if constexpr (cond) {                                                      \
+      Derived result;                                                          \
+      for (size_t i = 0; i < derived().size(); ++i) {                          \
+        const Value& a = derived().entry(i);                                   \
+        const Value& b = v.entry(i);                                           \
+        result.entry(i) = op;                                                  \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
+    else {                                                                     \
+      embr_fail(#name "_(): invalid operand type!");                           \
+    }                                                                          \
+  }
+
+  EL_IMPLEMENT_BINARY(add, a + b, kIsArithmetic)
+  EL_IMPLEMENT_BINARY(sub, a - b, kIsArithmetic)
+  EL_IMPLEMENT_BINARY(mul, a * b, kIsArithmetic)
+  EL_IMPLEMENT_BINARY(div, a / b, kIsArithmetic)
+  EL_IMPLEMENT_BINARY(minimum, minimum(a, b), kIsArithmetic)
+  EL_IMPLEMENT_BINARY(maximum, maximum(a, b), kIsArithmetic)
+
+#undef EL_IMPLEMENT_BINARY
+
+#define EL_IMPLEMENT_TERNARY_ALT(name, op, alt, cond)                          \
+  EL_INLINE Derived name##_(const Derived& v1, const Derived& v2) const        \
+  {                                                                            \
+    if constexpr (!cond) {                                                     \
+      embr_fail("Invalid operand type");                                       \
+    }                                                                          \
+    if constexpr (is_special_v<Derived>) {                                     \
+      return alt;                                                              \
+    }                                                                          \
+    else {                                                                     \
+      Derived result;                                                          \
+      for (size_t i = 0; i < derived().size(); ++i) {                          \
+        const auto& a = derived().entry(i);                                    \
+        const auto& b = v1.entry(i);                                           \
+        const auto& c = v2.entry(i);                                           \
+        result.entry(i) = op;                                                  \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
+  }
+
+  EL_IMPLEMENT_TERNARY_ALT(fmadd,
+                           fmadd(a, b, c),
+                           derived() * v1 + v2,
+                           kIsArithmetic)
+  EL_IMPLEMENT_TERNARY_ALT(fmsub,
+                           fmsub(a, b, c),
+                           derived() * v1 - v2,
+                           kIsArithmetic)
+  EL_IMPLEMENT_TERNARY_ALT(fnmadd,
+                           fnmadd(a, b, c),
+                           -derived() * v1 + v2,
+                           kIsArithmetic)
+  EL_IMPLEMENT_TERNARY_ALT(fnmsub,
+                           fnmsub(a, b, c),
+                           -derived() * v1 - v2,
+                           kIsArithmetic)
+
+#undef EL_IMPLEMENT_TERNARY_ALT
+
+  // ---------------------------------------------------------------------------
+  // Horizontal reduction members (called by router)
+  // These perform horizontal operations across array elements
+  // ---------------------------------------------------------------------------
+
+  /// Horizontal sum of array elements
+  template <typename T = Derived>
+    requires(T::kIsArithmetic)
+  EL_INLINE Scalar sum_() const
+  {
+    Scalar result = 0;
+    for (size_t i = 0; i < derived().size(); ++i)
+      result += derived().entry(i);
+    return result;
+  }
+
+  /// Horizontal product of array elements
+  template <typename T = Derived>
+    requires(T::kIsArithmetic)
+  EL_INLINE Scalar prod_() const
+  {
+    Scalar result = 1;
+    for (size_t i = 0; i < derived().size(); ++i)
+      result *= derived().entry(i);
+    return result;
+  }
+
+  /// Horizontal minimum
+  template <typename T = Derived>
+    requires(T::kIsArithmetic)
+  EL_INLINE Value min_() const
+  {
+    Value result = derived().entry(0);
+    for (size_t i = 1; i < derived().size(); ++i)
+      result = minimum(result, derived().entry(i));
+    return result;
+  }
+
+  /// Horizontal maximum
+  template <typename T = Derived>
+    requires(T::kIsArithmetic)
+  EL_INLINE Value max_() const
+  {
+    Value result = derived().entry(0);
+    for (size_t i = 1; i < derived().size(); ++i)
+      result = maximum(result, derived().entry(i));
+    return result;
+  }
+
+  /// Horizontal AND of boolean elements
+  mask_t<Value> all_() const
+  {
+    if constexpr (kIsMask) {
+      mask_t<Value> result = derived().entry(0);
+      for (size_t i = 1; i < derived().size(); ++i)
+        result = result && derived().entry(i);
+      return result;
+    }
+    else {
+      embr_fail("all_(): invalid operand type!");
+    }
+  }
+
+  /// Horizontal OR of boolean elements
+  mask_t<Value> any_() const
+  {
+    if constexpr (kIsMask) {
+      mask_t<Value> result = derived().entry(0);
+      for (size_t i = 1; i < derived().size(); ++i)
+        result = result || derived().entry(i);
+      return result;
+    }
+    else {
+      embr_fail("any_(): invalid operand type!");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dot product member (called by router)
+  // This allows SIMD types to override with optimized implementations
+  // ---------------------------------------------------------------------------
+
+  /// Dot product member
+  template <typename T = Derived>
+    requires(T::kIsArithmetic)
+  EL_INLINE Scalar dot_(const Derived& other) const
+  {
+    if constexpr (is_array_v<Value>) {
+      size_t sa = derived().size(), sb = other.size(), sr = sa > sb ? sa : sb;
+
+      Value result = derived().entry(0) * other.entry(0);
+      if constexpr (is_floating_point_v<Scalar>) {
+        for (size_t i = 1; i < sr; ++i)
+          result = fmadd(derived().entry(i), other.entry(i), result);
+      }
+      else {
+        for (size_t i = 1; i < sr; ++i)
+          result += derived().entry(i) * other.entry(i);
+      }
+      return result;
+    }
+    else {
+      return hsum(derived() * other);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shuffle member (called by router)
+  // Generic fallback - SIMD Packet specializations can override with intrinsics
+  // ---------------------------------------------------------------------------
+
+  /// Shuffle array elements according to compile-time indices
+  template <size_t... Indices> EL_INLINE Derived shuffle_() const
+  {
+    static_assert(sizeof...(Indices) == Derived::kSize ||
+                    sizeof...(Indices) == Derived::kActualSize,
+                  "shuffle_(): number of indices must match array size!");
+    Derived result;
+    size_t  idx = 0;
+    ((result.entry(idx++) = derived().entry(Indices % Derived::kSize)), ...);
+    return result;
+  }
 };
 NAMESPACE_END(eldr::embr)

@@ -10,5 +10,7 @@ std::string infoCopyright();
 
 std::string infoBuild(int thread_count);
 
+std::string infoFeatures();
+
 std::filesystem::path eldrRootDir();
 NAMESPACE_END(eldr::util)
